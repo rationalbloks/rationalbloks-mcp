@@ -1,0 +1,12 @@
+# RationalBloks MCP Server - Smithery Configuration
+# This enables one-click installation via: npx @smithery/cli install @rationalbloks/mcp
+
+startCommand:
+  type: stdio
+  command: uvx
+  args:
+    - rationalbloks-mcp
+  env:
+    RATIONALBLOKS_API_KEY:
+      description: "Your RationalBloks API Key (get it from rationalbloks.com/settings)"
+      required: true
