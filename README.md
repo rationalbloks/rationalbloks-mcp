@@ -163,14 +163,134 @@ Your API key doesn't have the required scope. Create a new key with `read,write`
 
 Wait a moment and try again. Default limit is 60 requests/minute.
 
+## Schema Examples
+
+### E-Commerce Store
+
+```json
+{
+  "schema": {
+    "customers": {
+      "name": { "type": "string", "required": true },
+      "email": { "type": "string", "format": "email", "unique": true },
+      "phone": { "type": "string" },
+      "created_at": { "type": "datetime", "default": "now" }
+    },
+    "products": {
+      "name": { "type": "string", "required": true },
+      "price": { "type": "decimal", "precision": 10, "scale": 2 },
+      "sku": { "type": "string", "unique": true },
+      "stock": { "type": "integer", "default": 0 },
+      "category": { "type": "string" }
+    },
+    "orders": {
+      "customer_id": { "type": "reference", "to": "customers" },
+      "total": { "type": "decimal", "precision": 10, "scale": 2 },
+      "status": { "type": "enum", "values": ["pending", "paid", "shipped", "delivered"] },
+      "created_at": { "type": "datetime", "default": "now" }
+    },
+    "order_items": {
+      "order_id": { "type": "reference", "to": "orders" },
+      "product_id": { "type": "reference", "to": "products" },
+      "quantity": { "type": "integer", "required": true },
+      "unit_price": { "type": "decimal", "precision": 10, "scale": 2 }
+    }
+  }
+}
+```
+
+### Team Collaboration
+
+```json
+{
+  "schema": {
+    "users": {
+      "name": { "type": "string", "required": true },
+      "email": { "type": "string", "format": "email", "unique": true },
+      "role": { "type": "enum", "values": ["admin", "member", "viewer"] }
+    },
+    "teams": {
+      "name": { "type": "string", "required": true },
+      "description": { "type": "text" }
+    },
+    "tasks": {
+      "title": { "type": "string", "required": true },
+      "description": { "type": "text" },
+      "team_id": { "type": "reference", "to": "teams" },
+      "assigned_to": { "type": "reference", "to": "users" },
+      "status": { "type": "enum", "values": ["todo", "in_progress", "done"] },
+      "due_date": { "type": "date" }
+    }
+  }
+}
+```
+
+## Deployment Workflow
+
+1. **Create Project** → Generates staging environment
+2. **Update Schema** → Modify your data model
+3. **Deploy Staging** → Test your changes
+4. **Deploy Production** → Promote when ready
+5. **Rollback** → Revert if needed
+
+```
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│  Development │ →  │   Staging    │ →  │  Production  │
+│   (Schema)   │    │   (Test)     │    │   (Live)     │
+└──────────────┘    └──────────────┘    └──────────────┘
+                            ↑
+                            │
+                    ┌───────┴───────┐
+                    │   Rollback    │
+                    └───────────────┘
+```
+
+## HTTP Transport (Remote)
+
+Connect to the hosted MCP server at `https://mcp.rationalbloks.com`:
+
+```json
+{
+  "mcpServers": {
+    "rationalbloks-remote": {
+      "transport": "sse",
+      "url": "https://mcp.rationalbloks.com/sse",
+      "headers": {
+        "x-api-key": "rb_sk_your_key_here"
+      }
+    }
+  }
+}
+```
+
+## Smithery Installation
+
+Install via Smithery CLI for one-click setup:
+
+```bash
+npx @smithery/cli install @rationalbloks/mcp
+```
+
+## What is RationalBloks?
+
+RationalBloks is a Backend-as-a-Service platform that generates complete backend APIs from JSON schemas. When you connect via MCP:
+
+- **AI agents** can create and manage your backends
+- **No coding required** - just describe your data model
+- **Automatic APIs** - REST endpoints generated instantly
+- **Database included** - PostgreSQL managed for you
+- **Staging + Production** - Full deployment pipeline
+
 ## License
 
-Copyright © 2024-2026 Victor Veloso Assunção. All Rights Reserved.
+Copyright © 2026 RationalBloks. All Rights Reserved.
 
 This is proprietary software. See [LICENSE](LICENSE) for details.
 
 ## Links
 
 - [RationalBloks Platform](https://rationalbloks.com)
+- [MCP Server Status](https://mcp.rationalbloks.com/health)
 - [Documentation](https://rationalbloks.com/docs)
 - [Support](https://rationalbloks.com/support)
+- [Smithery](https://smithery.ai)
