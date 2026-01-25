@@ -14,7 +14,7 @@ from .server import RationalBloksMCPServer
 from .client import RationalBloksClient
 from .tools import TOOLS
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __author__ = "RationalBloks"
 __all__ = ["RationalBloksMCPServer", "RationalBloksClient", "TOOLS", "main"]
 
@@ -29,6 +29,16 @@ def main():
     api_key = os.environ.get("RATIONALBLOKS_API_KEY")
     transport = os.environ.get("TRANSPORT", "stdio").lower()
     
+    # HTTP mode doesn't require API key at startup (users provide via header)
+    if transport == "http":
+        try:
+            server = RationalBloksMCPServer(api_key=api_key, http_mode=True)
+            server.run(transport="http")
+        except KeyboardInterrupt:
+            sys.exit(0)
+        return
+    
+    # STDIO mode requires API key
     if not api_key:
         print("ERROR: RATIONALBLOKS_API_KEY environment variable not set", file=sys.stderr)
         print("", file=sys.stderr)
