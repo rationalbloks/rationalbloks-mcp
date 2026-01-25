@@ -13,21 +13,24 @@
 # ============================================================================
 
 import asyncio
+import contextlib
 import json
 import os
 import sys
 from typing import Any
+from collections.abc import AsyncIterator
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.server.models import InitializationOptions
 from mcp.server.lowlevel.server import NotificationOptions
+from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from mcp.types import Tool, TextContent
 
 from .client import RationalBloksClient
 from .tools import TOOLS
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 
 # ============================================================================
@@ -110,26 +113,24 @@ class RationalBloksMCPServer:
             await self.server.run(read_stream, write_stream, self._get_init_options())
     
     # ========================================================================
-    # HTTP TRANSPORT - Cloud/Smithery Deployment
+    # HTTP TRANSPORT - Cloud/Smithery Deployment (Streamable HTTP)
     # ========================================================================
     
     def _run_http(self):
-        """Run in HTTP mode for Smithery and cloud agents."""
-        from mcp.server.sse import SseServerTransport
+        """Run in HTTP mode for Smithery and cloud agents using Streamable HTTP."""
         from starlette.applications import Starlette
         from starlette.routing import Route, Mount
-        from starlette.responses import Response, JSONResponse
+        from starlette.responses import JSONResponse
+        from starlette.middleware.cors import CORSMiddleware
+        from starlette.types import Receive, Scope, Send
         import uvicorn
         
-        sse = SseServerTransport("/messages/")
-        
-        async def handle_sse(request):
-            """SSE endpoint for MCP protocol."""
-            async with sse.connect_sse(
-                request.scope, request.receive, request._send
-            ) as streams:
-                await self.server.run(streams[0], streams[1], self._get_init_options())
-            return Response()
+        # Create session manager for Streamable HTTP
+        session_manager = StreamableHTTPSessionManager(
+            app=self.server,
+            json_response=True,  # Use JSON responses for compatibility
+            stateless=True,  # Stateless for scalability
+        )
         
         async def server_card(request):
             """MCP Server Card for Smithery discovery."""
@@ -151,20 +152,39 @@ class RationalBloksMCPServer:
             """Health check for Kubernetes probes."""
             return JSONResponse({"status": "ok", "version": __version__})
         
+        # ASGI handler for Streamable HTTP
+        async def handle_mcp(scope: Scope, receive: Receive, send: Send):
+            await session_manager.handle_request(scope, receive, send)
+        
+        @contextlib.asynccontextmanager
+        async def lifespan(app: Starlette) -> AsyncIterator[None]:
+            async with session_manager.run():
+                yield
+        
         app = Starlette(
             debug=False,
             routes=[
                 Route("/.well-known/mcp/server-card.json", endpoint=server_card, methods=["GET"]),
                 Route("/health", endpoint=health, methods=["GET"]),
-                Route("/sse", endpoint=handle_sse, methods=["GET"]),
-                Mount("/messages/", app=sse.handle_post_message),
-            ]
+                Mount("/mcp", app=handle_mcp),  # Smithery expects /mcp endpoint
+            ],
+            lifespan=lifespan,
+        )
+        
+        # Add CORS middleware for browser-based clients
+        app = CORSMiddleware(
+            app,
+            allow_origins=["*"],
+            allow_methods=["GET", "POST", "DELETE"],
+            allow_headers=["*"],
+            expose_headers=["Mcp-Session-Id"],
         )
         
         port = int(os.environ.get("PORT", 8000))
         host = os.environ.get("HOST", "0.0.0.0")
         
-        print(f"[rationalbloks-mcp] HTTP server starting on {host}:{port}", file=sys.stderr)
+        print(f"[rationalbloks-mcp] Streamable HTTP server starting on {host}:{port}", file=sys.stderr)
+        print(f"[rationalbloks-mcp] MCP endpoint: http://{host}:{port}/mcp", file=sys.stderr)
         uvicorn.run(app, host=host, port=port, log_level="info")
 
 
