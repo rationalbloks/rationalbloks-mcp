@@ -27,7 +27,7 @@ class RationalBloksClient:
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
-                "User-Agent": "rationalbloks-mcp/0.1.0"
+                "User-Agent": "rationalbloks-mcp/0.1.1"
             },
             timeout=60.0
         )
