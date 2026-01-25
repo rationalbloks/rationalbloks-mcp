@@ -1,6 +1,9 @@
 # RationalBloks MCP Server
 
-Connect AI agents (Claude Desktop, Cursor, GPT) to your RationalBloks projects using the Model Context Protocol.
+**Enterprise-grade Model Context Protocol (MCP) server for RationalBloks** - Connect AI agents (Claude Desktop, Cursor, VS Code Copilot) to programmatically manage backend APIs through natural language.
+
+[![License](https://img.shields.io/badge/license-Proprietary-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
 ## Installation
 
@@ -12,34 +15,34 @@ pip install rationalbloks-mcp
 
 ### 1. Get Your API Key
 
-1. Go to [rationalbloks.com/settings](https://rationalbloks.com/settings)
-2. Scroll to **API Keys** section
-3. Click **Create API Key**
-4. Enter a name (e.g., "Claude Desktop")
-5. Copy the key immediately - it won't be shown again!
+1. Visit [rationalbloks.com/settings](https://rationalbloks.com/settings)
+2. Create an API Key
+3. Copy the key (format: `rb_sk_...`)
 
-### 2. Set Environment Variable
+### 2. Configure Your AI Agent
 
-```bash
-# Linux/macOS
-export RATIONALBLOKS_API_KEY=rb_sk_your_key_here
+#### VS Code / Cursor
 
-# Windows (PowerShell)
-$env:RATIONALBLOKS_API_KEY = "rb_sk_your_key_here"
+Add to `settings.json`:
+
+```json
+{
+  "mcp.servers": {
+    "rationalbloks": {
+      "command": "rationalbloks-mcp",
+      "env": {
+        "RATIONALBLOKS_API_KEY": "rb_sk_your_key_here"
+      }
+    }
+  }
+}
 ```
 
-### 3. Run the Server
+**Reload window:** Ctrl+Shift+P → "Developer: Reload Window"
 
-```bash
-rationalbloks-mcp
-```
+#### Claude Desktop
 
-## Claude Desktop Configuration
-
-Add to your Claude Desktop config file:
-
-**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+Add to `claude_desktop_config.json`:
 
 ```json
 {
@@ -54,50 +57,92 @@ Add to your Claude Desktop config file:
 }
 ```
 
-Restart Claude Desktop after saving.
-
-## Cursor IDE Configuration
-
-Add to `.cursor/mcp.json` in your project:
-
-```json
-{
-  "mcpServers": {
-    "rationalbloks": {
-      "command": "rationalbloks-mcp",
-      "env": {
-        "RATIONALBLOKS_API_KEY": "rb_sk_your_key_here"
-      }
-    }
-  }
-}
-```
+**Location:**
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 ## Available Tools
 
-### Read Operations (11 tools)
+### Read Operations (11)
+- `list_projects` - List all projects
+- `get_project` - Get project details
+- `get_schema` - Get JSON schema
+- `get_user_info` - Get user information
+- `get_job_status` - Check deployment status
+- `get_project_info` - Detailed project info
+- `get_version_history` - Git history
+- `get_template_schemas` - Available templates
+- `get_subscription_status` - Plan and limits
+- `get_project_usage` - Metrics
+- `get_schema_at_version` - Schema at commit
 
-| Tool | Description |
-|------|-------------|
-| `list_projects` | List all your projects |
-| `get_project` | Get project details |
-| `get_schema` | Get project JSON schema |
-| `get_user_info` | Get your user info |
-| `get_job_status` | Check deployment status |
-| `get_project_info` | Detailed project + deployment info |
-| `get_version_history` | Git commit history |
-| `get_template_schemas` | Available schema templates |
-| `get_subscription_status` | Your plan and limits |
-| `get_project_usage` | CPU/memory metrics |
-| `get_schema_at_version` | Schema at specific commit |
+### Write Operations (7)
+- `create_project` - Create new project
+- `update_schema` - Update schema
+- `deploy_staging` - Deploy to staging
+- `deploy_production` - Deploy to production
+- `delete_project` - Delete project
+- `rollback_project` - Rollback version
+- `rename_project` - Rename project
 
-### Write Operations (7 tools)
+## Authentication
 
-| Tool | Description |
-|------|-------------|
-| `create_project` | Create new project from schema |
-| `update_schema` | Update project schema |
-| `deploy_staging` | Deploy to staging |
+Uses **OAuth2 Bearer Token** (RFC 6750):
+
+```
+Authorization: Bearer rb_sk_your_key_here
+```
+
+All API keys follow format: `rb_sk_` + 43 characters
+
+## Architecture
+
+### Local Mode (STDIO)
+- For VS Code, Cursor, Claude Desktop
+- JSON-RPC over stdin/stdout
+- Fast, private, offline-capable
+
+### Cloud Mode (HTTP/SSE)
+- For Smithery, web agents
+- Streamable HTTP with Server-Sent Events
+- Works anywhere with internet
+
+## Testing
+
+```bash
+# Test command
+export RATIONALBLOKS_API_KEY=rb_sk_your_key
+rationalbloks-mcp
+
+# Test gateway
+curl https://logicblok.rationalbloks.com/api/mcp/health \
+  -H "Authorization: Bearer rb_sk_your_key"
+```
+
+## Troubleshooting
+
+### "Command not found"
+```bash
+pip show rationalbloks-mcp
+which rationalbloks-mcp
+```
+
+### "API key required"
+Check format: must start with `rb_sk_`
+
+### Tools not loading
+1. Check IDE Output panel for errors
+2. Reload window
+3. Verify settings.json syntax
+
+## Support
+
+- **Email:** support@rationalbloks.com
+- **Docs:** [rationalbloks.com/docs/mcp](https://rationalbloks.com/docs/mcp)
+
+## License
+
+Proprietary - © 2026 RationalBloks. All Rights Reserved.
 | `deploy_production` | Promote to production |
 | `delete_project` | Delete a project |
 | `rollback_project` | Rollback to previous version |

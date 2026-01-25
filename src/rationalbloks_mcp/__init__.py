@@ -14,7 +14,7 @@ from .server import RationalBloksMCPServer
 from .client import RationalBloksClient
 from .tools import TOOLS
 
-__version__ = "0.1.2"
+__version__ = "0.1.4"
 __author__ = "RationalBloks"
 __all__ = ["RationalBloksMCPServer", "RationalBloksClient", "TOOLS", "main"]
 

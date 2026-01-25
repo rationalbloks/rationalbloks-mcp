@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rationalbloks-mcp"
-version = "0.1.3"
-description = "MCP Server for RationalBloks - Connect AI agents to your backend projects"
+version = "0.1.4"
+description = "Enterprise-grade MCP Server for RationalBloks - Connect AI agents to your backend projects"
 readme = "README.md"
 license = {text = "Proprietary"}
 requires-python = ">=3.10"
@@ -40,8 +40,9 @@ dev = [
 
 [project.urls]
 Homepage = "https://rationalbloks.com"
-Documentation = "https://rationalbloks.com/docs"
+Documentation = "https://rationalbloks.com/docs/mcp"
 Repository = "https://github.com/rationalbloks/rationalbloks-mcp"
+Issues = "https://github.com/rationalbloks/rationalbloks-mcp/issues"
 
 [project.scripts]
 rationalbloks-mcp = "rationalbloks_mcp:main"
