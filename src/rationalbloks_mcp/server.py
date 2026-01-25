@@ -31,7 +31,7 @@ from starlette.requests import Request
 from .client import RationalBloksClient
 from .tools import TOOLS
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 
 # ============================================================================
@@ -91,7 +91,7 @@ class RationalBloksMCPServer:
                 if client is None:
                     return [TextContent(
                         type="text", 
-                        text="Error: API key required. Provide 'x-api-key' header with your RationalBloks API key (rb_sk_...)."
+                        text="Error: API key required. Provide 'Authorization: Bearer rb_sk_...' header with your RationalBloks API key."
                     )]
                 
                 result = client.execute(name, arguments)
@@ -119,14 +119,16 @@ class RationalBloksMCPServer:
             # STDIO mode - use pre-configured client
             return self.client
         
-        # HTTP mode - extract API key from request headers
+        # HTTP mode - extract API key from Authorization: Bearer header
         try:
             ctx = self.server.request_context
             if ctx.request and isinstance(ctx.request, Request):
-                # Get API key from x-api-key header
-                api_key = ctx.request.headers.get("x-api-key")
-                if api_key and api_key.startswith("rb_sk_"):
-                    return RationalBloksClient(api_key)
+                # Get API key from Authorization: Bearer header (OAuth2 standard)
+                auth_header = ctx.request.headers.get("authorization", "")
+                if auth_header.startswith("Bearer "):
+                    api_key = auth_header[7:]  # Remove "Bearer " prefix
+                    if api_key.startswith("rb_sk_"):
+                        return RationalBloksClient(api_key)
         except (LookupError, AttributeError):
             # Context not available - not in a request
             pass
@@ -193,9 +195,10 @@ class RationalBloksMCPServer:
                 "homepage": "https://rationalbloks.com",
                 "capabilities": {"tools": True, "resources": False, "prompts": False},
                 "authentication": {
-                    "type": "header",
-                    "header": "x-api-key",
-                    "description": "RationalBloks API Key"
+                    "type": "bearer",
+                    "scheme": "Bearer",
+                    "description": "RationalBloks API Key (format: rb_sk_...)",
+                    "header": "Authorization: Bearer rb_sk_..."
                 }
             })
         
