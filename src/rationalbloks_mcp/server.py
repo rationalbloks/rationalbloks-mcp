@@ -26,11 +26,12 @@ from mcp.server.models import InitializationOptions
 from mcp.server.lowlevel.server import NotificationOptions
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from mcp.types import Tool, TextContent
+from starlette.requests import Request
 
 from .client import RationalBloksClient
 from .tools import TOOLS
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 
 # ============================================================================
@@ -84,12 +85,16 @@ class RationalBloksMCPServer:
         @self.server.call_tool()
         async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             try:
-                # In HTTP mode, we need to get API key from context
-                # For now, use the stored client (STDIO) or require key in args
-                if self.client is None:
-                    return [TextContent(type="text", text="Error: API key not configured. Set RATIONALBLOKS_API_KEY header.")]
+                # Get client based on transport mode
+                client = self._get_client_for_request()
                 
-                result = self.client.execute(name, arguments)
+                if client is None:
+                    return [TextContent(
+                        type="text", 
+                        text="Error: API key required. Provide 'x-api-key' header with your RationalBloks API key (rb_sk_...)."
+                    )]
+                
+                result = client.execute(name, arguments)
                 
                 if result.get("success"):
                     data = result.get("result", {})
@@ -102,6 +107,31 @@ class RationalBloksMCPServer:
             except Exception as e:
                 print(f"[rationalbloks-mcp] Error: {e}", file=sys.stderr)
                 return [TextContent(type="text", text=f"Error: {str(e)}")]
+    
+    def _get_client_for_request(self) -> RationalBloksClient | None:
+        """
+        Get the appropriate client for the current request.
+        
+        - STDIO mode: Uses the pre-configured client with env API key
+        - HTTP mode: Extracts API key from request headers per-request
+        """
+        if not self.http_mode:
+            # STDIO mode - use pre-configured client
+            return self.client
+        
+        # HTTP mode - extract API key from request headers
+        try:
+            ctx = self.server.request_context
+            if ctx.request and isinstance(ctx.request, Request):
+                # Get API key from x-api-key header
+                api_key = ctx.request.headers.get("x-api-key")
+                if api_key and api_key.startswith("rb_sk_"):
+                    return RationalBloksClient(api_key)
+        except (LookupError, AttributeError):
+            # Context not available - not in a request
+            pass
+        
+        return None
     
     def _get_init_options(self) -> InitializationOptions:
         """Get MCP initialization options."""
