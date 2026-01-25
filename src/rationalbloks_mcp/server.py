@@ -30,7 +30,7 @@ from mcp.types import Tool, TextContent
 from .client import RationalBloksClient
 from .tools import TOOLS
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 
 # ============================================================================
@@ -40,14 +40,29 @@ __version__ = "0.1.1"
 class RationalBloksMCPServer:
     """RationalBloks MCP Server - Backend as a Service for AI Agents."""
     
-    def __init__(self, api_key: str):
-        if not api_key:
-            raise ValueError("API key is required")
-        if not api_key.startswith("rb_sk_"):
-            raise ValueError("Invalid API key format - must start with 'rb_sk_'")
+    def __init__(self, api_key: str | None = None, http_mode: bool = False):
+        """
+        Initialize the MCP server.
+        
+        Args:
+            api_key: Required for STDIO mode, optional for HTTP mode
+            http_mode: If True, runs without requiring API key at startup
+        """
+        self.http_mode = http_mode
+        
+        if not http_mode:
+            # STDIO mode requires API key at startup
+            if not api_key:
+                raise ValueError("API key is required")
+            if not api_key.startswith("rb_sk_"):
+                raise ValueError("Invalid API key format - must start with 'rb_sk_'")
+            self.api_key = api_key
+            self.client = RationalBloksClient(api_key)
+        else:
+            # HTTP mode - API key comes from request headers
+            self.api_key = None
+            self.client = None
             
-        self.api_key = api_key
-        self.client = RationalBloksClient(api_key)
         self.server = Server("rationalbloks")
         self._setup_handlers()
     
@@ -56,6 +71,7 @@ class RationalBloksMCPServer:
         
         @self.server.list_tools()
         async def list_tools() -> list[Tool]:
+            # Tools can be listed without auth - this is for discovery
             return [
                 Tool(
                     name=tool["name"],
@@ -68,6 +84,11 @@ class RationalBloksMCPServer:
         @self.server.call_tool()
         async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             try:
+                # In HTTP mode, we need to get API key from context
+                # For now, use the stored client (STDIO) or require key in args
+                if self.client is None:
+                    return [TextContent(type="text", text="Error: API key not configured. Set RATIONALBLOKS_API_KEY header.")]
+                
                 result = self.client.execute(name, arguments)
                 
                 if result.get("success"):
