@@ -152,8 +152,9 @@ class RationalBloksMCPServer:
             """Health check for Kubernetes probes."""
             return JSONResponse({"status": "ok", "version": __version__})
         
-        # ASGI handler for Streamable HTTP
-        async def handle_mcp(scope: Scope, receive: Receive, send: Send):
+        # The Streamable HTTP handler - it handles POST requests for JSON-RPC
+        async def handle_streamable(scope: Scope, receive: Receive, send: Send):
+            """Handle Streamable HTTP requests for MCP protocol."""
             await session_manager.handle_request(scope, receive, send)
         
         @contextlib.asynccontextmanager
@@ -166,7 +167,8 @@ class RationalBloksMCPServer:
             routes=[
                 Route("/.well-known/mcp/server-card.json", endpoint=server_card, methods=["GET"]),
                 Route("/health", endpoint=health, methods=["GET"]),
-                Mount("/mcp", app=handle_mcp),  # Smithery expects /mcp endpoint
+                # Mount session manager at root - handles POST to /
+                Mount("/", app=handle_streamable),
             ],
             lifespan=lifespan,
         )
