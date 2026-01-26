@@ -50,7 +50,7 @@ try:
     from importlib.metadata import version as _get_version
     __version__ = _get_version("rationalbloks-mcp")
 except Exception:
-    __version__ = "0.1.8"
+    __version__ = "0.1.9"
 
 
 # ============================================================================
@@ -118,7 +118,7 @@ class RationalBloksMCPServer:
                     name=tool["name"],
                     title=tool.get("title"),
                     description=tool["description"],
-                    inputSchema=tool["inputSchema"],
+                    input_schema=tool["inputSchema"],
                     annotations=annotations
                 )
                 tools_list.append(tool_obj)
@@ -356,10 +356,13 @@ class RationalBloksMCPServer:
         return InitializationOptions(
             server_name="rationalbloks",
             server_version=__version__,
+            title="RationalBloks MCP Server",
+            description="Enterprise-grade Backend-as-a-Service for AI agents. Build production APIs from JSON schemas.",
             capabilities=self.server.get_capabilities(
                 notification_options=NotificationOptions(),
                 experimental_capabilities={},
             ),
+            website_url="https://rationalbloks.com",
         )
     
     def run(self, transport: str = "stdio") -> None:

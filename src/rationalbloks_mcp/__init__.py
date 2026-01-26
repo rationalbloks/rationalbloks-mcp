@@ -9,9 +9,14 @@
 #   export RATIONALBLOKS_API_KEY=rb_sk_your_key_here
 #   rationalbloks-mcp
 #
-# Environment Variables:
+# Environment Variables (Required):
 #   RATIONALBLOKS_API_KEY - Your API key (required for STDIO mode)
+#
+# Environment Variables (Optional):
 #   TRANSPORT - "stdio" (default) or "http"
+#   RATIONALBLOKS_BASE_URL - API Gateway URL (default: https://logicblok.rationalbloks.com)
+#   RATIONALBLOKS_TIMEOUT - Request timeout in seconds (default: 30)
+#   RATIONALBLOKS_LOG_LEVEL - Logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)
 # ============================================================================
 
 import os
@@ -26,7 +31,7 @@ try:
     from importlib.metadata import version as _get_version
     __version__ = _get_version("rationalbloks-mcp")
 except Exception:
-    __version__ = "0.1.8"  # Fallback matches pyproject.toml
+    __version__ = "0.1.9"  # Fallback matches pyproject.toml
 
 __author__ = "RationalBloks"
 __all__ = ["RationalBloksMCPServer", "RationalBloksClient", "TOOLS", "main"]

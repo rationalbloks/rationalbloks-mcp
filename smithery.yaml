@@ -3,7 +3,7 @@
 # NOTE: Version should match pyproject.toml (update both together)
 
 name: rationalbloks
-version: 0.1.8
+version: 0.1.9
 description: Enterprise-grade Backend-as-a-Service platform for AI agents
 author: RationalBloks
 homepage: https://rationalbloks.com
@@ -19,3 +19,15 @@ startCommand:
       description: "Your RationalBloks API Key (get it from rationalbloks.com/settings)"
       required: true
       pattern: "^rb_sk_[A-Za-z0-9_-]{43}$"
+    RATIONALBLOKS_BASE_URL:
+      description: "API Gateway URL (default: https://logicblok.rationalbloks.com)"
+      required: false
+      default: "https://logicblok.rationalbloks.com"
+    RATIONALBLOKS_TIMEOUT:
+      description: "Request timeout in seconds (default: 30)"
+      required: false
+      default: "30"
+    RATIONALBLOKS_LOG_LEVEL:
+      description: "Logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)"
+      required: false
+      default: "INFO"

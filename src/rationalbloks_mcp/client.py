@@ -17,6 +17,7 @@
 # ============================================================================
 
 import httpx
+import os
 import time
 from typing import Any
 
@@ -25,9 +26,11 @@ try:
     from importlib.metadata import version as _get_version
     __version__ = _get_version("rationalbloks-mcp")
 except Exception:
-    __version__ = "0.1.8"
+    __version__ = "0.1.9"
 
-GATEWAY_URL = "https://logicblok.rationalbloks.com"
+# Default configuration (can be overridden via environment variables)
+GATEWAY_URL = os.environ.get("RATIONALBLOKS_BASE_URL", "https://logicblok.rationalbloks.com")
+REQUEST_TIMEOUT = float(os.environ.get("RATIONALBLOKS_TIMEOUT", "30"))
 MAX_RETRIES = 3
 RETRY_DELAY = 1.0  # Base delay in seconds, exponentially increases
 
@@ -37,7 +40,7 @@ class RationalBloksClient:
     # Validates API key format on initialization
     # Provides execute(), list_tools(), and health() methods
     
-    def __init__(self, api_key: str, base_url: str = GATEWAY_URL) -> None:
+    def __init__(self, api_key: str, base_url: str | None = None, timeout: float | None = None) -> None:
         # Initialize client with API key and base URL
         # CHAIN STEP 1: Validate API key format (fail-fast if invalid)
         if not api_key:
@@ -45,9 +48,10 @@ class RationalBloksClient:
         if not api_key.startswith("rb_sk_"):
             raise ValueError("Invalid API key format - must start with 'rb_sk_'")
         
-        # CHAIN STEP 2: Store configuration
+        # CHAIN STEP 2: Store configuration (use env vars as defaults)
         self.api_key = api_key
-        self.base_url = base_url.rstrip("/")
+        self.base_url = (base_url or GATEWAY_URL).rstrip("/")
+        self.timeout = timeout if timeout is not None else REQUEST_TIMEOUT
         
         # CHAIN STEP 3: Initialize HTTP client (let exceptions propagate)
         self._client = httpx.Client(
@@ -57,7 +61,7 @@ class RationalBloksClient:
                 "Content-Type": "application/json",
                 "User-Agent": f"rationalbloks-mcp/{__version__}"
             },
-            timeout=60.0,
+            timeout=self.timeout,
             follow_redirects=True
         )
     
