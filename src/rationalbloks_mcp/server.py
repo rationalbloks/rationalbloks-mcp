@@ -38,7 +38,8 @@ from mcp.types import (
     PromptArgument,
     PromptMessage,
     GetPromptResult,
-    Resource
+    Resource,
+    Icon
 )
 from starlette.requests import Request
 
@@ -159,6 +160,10 @@ class RationalBloksMCPServer:
             version=__version__,
             instructions="RationalBloks MCP Server - Enterprise Backend-as-a-Service for AI agents. Build production APIs from JSON schemas.",
             website_url="https://rationalbloks.com",
+            icons=[
+                Icon(src="https://rationalbloks.com/logo.svg", mimeType="image/svg+xml"),
+                Icon(src="https://rationalbloks.com/logo.png", mimeType="image/png", sizes=["128x128"]),
+            ],
         )
         self._setup_handlers()
     
