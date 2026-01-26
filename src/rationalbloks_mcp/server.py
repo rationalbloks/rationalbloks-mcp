@@ -548,7 +548,8 @@ class RationalBloksMCPServer:
                         "apiKey": {
                             "type": "string",
                             "title": "API Key",
-                            "description": "Your RationalBloks API key (get it from https://rationalbloks.com/settings)",
+                            "description": "Your RationalBloks API key (get it from https://rationalbloks.com/settings). Optional for browsing documentation.",
+                            "default": "",
                             "x-from": {"header": "authorization"}
                         },
                         "baseUrl": {
@@ -570,8 +571,7 @@ class RationalBloksMCPServer:
                             "default": "INFO",
                             "enum": ["DEBUG", "INFO", "WARNING", "ERROR"]
                         }
-                    },
-                    "required": ["apiKey"]
+                    }
                 }
             })
         
