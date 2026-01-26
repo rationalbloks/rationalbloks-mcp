@@ -32,6 +32,7 @@ from mcp.server.lowlevel.server import NotificationOptions
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from mcp.types import (
     Tool,
+    ToolAnnotations,
     TextContent,
     Prompt,
     PromptArgument,
@@ -49,7 +50,7 @@ try:
     from importlib.metadata import version as _get_version
     __version__ = _get_version("rationalbloks-mcp")
 except Exception:
-    __version__ = "0.1.7"
+    __version__ = "0.1.8"
 
 
 # ============================================================================
@@ -97,18 +98,31 @@ class RationalBloksMCPServer:
         @self.server.list_tools()
         async def list_tools() -> list[Tool]:
             # List all available MCP tools with schemas and annotations
-            # Returns complete tool definitions including input schemas
-            # WHY: MCP discovery phase - clients need to know available operations
+            # Returns complete tool definitions including input schemas and hints
+            # WHY: MCP discovery - clients need to know available operations and their behavior
             
-            tools_with_annotations = []
+            tools_list = []
             for tool in TOOLS:
+                # Build ToolAnnotations if present in tool definition
+                annotations = None
+                if "annotations" in tool:
+                    ann = tool["annotations"]
+                    annotations = ToolAnnotations(
+                        read_only_hint=ann.get("readOnlyHint"),
+                        destructive_hint=ann.get("destructiveHint"),
+                        idempotent_hint=ann.get("idempotentHint"),
+                        open_world_hint=ann.get("openWorldHint")
+                    )
+                
                 tool_obj = Tool(
                     name=tool["name"],
+                    title=tool.get("title"),
                     description=tool["description"],
-                    inputSchema=tool["inputSchema"]
+                    inputSchema=tool["inputSchema"],
+                    annotations=annotations
                 )
-                tools_with_annotations.append(tool_obj)
-            return tools_with_annotations
+                tools_list.append(tool_obj)
+            return tools_list
         
         @self.server.list_prompts()
         async def list_prompts() -> list[Prompt]:
@@ -497,7 +511,3 @@ class RationalBloksMCPServer:
         print(f"[rationalbloks-mcp] MCP endpoint: http://{host}:{port}/mcp", file=sys.stderr)
         
         uvicorn.run(app, host=host, port=port, log_level="info")
-
-        
-
-

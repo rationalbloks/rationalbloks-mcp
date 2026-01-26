@@ -1,7 +1,7 @@
 # ============================================================================
 # RATIONALBLOKS HTTP CLIENT
 # ============================================================================
-# Copyright © 2026 RationalBloks. All Rights Reserved.
+# Copyright 2026 RationalBloks. All Rights Reserved.
 #
 # Handles communication with MCP Gateway at logicblok.rationalbloks.com
 #
@@ -25,7 +25,7 @@ try:
     from importlib.metadata import version as _get_version
     __version__ = _get_version("rationalbloks-mcp")
 except Exception:
-    __version__ = "0.1.7"
+    __version__ = "0.1.8"
 
 GATEWAY_URL = "https://logicblok.rationalbloks.com"
 MAX_RETRIES = 3
@@ -155,5 +155,5 @@ class RationalBloksClient:
         # Ensure cleanup on garbage collection (suppress all exceptions)
         try:
             self.close()
-        except:
+        except Exception:
             pass
