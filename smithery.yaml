@@ -3,11 +3,45 @@
 # NOTE: Version should match pyproject.toml (update both together)
 
 name: rationalbloks
-version: 0.1.12
+displayName: RationalBloks
+version: 0.1.13
 description: Enterprise-grade Backend-as-a-Service platform for AI agents
 author: RationalBloks
 homepage: https://rationalbloks.com
 repository: https://github.com/rationalbloks/rationalbloks-mcp
+icon: https://rationalbloks.com/logo.svg
+
+# Configuration schema for Smithery UI
+configSchema:
+  type: object
+  title: RationalBloks Configuration
+  properties:
+    apiKey:
+      type: string
+      title: API Key
+      description: Your RationalBloks API key (get it from rationalbloks.com/settings)
+    baseUrl:
+      type: string
+      title: API Gateway URL
+      description: RationalBloks API Gateway URL
+      default: https://logicblok.rationalbloks.com
+    timeout:
+      type: number
+      title: Timeout
+      description: Request timeout in seconds
+      default: 30
+    logLevel:
+      type: string
+      title: Log Level
+      description: Logging level
+      default: INFO
+      enum:
+        - DEBUG
+        - INFO
+        - WARNING
+        - ERROR
+  required:
+    - apiKey
 
 startCommand:
   type: stdio
@@ -20,14 +54,14 @@ startCommand:
       required: true
       pattern: "^rb_sk_[A-Za-z0-9_-]{43}$"
     RATIONALBLOKS_BASE_URL:
-      description: "API Gateway URL (default: https://logicblok.rationalbloks.com)"
+      description: "API Gateway URL"
       required: false
       default: "https://logicblok.rationalbloks.com"
     RATIONALBLOKS_TIMEOUT:
-      description: "Request timeout in seconds (default: 30)"
+      description: "Request timeout in seconds"
       required: false
       default: "30"
     RATIONALBLOKS_LOG_LEVEL:
-      description: "Logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)"
+      description: "Logging level (DEBUG, INFO, WARNING, ERROR)"
       required: false
       default: "INFO"
