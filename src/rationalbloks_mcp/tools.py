@@ -1,8 +1,15 @@
-# RationalBloks MCP Tool Definitions
+# ============================================================================
+# RATIONALBLOKS MCP TOOL DEFINITIONS
+# ============================================================================
 # Copyright © 2026 RationalBloks. All Rights Reserved.
 #
 # These define the tools available to AI agents via MCP protocol
 # Must match the TOOL_REGISTRY in logicblok/mcp_gateway.py
+#
+# Tool Categories:
+#   - Read Operations (11 tools): Query projects, schemas, and status
+#   - Write Operations (7 tools): Create, update, deploy, and delete
+# ============================================================================
 
 TOOLS = [
     # =========================================================================

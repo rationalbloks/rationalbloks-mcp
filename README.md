@@ -140,14 +140,6 @@ Check format: must start with `rb_sk_`
 - **Email:** support@rationalbloks.com
 - **Docs:** [rationalbloks.com/docs/mcp](https://rationalbloks.com/docs/mcp)
 
-## License
-
-Proprietary - © 2026 RationalBloks. All Rights Reserved.
-| `deploy_production` | Promote to production |
-| `delete_project` | Delete a project |
-| `rollback_project` | Rollback to previous version |
-| `rename_project` | Rename a project |
-
 ## Example Usage with Claude
 
 Try these prompts:
@@ -186,27 +178,6 @@ Default scope is `read,write` which covers all common operations.
 - Keys are hashed in storage (only prefix visible after creation)
 - Each key can be revoked independently
 - Full audit logging of all operations
-
-## Troubleshooting
-
-### "RATIONALBLOKS_API_KEY environment variable not set"
-
-Make sure you've exported the API key in your shell:
-```bash
-export RATIONALBLOKS_API_KEY=rb_sk_your_key_here
-```
-
-### "Invalid API key format"
-
-API keys must start with `rb_sk_`. Get a new key from [rationalbloks.com/settings](https://rationalbloks.com/settings).
-
-### "Permission denied - check API key scopes"
-
-Your API key doesn't have the required scope. Create a new key with `read,write` permissions.
-
-### "Rate limit exceeded"
-
-Wait a moment and try again. Default limit is 60 requests/minute.
 
 ## Schema Examples
 

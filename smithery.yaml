@@ -1,5 +1,13 @@
 # RationalBloks MCP Server - Smithery Configuration
 # This enables one-click installation via: npx @smithery/cli install @rationalbloks/mcp
+# NOTE: Version should match pyproject.toml (update both together)
+
+name: rationalbloks
+version: 0.1.6
+description: Enterprise-grade Backend-as-a-Service platform for AI agents
+author: RationalBloks
+homepage: https://rationalbloks.com
+repository: https://github.com/rationalbloks/rationalbloks-mcp
 
 startCommand:
   type: stdio
@@ -10,3 +18,4 @@ startCommand:
     RATIONALBLOKS_API_KEY:
       description: "Your RationalBloks API Key (get it from rationalbloks.com/settings)"
       required: true
+      pattern: "^rb_sk_[A-Za-z0-9_-]{43}$"

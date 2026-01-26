@@ -18,7 +18,9 @@
 
 import httpx
 import time
-from typing import Dict, Any, Optional
+from typing import Any
+
+from . import __version__
 
 GATEWAY_URL = "https://logicblok.rationalbloks.com"
 MAX_RETRIES = 3
@@ -30,7 +32,8 @@ class RationalBloksClient:
     # Validates API key format on initialization
     # Provides execute(), list_tools(), and health() methods
     
-    def __init__(self, api_key: str, base_url: str = GATEWAY_URL):
+    def __init__(self, api_key: str, base_url: str = GATEWAY_URL) -> None:
+        # Initialize client with API key and base URL
         # CHAIN STEP 1: Validate API key format (fail-fast if invalid)
         if not api_key:
             raise ValueError("API key is required")
@@ -47,18 +50,17 @@ class RationalBloksClient:
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
-                "User-Agent": "rationalbloks-mcp/0.1.5"
+                "User-Agent": f"rationalbloks-mcp/{__version__}"
             },
             timeout=60.0,
             follow_redirects=True
         )
     
-    def execute(self, tool: str, arguments: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def execute(self, tool: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
         # Execute MCP tool via gateway with automatic retry for transient failures
         # Returns: {"success": bool, "result": Any} or {"success": False, "error": str}
         # Retries ONLY transient failures (connect errors, timeouts, 503)
         # All other errors fail immediately (no silent fallbacks)
-        
         payload = {"tool": tool, "arguments": arguments or {}}
         last_error = None
         
@@ -111,11 +113,10 @@ class RationalBloksClient:
         # All retries exhausted
         return {"success": False, "error": f"Max retries ({MAX_RETRIES}) exceeded. Last error: {last_error}"}
     
-    def list_tools(self) -> Dict[str, Any]:
+    def list_tools(self) -> dict[str, Any]:
         # Get available MCP tools from gateway (public endpoint)
         # Returns: {"tools": [...], "authentication": {...}}
         # Single try/except - if fails, return error dict
-        
         try:
             response = self._client.get("/api/mcp/tools")
             response.raise_for_status()
@@ -123,11 +124,10 @@ class RationalBloksClient:
         except Exception as e:
             return {"success": False, "error": f"Failed to fetch tools: {str(e)}"}
     
-    def health(self) -> Dict[str, Any]:
+    def health(self) -> dict[str, Any]:
         # Check MCP gateway health status
         # Returns: {"status": "healthy"} or {"status": "unreachable", "error": "..."}
         # Single try/except - if fails, return error dict
-        
         try:
             response = self._client.get("/api/mcp/health")
             response.raise_for_status()
@@ -135,18 +135,18 @@ class RationalBloksClient:
         except Exception as e:
             return {"status": "unreachable", "error": str(e)}
     
-    def close(self):
+    def close(self) -> None:
         # Close HTTP client and release resources (idempotent)
         if hasattr(self, '_client') and self._client is not None:
             self._client.close()
     
-    def __enter__(self):
+    def __enter__(self) -> "RationalBloksClient":
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.close()
     
-    def __del__(self):
+    def __del__(self) -> None:
         # Ensure cleanup on garbage collection (suppress all exceptions)
         try:
             self.close()

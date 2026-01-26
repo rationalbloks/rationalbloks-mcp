@@ -41,10 +41,9 @@ from mcp.types import (
 )
 from starlette.requests import Request
 
+from . import __version__
 from .client import RationalBloksClient
 from .tools import TOOLS
-
-__version__ = "0.1.5"
 
 
 # ============================================================================
@@ -55,7 +54,7 @@ class RationalBloksMCPServer:
     # RationalBloks MCP Server - Backend as a Service for AI Agents
     # Implements Model Context Protocol with dual transport (STDIO + HTTP)
     
-    def __init__(self, api_key: str | None = None, http_mode: bool = False):
+    def __init__(self, api_key: str | None = None, http_mode: bool = False) -> None:
         # Initialize MCP server with appropriate transport mode
         # 
         # STDIO mode: API key required at startup (from environment)
@@ -84,7 +83,7 @@ class RationalBloksMCPServer:
         self.server = Server("rationalbloks")
         self._setup_handlers()
     
-    def _setup_handlers(self):
+    def _setup_handlers(self) -> None:
         # Register all MCP protocol handlers
         # Single registration point for tools, prompts, resources
         # WHY: Centralizes handler registration for maintainability
@@ -304,7 +303,7 @@ class RationalBloksMCPServer:
             
             except Exception as e:
                 print(f"[rationalbloks-mcp] Error: {e}", file=sys.stderr)
-                return [TextContent(type="text", text=f"Error: {str(e)}")]]
+                return [TextContent(type="text", text=f"Error: {str(e)}")]
     
     def _get_client_for_request(self) -> RationalBloksClient | None:
         # Get the appropriate client for the current request
@@ -343,10 +342,16 @@ class RationalBloksMCPServer:
             ),
         )
     
-    def run(self, transport: str = "stdio"):
-        # Run the MCP server with the specified transport
-        # Single entry point that routes to STDIO or HTTP transport
-        # WHY: Simplifies server startup regardless of deployment mode
+    def run(self, transport: str = "stdio") -> None:
+        """Run the MCP server with the specified transport.
+        
+        Args:
+            transport: "stdio" for local IDEs or "http" for cloud deployment
+            
+        Note:
+            Single entry point that routes to STDIO or HTTP transport.
+            Simplifies server startup regardless of deployment mode.
+        """
         
         if transport == "http":
             self._run_http()
@@ -358,18 +363,16 @@ class RationalBloksMCPServer:
 # STDIO TRANSPORT - Local IDE Integration
 # ============================================================================
     
-    def _run_stdio(self):
+    def _run_stdio(self) -> None:
         # Run in STDIO mode for Cursor, VS Code, Claude Desktop
         # Uses asyncio event loop with stdio_server context manager
         # WHY: IDEs communicate via stdin/stdout pipes
-        
         asyncio.run(self._stdio_async())
     
-    async def _stdio_async(self):
+    async def _stdio_async(self) -> None:
         # Async STDIO handler with MCP stream management
         # Single code path: open streams → run server → close streams
         # WHY: MCP requires bidirectional async stream communication
-        
         async with stdio_server() as (read_stream, write_stream):
             await self.server.run(read_stream, write_stream, self._get_init_options())
 
@@ -378,11 +381,10 @@ class RationalBloksMCPServer:
 # HTTP TRANSPORT - Cloud/Smithery Deployment
 # ============================================================================
     
-    def _run_http(self):
+    def _run_http(self) -> None:
         # Run in HTTP mode for Smithery and cloud agents using Streamable HTTP
         # Creates Starlette ASGI application with MCP session management
         # WHY: Cloud deployments require HTTP/SSE transport instead of STDIO
-        
         from starlette.applications import Starlette
         from starlette.routing import Route, Mount
         from starlette.responses import JSONResponse
@@ -487,6 +489,9 @@ class RationalBloksMCPServer:
         
         print(f"[rationalbloks-mcp] Streamable HTTP server starting on {host}:{port}", file=sys.stderr)
         print(f"[rationalbloks-mcp] MCP endpoint: http://{host}:{port}/mcp", file=sys.stderr)
+        
+        uvicorn.run(app, host=host, port=port, log_level="info")
+
         
 
 

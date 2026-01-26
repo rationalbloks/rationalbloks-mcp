@@ -21,17 +21,22 @@ from .server import RationalBloksMCPServer
 from .client import RationalBloksClient
 from .tools import TOOLS
 
-__version__ = "0.1.5"
+# Version - single source of truth read from pyproject.toml metadata
+try:
+    from importlib.metadata import version as _get_version
+    __version__ = _get_version("rationalbloks-mcp")
+except Exception:
+    __version__ = "0.1.6"  # Fallback matches pyproject.toml
+
 __author__ = "RationalBloks"
 __all__ = ["RationalBloksMCPServer", "RationalBloksClient", "TOOLS", "main"]
 
 
-def main():
+def main() -> None:
     # Entry point for rationalbloks-mcp command
     # Supports two modes:
     #   - stdio: Local IDE integration (Claude Desktop, VS Code, Cursor)
     #   - http: Cloud deployment (Smithery, Replit, web agents)
-    
     api_key = os.environ.get("RATIONALBLOKS_API_KEY")
     transport = os.environ.get("TRANSPORT", "stdio").lower()
     
