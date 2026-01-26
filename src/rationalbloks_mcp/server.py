@@ -359,10 +359,13 @@ class RationalBloksMCPServer:
             return resources
         
         @self.server.read_resource()
-        async def read_resource(uri: str) -> str:
+        async def read_resource(uri) -> str:
             # Read a specific resource by URI
             # Handles both static docs and dynamic project resources
             # WHY: Provides AI agents access to docs and project schemas
+            
+            # Convert AnyUrl to string for comparison
+            uri_str = str(uri)
             
             # Static documentation resources - no auth required
             static_docs = {
@@ -371,8 +374,8 @@ class RationalBloksMCPServer:
                 "rationalbloks://docs/api-reference": DOCS_API_REFERENCE,
             }
             
-            if uri in static_docs:
-                return static_docs[uri]
+            if uri_str in static_docs:
+                return static_docs[uri_str]
             
             # Dynamic project resources - require authentication
             client = self._get_client_for_request()
@@ -380,12 +383,12 @@ class RationalBloksMCPServer:
                 raise ValueError("Authentication required to read project resources")
             
             # Parse URI: rationalbloks://project/{id}/{type}
-            if not uri.startswith("rationalbloks://project/"):
-                raise ValueError(f"Invalid URI format: {uri}")
+            if not uri_str.startswith("rationalbloks://project/"):
+                raise ValueError(f"Invalid URI format: {uri_str}")
             
-            parts = uri.replace("rationalbloks://project/", "").split("/")
+            parts = uri_str.replace("rationalbloks://project/", "").split("/")
             if len(parts) != 2:
-                raise ValueError(f"Invalid URI format: {uri}")
+                raise ValueError(f"Invalid URI format: {uri_str}")
             
             project_id, resource_type = parts
             
@@ -404,8 +407,13 @@ class RationalBloksMCPServer:
         @self.server.call_tool()
         async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             # Execute a tool with provided arguments
-            # Single code path: get client → execute → format response
+            # Single code path: validate → get client → execute → format response
             # WHY: Core MCP operation - all tool invocations flow through here
+            
+            # Validate tool name exists
+            valid_tools = [t["name"] for t in TOOLS]
+            if name not in valid_tools:
+                raise ValueError(f"Unknown tool: {name}")
             
             try:
                 client = self._get_client_for_request()
