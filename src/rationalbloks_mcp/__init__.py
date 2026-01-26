@@ -1,11 +1,18 @@
-# RationalBloks MCP Server
+# ============================================================================
+# RATIONALBLOKS MCP - Main Entry Point
+# ============================================================================
 # Copyright © 2026 RationalBloks. All Rights Reserved.
 #
-# Connect AI agents (Claude, GPT, Cursor) to your RationalBloks projects
+# Connect AI agents (Claude, GPT, Cursor) to RationalBloks projects
 #
 # Usage:
 #   export RATIONALBLOKS_API_KEY=rb_sk_your_key_here
 #   rationalbloks-mcp
+#
+# Environment Variables:
+#   RATIONALBLOKS_API_KEY - Your API key (required for STDIO mode)
+#   TRANSPORT - "stdio" (default) or "http"
+# ============================================================================
 
 import os
 import sys
@@ -14,22 +21,21 @@ from .server import RationalBloksMCPServer
 from .client import RationalBloksClient
 from .tools import TOOLS
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 __author__ = "RationalBloks"
 __all__ = ["RationalBloksMCPServer", "RationalBloksClient", "TOOLS", "main"]
 
 
 def main():
-    """Entry point for the rationalbloks-mcp command.
+    # Entry point for rationalbloks-mcp command
+    # Supports two modes:
+    #   - stdio: Local IDE integration (Claude Desktop, VS Code, Cursor)
+    #   - http: Cloud deployment (Smithery, Replit, web agents)
     
-    Supports two modes:
-    - stdio (default): For local use with Claude Desktop, VS Code, Cursor
-    - http: For Smithery/cloud deployment (set TRANSPORT=http)
-    """
     api_key = os.environ.get("RATIONALBLOKS_API_KEY")
     transport = os.environ.get("TRANSPORT", "stdio").lower()
     
-    # HTTP mode doesn't require API key at startup (users provide via header)
+    # HTTP mode: API key provided per-request via Authorization header
     if transport == "http":
         try:
             server = RationalBloksMCPServer(api_key=api_key, http_mode=True)
@@ -38,7 +44,7 @@ def main():
             sys.exit(0)
         return
     
-    # STDIO mode requires API key
+    # STDIO mode: API key required at startup
     if not api_key:
         print("ERROR: RATIONALBLOKS_API_KEY environment variable not set", file=sys.stderr)
         print("", file=sys.stderr)
@@ -52,11 +58,11 @@ def main():
         print("ERROR: Invalid API key format. Must start with 'rb_sk_'", file=sys.stderr)
         sys.exit(1)
     
+    # CHAIN: Run STDIO server (single path, fail-fast)
     try:
         server = RationalBloksMCPServer(api_key=api_key)
         server.run(transport=transport)
     except KeyboardInterrupt:
-        # Graceful shutdown on Ctrl+C
         sys.exit(0)
     except Exception as e:
         print(f"ERROR: {e}", file=sys.stderr)

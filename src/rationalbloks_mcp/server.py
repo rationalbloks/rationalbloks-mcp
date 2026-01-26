@@ -1,7 +1,7 @@
 # ============================================================================
 # RATIONALBLOKS MCP SERVER
 # ============================================================================
-# Copyright © 2026 RationalBloks. All Rights Reserved.
+# Copyright 2026 RationalBloks. All Rights Reserved.
 #
 # Model Context Protocol (MCP) Server for AI Agent Communication
 # Enables AI agents (Claude, Cursor, GPT, Windsurf) to build backends via chat
@@ -9,6 +9,11 @@
 # DUAL TRANSPORT ARCHITECTURE:
 # - STDIO:  Local development (Cursor, VS Code, Claude Desktop)
 # - HTTP:   Cloud deployment (Smithery, Replit, web agents)
+#
+# WHY THIS EXISTS:
+# AI agents need a standard protocol to communicate with backend services.
+# This server implements MCP (Model Context Protocol) to expose RationalBloks
+# platform capabilities to any AI agent supporting MCP.
 #
 # ============================================================================
 
@@ -25,13 +30,21 @@ from mcp.server.stdio import stdio_server
 from mcp.server.models import InitializationOptions
 from mcp.server.lowlevel.server import NotificationOptions
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
-from mcp.types import Tool, TextContent
+from mcp.types import (
+    Tool,
+    TextContent,
+    Prompt,
+    PromptArgument,
+    PromptMessage,
+    GetPromptResult,
+    Resource
+)
 from starlette.requests import Request
 
 from .client import RationalBloksClient
 from .tools import TOOLS
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 
 
 # ============================================================================
@@ -39,16 +52,20 @@ __version__ = "0.1.4"
 # ============================================================================
 
 class RationalBloksMCPServer:
-    """RationalBloks MCP Server - Backend as a Service for AI Agents."""
+    # RationalBloks MCP Server - Backend as a Service for AI Agents
+    # Implements Model Context Protocol with dual transport (STDIO + HTTP)
     
     def __init__(self, api_key: str | None = None, http_mode: bool = False):
-        """
-        Initialize the MCP server.
+        # Initialize MCP server with appropriate transport mode
+        # 
+        # STDIO mode: API key required at startup (from environment)
+        # HTTP mode: API key extracted per-request from Authorization header
+        #
+        # Validation:
+        # - API key must start with "rb_sk_" prefix
+        # - STDIO mode fails fast if key missing or invalid
+        # - HTTP mode defers validation to request time
         
-        Args:
-            api_key: Required for STDIO mode, optional for HTTP mode
-            http_mode: If True, runs without requiring API key at startup
-        """
         self.http_mode = http_mode
         
         if not http_mode:
@@ -63,34 +80,215 @@ class RationalBloksMCPServer:
             # HTTP mode - API key comes from request headers
             self.api_key = None
             self.client = None
-            
+        
         self.server = Server("rationalbloks")
         self._setup_handlers()
     
     def _setup_handlers(self):
-        """Register MCP protocol handlers."""
+        # Register all MCP protocol handlers
+        # Single registration point for tools, prompts, resources
+        # WHY: Centralizes handler registration for maintainability
         
         @self.server.list_tools()
         async def list_tools() -> list[Tool]:
-            # Tools can be listed without auth - this is for discovery
-            return [
-                Tool(
+            # List all available MCP tools with schemas and annotations
+            # Returns complete tool definitions including input schemas
+            # WHY: MCP discovery phase - clients need to know available operations
+            
+            tools_with_annotations = []
+            for tool in TOOLS:
+                tool_obj = Tool(
                     name=tool["name"],
                     description=tool["description"],
                     inputSchema=tool["inputSchema"]
                 )
-                for tool in TOOLS
+                tools_with_annotations.append(tool_obj)
+            return tools_with_annotations
+        
+        @self.server.list_prompts()
+        async def list_prompts() -> list[Prompt]:
+            # List available prompts for common workflows
+            # Provides pre-built workflows for typical tasks
+            # WHY: Reduces cognitive load for AI agents by offering ready-made workflows
+            
+            return [
+                Prompt(
+                    name="create-crud-api",
+                    description="Create a full CRUD API project from a data model description",
+                    arguments=[
+                        PromptArgument(
+                            name="data_model",
+                            description="Describe your data model (e.g., 'blog with posts, comments, users')",
+                            required=True
+                        )
+                    ]
+                ),
+                Prompt(
+                    name="deploy-project",
+                    description="Deploy an existing project through staging to production",
+                    arguments=[
+                        PromptArgument(
+                            name="project_name",
+                            description="Name of the project to deploy",
+                            required=True
+                        )
+                    ]
+                ),
+                Prompt(
+                    name="check-project-status",
+                    description="Get comprehensive status of a project including deployments and metrics",
+                    arguments=[
+                        PromptArgument(
+                            name="project_name",
+                            description="Name of the project to check",
+                            required=True
+                        )
+                    ]
+                )
             ]
+        
+        @self.server.get_prompt()
+        async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> GetPromptResult:
+            # Get a specific prompt with populated content
+            # Fills in workflow templates with user-provided arguments
+            # WHY: Transforms generic workflows into executable instructions
+            
+            if name == "create-crud-api":
+                data_model = (arguments or {}).get("data_model", "your data model")
+                return GetPromptResult(
+                    description="Create a full CRUD API from data model",
+                    messages=[
+                        PromptMessage(
+                            role="user",
+                            content=TextContent(
+                                type="text",
+                                text=f"Create a new RationalBloks project for: {data_model}. Include all necessary tables, fields, and relationships. Use create_project tool with appropriate schema."
+                            )
+                        )
+                    ]
+                )
+            
+            elif name == "deploy-project":
+                project_name = (arguments or {}).get("project_name", "project")
+                return GetPromptResult(
+                    description="Deploy project workflow",
+                    messages=[
+                        PromptMessage(
+                            role="user",
+                            content=TextContent(
+                                type="text",
+                                text=f"Deploy {project_name}: 1) Use list_projects to find project_id, 2) Use deploy_staging, 3) Check get_job_status, 4) If staging works, use deploy_production"
+                            )
+                        )
+                    ]
+                )
+            
+            elif name == "check-project-status":
+                project_name = (arguments or {}).get("project_name", "project")
+                return GetPromptResult(
+                    description="Comprehensive project status check",
+                    messages=[
+                        PromptMessage(
+                            role="user",
+                            content=TextContent(
+                                type="text",
+                                text=f"Check {project_name} status: 1) Use list_projects to get ID, 2) Use get_project_info for deployment status, 3) Use get_project_usage for metrics, 4) Use get_version_history for recent changes"
+                            )
+                        )
+                    ]
+                )
+            
+            raise ValueError(f"Unknown prompt: {name}")
+        
+        @self.server.list_resources()
+        async def list_resources() -> list[Resource]:
+            # List available resources (project schemas and documentation)
+            # Dynamically generates resource URIs for user's projects
+            # WHY: Enables AI agents to discover and read project configurations
+            
+            client = self._get_client_for_request()
+            if not client:
+                return []
+            
+            try:
+                result = client.execute("list_projects", {})
+                if not result.get("success"):
+                    return []
+                
+                projects = result.get("result", {}).get("projects", [])
+                resources = []
+                
+                for project in projects:
+                    project_id = project.get("id", "")
+                    project_name = project.get("name", "Unknown")
+                    
+                    # Schema resource
+                    resources.append(Resource(
+                        uri=f"rationalbloks://project/{project_id}/schema",
+                        name=f"{project_name} - Schema",
+                        description=f"JSON schema definition for {project_name}",
+                        mimeType="application/json"
+                    ))
+                    
+                    # Project info resource
+                    resources.append(Resource(
+                        uri=f"rationalbloks://project/{project_id}/info",
+                        name=f"{project_name} - Info",
+                        description=f"Deployment status and metadata for {project_name}",
+                        mimeType="application/json"
+                    ))
+                
+                return resources
+            
+            except Exception:
+                # Fail silently for resource listing
+                # WHY: Resources are optional - don't break client if unavailable
+                return []
+        
+        @self.server.read_resource()
+        async def read_resource(uri: str) -> str:
+            # Read a specific resource by URI
+            # Parses rationalbloks:// URIs and fetches resource content
+            # WHY: Provides AI agents access to project schemas and metadata
+            
+            client = self._get_client_for_request()
+            if not client:
+                raise ValueError("Authentication required to read resources")
+            
+            # Parse URI: rationalbloks://project/{id}/{type}
+            if not uri.startswith("rationalbloks://project/"):
+                raise ValueError(f"Invalid URI format: {uri}")
+            
+            parts = uri.replace("rationalbloks://project/", "").split("/")
+            if len(parts) != 2:
+                raise ValueError(f"Invalid URI format: {uri}")
+            
+            project_id, resource_type = parts
+            
+            if resource_type == "schema":
+                result = client.execute("get_schema", {"project_id": project_id})
+            elif resource_type == "info":
+                result = client.execute("get_project_info", {"project_id": project_id})
+            else:
+                raise ValueError(f"Unknown resource type: {resource_type}")
+            
+            if result.get("success"):
+                return json.dumps(result.get("result", {}), indent=2)
+            else:
+                raise ValueError(result.get("error", "Failed to read resource"))
         
         @self.server.call_tool()
         async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+            # Execute a tool with provided arguments
+            # Single code path: get client → execute → format response
+            # WHY: Core MCP operation - all tool invocations flow through here
+            
             try:
-                # Get client based on transport mode
                 client = self._get_client_for_request()
                 
                 if client is None:
                     return [TextContent(
-                        type="text", 
+                        type="text",
                         text="Error: API key required. Provide 'Authorization: Bearer rb_sk_...' header with your RationalBloks API key."
                     )]
                 
@@ -103,40 +301,39 @@ class RationalBloksMCPServer:
                 else:
                     error = result.get("error", "Unknown error")
                     return [TextContent(type="text", text=f"Error: {error}")]
-                    
+            
             except Exception as e:
                 print(f"[rationalbloks-mcp] Error: {e}", file=sys.stderr)
-                return [TextContent(type="text", text=f"Error: {str(e)}")]
+                return [TextContent(type="text", text=f"Error: {str(e)}")]]
     
     def _get_client_for_request(self) -> RationalBloksClient | None:
-        """
-        Get the appropriate client for the current request.
+        # Get the appropriate client for the current request
+        # STDIO mode: Returns pre-configured client with environment API key
+        # HTTP mode: Extracts API key from Authorization Bearer header per-request
+        # WHY: Dual transport requires different authentication strategies
         
-        - STDIO mode: Uses the pre-configured client with env API key
-        - HTTP mode: Extracts API key from request headers per-request
-        """
         if not self.http_mode:
-            # STDIO mode - use pre-configured client
             return self.client
         
         # HTTP mode - extract API key from Authorization: Bearer header
         try:
             ctx = self.server.request_context
             if ctx.request and isinstance(ctx.request, Request):
-                # Get API key from Authorization: Bearer header (OAuth2 standard)
                 auth_header = ctx.request.headers.get("authorization", "")
                 if auth_header.startswith("Bearer "):
                     api_key = auth_header[7:]  # Remove "Bearer " prefix
                     if api_key.startswith("rb_sk_"):
                         return RationalBloksClient(api_key)
         except (LookupError, AttributeError):
-            # Context not available - not in a request
             pass
         
         return None
     
     def _get_init_options(self) -> InitializationOptions:
-        """Get MCP initialization options."""
+        # Get MCP initialization options
+        # Returns server metadata and capability declarations
+        # WHY: MCP handshake requires server capabilities advertisement
+        
         return InitializationOptions(
             server_name="rationalbloks",
             server_version=__version__,
@@ -147,30 +344,45 @@ class RationalBloksMCPServer:
         )
     
     def run(self, transport: str = "stdio"):
-        """Run the MCP server with the specified transport."""
+        # Run the MCP server with the specified transport
+        # Single entry point that routes to STDIO or HTTP transport
+        # WHY: Simplifies server startup regardless of deployment mode
+        
         if transport == "http":
             self._run_http()
         else:
             self._run_stdio()
-    
-    # ========================================================================
-    # STDIO TRANSPORT - Local IDE Integration
-    # ========================================================================
+
+
+# ============================================================================
+# STDIO TRANSPORT - Local IDE Integration
+# ============================================================================
     
     def _run_stdio(self):
-        """Run in STDIO mode for Cursor, VS Code, Claude Desktop."""
+        # Run in STDIO mode for Cursor, VS Code, Claude Desktop
+        # Uses asyncio event loop with stdio_server context manager
+        # WHY: IDEs communicate via stdin/stdout pipes
+        
         asyncio.run(self._stdio_async())
     
     async def _stdio_async(self):
+        # Async STDIO handler with MCP stream management
+        # Single code path: open streams → run server → close streams
+        # WHY: MCP requires bidirectional async stream communication
+        
         async with stdio_server() as (read_stream, write_stream):
             await self.server.run(read_stream, write_stream, self._get_init_options())
-    
-    # ========================================================================
-    # HTTP TRANSPORT - Cloud/Smithery Deployment (Streamable HTTP)
-    # ========================================================================
+
+
+# ============================================================================
+# HTTP TRANSPORT - Cloud/Smithery Deployment
+# ============================================================================
     
     def _run_http(self):
-        """Run in HTTP mode for Smithery and cloud agents using Streamable HTTP."""
+        # Run in HTTP mode for Smithery and cloud agents using Streamable HTTP
+        # Creates Starlette ASGI application with MCP session management
+        # WHY: Cloud deployments require HTTP/SSE transport instead of STDIO
+        
         from starlette.applications import Starlette
         from starlette.routing import Route, Mount
         from starlette.responses import JSONResponse
@@ -179,55 +391,88 @@ class RationalBloksMCPServer:
         import uvicorn
         
         # Create session manager for Streamable HTTP
+        # Handles MCP protocol over HTTP with Server-Sent Events
         session_manager = StreamableHTTPSessionManager(
             app=self.server,
-            json_response=True,  # Use JSON responses for compatibility
-            stateless=True,  # Stateless for scalability
+            json_response=True,   # Use JSON responses for compatibility
+            stateless=True,       # Stateless for horizontal scalability
         )
         
         async def server_card(request):
-            """MCP Server Card for Smithery discovery."""
+            # MCP Server Card for Smithery discovery with comprehensive metadata
+            # Provides machine-readable server capabilities and authentication requirements
+            # WHY: Smithery marketplace needs structured server metadata for discovery
+            
             return JSONResponse({
                 "name": "rationalbloks",
                 "version": __version__,
-                "description": "RationalBloks MCP Server - Backend as a Service for AI Agents",
+                "description": "Enterprise-grade Backend-as-a-Service platform for AI agents. Build production APIs from JSON schemas in minutes.",
                 "vendor": "RationalBloks",
                 "homepage": "https://rationalbloks.com",
-                "capabilities": {"tools": True, "resources": False, "prompts": False},
+                "icon": "https://rationalbloks.com/logo.svg",
+                "documentation": "https://rationalbloks.com/docs/mcp",
+                "capabilities": {
+                    "tools": True,
+                    "resources": True,
+                    "prompts": True
+                },
                 "authentication": {
                     "type": "bearer",
                     "scheme": "Bearer",
                     "description": "RationalBloks API Key (format: rb_sk_...)",
                     "header": "Authorization: Bearer rb_sk_..."
+                },
+                "config": {
+                    "type": "object",
+                    "title": "RationalBloks Configuration",
+                    "properties": {
+                        "apiKey": {
+                            "type": "string",
+                            "title": "API Key",
+                            "description": "Your RationalBloks API key (get it from https://rationalbloks.com/settings)",
+                            "pattern": "^rb_sk_[A-Za-z0-9_-]{43}$"
+                        }
+                    },
+                    "required": ["apiKey"]
                 }
             })
         
         async def health(request):
-            """Health check for Kubernetes probes."""
+            # Health check endpoint for Kubernetes liveness/readiness probes
+            # Simple status check with version information
+            # WHY: K8s needs health endpoint to manage pod lifecycle
+            
             return JSONResponse({"status": "ok", "version": __version__})
         
-        # The Streamable HTTP handler - it handles POST requests for JSON-RPC
         async def handle_streamable(scope: Scope, receive: Receive, send: Send):
-            """Handle Streamable HTTP requests for MCP protocol."""
+            # Handle Streamable HTTP requests for MCP protocol
+            # Delegates to session manager for MCP JSON-RPC handling
+            # WHY: MCP over HTTP uses JSON-RPC 2.0 with SSE for streaming
+            
             await session_manager.handle_request(scope, receive, send)
         
         @contextlib.asynccontextmanager
         async def lifespan(app: Starlette) -> AsyncIterator[None]:
+            # Application lifespan manager for session manager
+            # Ensures proper startup and shutdown of MCP session infrastructure
+            # WHY: ASGI lifespan protocol for resource management
+            
             async with session_manager.run():
                 yield
         
+        # Build Starlette ASGI application
         app = Starlette(
             debug=False,
             routes=[
                 Route("/.well-known/mcp/server-card.json", endpoint=server_card, methods=["GET"]),
                 Route("/health", endpoint=health, methods=["GET"]),
-                # Mount session manager at root - handles POST to /
-                Mount("/", app=handle_streamable),
+                Mount("/", app=handle_streamable),  # MCP JSON-RPC endpoint at root
             ],
             lifespan=lifespan,
         )
         
         # Add CORS middleware for browser-based clients
+        # Allows cross-origin requests from web-based AI agents
         app = CORSMiddleware(
             app,
             allow_origins=["*"],
@@ -236,11 +481,12 @@ class RationalBloksMCPServer:
             expose_headers=["Mcp-Session-Id"],
         )
         
+        # Server configuration from environment
         port = int(os.environ.get("PORT", 8000))
         host = os.environ.get("HOST", "0.0.0.0")
         
         print(f"[rationalbloks-mcp] Streamable HTTP server starting on {host}:{port}", file=sys.stderr)
         print(f"[rationalbloks-mcp] MCP endpoint: http://{host}:{port}/mcp", file=sys.stderr)
-        uvicorn.run(app, host=host, port=port, log_level="info")
+        
 
 

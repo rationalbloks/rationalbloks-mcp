@@ -8,7 +8,7 @@
 ## Installation
 
 ```bash
-pip install rationalbloks-mcp
+uv pip install rationalbloks-mcp
 ```
 
 ## Quick Start
@@ -301,7 +301,7 @@ Connect to the hosted MCP server at `https://mcp.rationalbloks.com`:
       "transport": "sse",
       "url": "https://mcp.rationalbloks.com/sse",
       "headers": {
-        "x-api-key": "rb_sk_your_key_here"
+        "Authorization": "Bearer rb_sk_your_key_here"
       }
     }
   }
