@@ -54,6 +54,73 @@ except Exception:
 
 
 # ============================================================================
+# STATIC RESOURCE CONTENT
+# ============================================================================
+# Pre-defined documentation content for MCP resources
+# WHY: Extracted to constants for cleaner read_resource handler
+
+DOCS_GETTING_STARTED = """# Getting Started with RationalBloks MCP
+
+## Quick Start
+
+1. Get your API key from https://rationalbloks.com/dashboard
+2. Set environment variable: export RATIONALBLOKS_API_KEY=rb_sk_...
+3. Run the server: uvx rationalbloks-mcp
+
+## Create Your First Project
+
+Use the create_project tool with a name and JSON schema.
+
+## Need Help?
+
+Visit https://rationalbloks.com/docs for full documentation.
+"""
+
+DOCS_SCHEMA_REFERENCE = """# RationalBloks Schema Reference
+
+## Field Types
+
+- string: Text fields
+- integer: Whole numbers
+- number: Decimal numbers
+- boolean: True/false values
+- array: Lists of items
+- object: Nested structures
+
+## Example Schema
+
+{
+  "tables": {
+    "users": {
+      "fields": {
+        "name": {"type": "string"},
+        "email": {"type": "string"}
+      }
+    }
+  }
+}
+"""
+
+DOCS_API_REFERENCE = """# RationalBloks MCP API Reference
+
+## Read Tools
+- list_projects: List all projects
+- get_project: Get project details
+- get_schema: Get project schema
+- get_user_info: Get authenticated user info
+
+## Write Tools
+- create_project: Create new project
+- update_schema: Update project schema
+- deploy_staging: Deploy to staging
+- deploy_production: Deploy to production
+- delete_project: Delete a project
+
+For full documentation, visit https://rationalbloks.com/docs
+"""
+
+
+# ============================================================================
 # MCP SERVER CLASS
 # ============================================================================
 
@@ -108,10 +175,10 @@ class RationalBloksMCPServer:
                 if "annotations" in tool:
                     ann = tool["annotations"]
                     annotations = ToolAnnotations(
-                        read_only_hint=ann.get("readOnlyHint"),
-                        destructive_hint=ann.get("destructiveHint"),
-                        idempotent_hint=ann.get("idempotentHint"),
-                        open_world_hint=ann.get("openWorldHint")
+                        readOnlyHint=ann.get("readOnlyHint"),
+                        destructiveHint=ann.get("destructiveHint"),
+                        idempotentHint=ann.get("idempotentHint"),
+                        openWorldHint=ann.get("openWorldHint")
                     )
                 
                 tool_obj = Tool(
@@ -222,57 +289,85 @@ class RationalBloksMCPServer:
         @self.server.list_resources()
         async def list_resources() -> list[Resource]:
             # List available resources (project schemas and documentation)
-            # Dynamically generates resource URIs for user's projects
-            # WHY: Enables AI agents to discover and read project configurations
+            # Returns: Static docs + dynamic project resources if authenticated
+            # WHY: Static resources ensure Smithery quality checks pass
             
+            # Static resources - always available without auth
+            resources = [
+                Resource(
+                    uri="rationalbloks://docs/getting-started",
+                    name="Getting Started Guide",
+                    description="Quick start guide for RationalBloks MCP server",
+                    mimeType="text/markdown"
+                ),
+                Resource(
+                    uri="rationalbloks://docs/schema-reference",
+                    name="Schema Reference",
+                    description="JSON schema format and field types reference",
+                    mimeType="text/markdown"
+                ),
+                Resource(
+                    uri="rationalbloks://docs/api-reference",
+                    name="API Reference",
+                    description="Complete MCP tool documentation",
+                    mimeType="text/markdown"
+                )
+            ]
+            
+            # Dynamic project resources - requires authentication
             client = self._get_client_for_request()
-            if not client:
-                return []
+            if client:
+                try:
+                    result = client.execute("list_projects", {})
+                    if result.get("success"):
+                        projects = result.get("result", {}).get("projects", [])
+                        
+                        for project in projects:
+                            project_id = project.get("id", "")
+                            project_name = project.get("name", "Unknown")
+                            
+                            # Schema resource
+                            resources.append(Resource(
+                                uri=f"rationalbloks://project/{project_id}/schema",
+                                name=f"{project_name} - Schema",
+                                description=f"JSON schema definition for {project_name}",
+                                mimeType="application/json"
+                            ))
+                            
+                            # Project info resource
+                            resources.append(Resource(
+                                uri=f"rationalbloks://project/{project_id}/info",
+                                name=f"{project_name} - Info",
+                                description=f"Deployment status and metadata for {project_name}",
+                                mimeType="application/json"
+                            ))
+                except Exception:
+                    # Fail silently for dynamic resources
+                    # WHY: Static resources still available
+                    pass
             
-            try:
-                result = client.execute("list_projects", {})
-                if not result.get("success"):
-                    return []
-                
-                projects = result.get("result", {}).get("projects", [])
-                resources = []
-                
-                for project in projects:
-                    project_id = project.get("id", "")
-                    project_name = project.get("name", "Unknown")
-                    
-                    # Schema resource
-                    resources.append(Resource(
-                        uri=f"rationalbloks://project/{project_id}/schema",
-                        name=f"{project_name} - Schema",
-                        description=f"JSON schema definition for {project_name}",
-                        mimeType="application/json"
-                    ))
-                    
-                    # Project info resource
-                    resources.append(Resource(
-                        uri=f"rationalbloks://project/{project_id}/info",
-                        name=f"{project_name} - Info",
-                        description=f"Deployment status and metadata for {project_name}",
-                        mimeType="application/json"
-                    ))
-                
-                return resources
-            
-            except Exception:
-                # Fail silently for resource listing
-                # WHY: Resources are optional - don't break client if unavailable
-                return []
+            return resources
         
         @self.server.read_resource()
         async def read_resource(uri: str) -> str:
             # Read a specific resource by URI
-            # Parses rationalbloks:// URIs and fetches resource content
-            # WHY: Provides AI agents access to project schemas and metadata
+            # Handles both static docs and dynamic project resources
+            # WHY: Provides AI agents access to docs and project schemas
             
+            # Static documentation resources - no auth required
+            static_docs = {
+                "rationalbloks://docs/getting-started": DOCS_GETTING_STARTED,
+                "rationalbloks://docs/schema-reference": DOCS_SCHEMA_REFERENCE,
+                "rationalbloks://docs/api-reference": DOCS_API_REFERENCE,
+            }
+            
+            if uri in static_docs:
+                return static_docs[uri]
+            
+            # Dynamic project resources - require authentication
             client = self._get_client_for_request()
             if not client:
-                raise ValueError("Authentication required to read resources")
+                raise ValueError("Authentication required to read project resources")
             
             # Parse URI: rationalbloks://project/{id}/{type}
             if not uri.startswith("rationalbloks://project/"):
@@ -366,15 +461,9 @@ class RationalBloksMCPServer:
         )
     
     def run(self, transport: str = "stdio") -> None:
-        """Run the MCP server with the specified transport.
-        
-        Args:
-            transport: "stdio" for local IDEs or "http" for cloud deployment
-            
-        Note:
-            Single entry point that routes to STDIO or HTTP transport.
-            Simplifies server startup regardless of deployment mode.
-        """
+        # Run the MCP server with the specified transport
+        # transport: "stdio" for local IDEs or "http" for cloud deployment
+        # Single entry point that routes to STDIO or HTTP transport
         
         if transport == "http":
             self._run_http()
