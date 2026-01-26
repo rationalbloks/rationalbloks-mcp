@@ -154,7 +154,12 @@ class RationalBloksMCPServer:
             self.api_key = None
             self.client = None
         
-        self.server = Server("rationalbloks")
+        self.server = Server(
+            name="rationalbloks",
+            version=__version__,
+            instructions="RationalBloks MCP Server - Enterprise Backend-as-a-Service for AI agents. Build production APIs from JSON schemas.",
+            website_url="https://rationalbloks.com",
+        )
         self._setup_handlers()
     
     def _setup_handlers(self) -> None:
@@ -444,19 +449,18 @@ class RationalBloksMCPServer:
         return None
     
     def _get_init_options(self) -> InitializationOptions:
-        # Get MCP initialization options
+        # Get MCP initialization options for STDIO transport
         # Returns server metadata and capability declarations
         # WHY: MCP handshake requires server capabilities advertisement
         
         return InitializationOptions(
             server_name="rationalbloks",
             server_version=__version__,
-            title="RationalBloks MCP Server",
-            description="Enterprise-grade Backend-as-a-Service for AI agents. Build production APIs from JSON schemas.",
             capabilities=self.server.get_capabilities(
                 notification_options=NotificationOptions(),
                 experimental_capabilities={},
             ),
+            instructions="RationalBloks MCP Server - Enterprise Backend-as-a-Service for AI agents. Build production APIs from JSON schemas.",
             website_url="https://rationalbloks.com",
         )
     
