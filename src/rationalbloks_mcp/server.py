@@ -50,7 +50,7 @@ try:
     from importlib.metadata import version as _get_version
     __version__ = _get_version("rationalbloks-mcp")
 except Exception:
-    __version__ = "0.1.9"
+    __version__ = "0.1.10"
 
 
 # ============================================================================
@@ -118,7 +118,7 @@ class RationalBloksMCPServer:
                     name=tool["name"],
                     title=tool.get("title"),
                     description=tool["description"],
-                    input_schema=tool["inputSchema"],
+                    inputSchema=tool["inputSchema"],
                     annotations=annotations
                 )
                 tools_list.append(tool_obj)

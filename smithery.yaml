@@ -3,7 +3,7 @@
 # NOTE: Version should match pyproject.toml (update both together)
 
 name: rationalbloks
-version: 0.1.9
+version: 0.1.10
 description: Enterprise-grade Backend-as-a-Service platform for AI agents
 author: RationalBloks
 homepage: https://rationalbloks.com

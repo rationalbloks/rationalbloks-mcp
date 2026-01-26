@@ -26,7 +26,7 @@ try:
     from importlib.metadata import version as _get_version
     __version__ = _get_version("rationalbloks-mcp")
 except Exception:
-    __version__ = "0.1.9"
+    __version__ = "0.1.10"
 
 # Default configuration (can be overridden via environment variables)
 GATEWAY_URL = os.environ.get("RATIONALBLOKS_BASE_URL", "https://logicblok.rationalbloks.com")
