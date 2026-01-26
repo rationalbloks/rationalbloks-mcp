@@ -519,6 +519,7 @@ class RationalBloksMCPServer:
             
             return JSONResponse({
                 "name": "rationalbloks",
+                "displayName": "RationalBloks",
                 "version": __version__,
                 "description": "Enterprise-grade Backend-as-a-Service platform for AI agents. Build production APIs from JSON schemas in minutes.",
                 "vendor": "RationalBloks",
@@ -536,7 +537,7 @@ class RationalBloksMCPServer:
                     "description": "RationalBloks API Key (format: rb_sk_...)",
                     "header": "Authorization: Bearer rb_sk_..."
                 },
-                "config": {
+                "configSchema": {
                     "type": "object",
                     "title": "RationalBloks Configuration",
                     "properties": {
@@ -544,7 +545,26 @@ class RationalBloksMCPServer:
                             "type": "string",
                             "title": "API Key",
                             "description": "Your RationalBloks API key (get it from https://rationalbloks.com/settings)",
-                            "pattern": "^rb_sk_[A-Za-z0-9_-]{43}$"
+                            "x-from": {"header": "authorization"}
+                        },
+                        "baseUrl": {
+                            "type": "string",
+                            "title": "API Gateway URL",
+                            "description": "RationalBloks API Gateway URL",
+                            "default": "https://logicblok.rationalbloks.com"
+                        },
+                        "timeout": {
+                            "type": "number",
+                            "title": "Timeout",
+                            "description": "Request timeout in seconds",
+                            "default": 30
+                        },
+                        "logLevel": {
+                            "type": "string",
+                            "title": "Log Level",
+                            "description": "Logging level: DEBUG, INFO, WARNING, ERROR",
+                            "default": "INFO",
+                            "enum": ["DEBUG", "INFO", "WARNING", "ERROR"]
                         }
                     },
                     "required": ["apiKey"]

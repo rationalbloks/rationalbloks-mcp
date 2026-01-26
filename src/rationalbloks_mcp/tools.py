@@ -27,6 +27,7 @@ TOOLS = [
         "description": "List all your RationalBloks projects with their status and URLs",
         "inputSchema": {
             "type": "object",
+            "description": "No parameters required - returns all projects for authenticated user",
             "properties": {},
             "required": [],
             "additionalProperties": False
@@ -88,6 +89,7 @@ TOOLS = [
         "description": "Get information about the authenticated user",
         "inputSchema": {
             "type": "object",
+            "description": "No parameters required - returns info for authenticated user",
             "properties": {},
             "required": [],
             "additionalProperties": False
@@ -171,6 +173,7 @@ TOOLS = [
         "description": "Get available template schemas for creating new projects",
         "inputSchema": {
             "type": "object",
+            "description": "No parameters required - returns all available templates",
             "properties": {},
             "required": [],
             "additionalProperties": False
@@ -188,6 +191,7 @@ TOOLS = [
         "description": "Get your subscription tier, limits, and usage",
         "inputSchema": {
             "type": "object",
+            "description": "No parameters required - returns subscription for authenticated user",
             "properties": {},
             "required": [],
             "additionalProperties": False
