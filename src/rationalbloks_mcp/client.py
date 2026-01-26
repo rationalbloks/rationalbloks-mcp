@@ -20,7 +20,12 @@ import httpx
 import time
 from typing import Any
 
-from . import __version__
+# Version - read dynamically to avoid circular import
+try:
+    from importlib.metadata import version as _get_version
+    __version__ = _get_version("rationalbloks-mcp")
+except Exception:
+    __version__ = "0.1.7"
 
 GATEWAY_URL = "https://logicblok.rationalbloks.com"
 MAX_RETRIES = 3
