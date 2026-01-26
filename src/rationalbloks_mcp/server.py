@@ -49,7 +49,7 @@ try:
     from importlib.metadata import version as _get_version
     __version__ = _get_version("rationalbloks-mcp")
 except Exception:
-    __version__ = "0.1.6"
+    __version__ = "0.1.7"
 
 
 # ============================================================================

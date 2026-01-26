@@ -26,7 +26,7 @@ try:
     from importlib.metadata import version as _get_version
     __version__ = _get_version("rationalbloks-mcp")
 except Exception:
-    __version__ = "0.1.6"  # Fallback matches pyproject.toml
+    __version__ = "0.1.7"  # Fallback matches pyproject.toml
 
 __author__ = "RationalBloks"
 __all__ = ["RationalBloksMCPServer", "RationalBloksClient", "TOOLS", "main"]
