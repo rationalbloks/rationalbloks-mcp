@@ -48,6 +48,7 @@ TOOLS = [
         "description": "Get detailed information about a specific project",
         "inputSchema": {
             "type": "object",
+            "description": "Specify the project to retrieve",
             "properties": {
                 "project_id": {
                     "type": "string",
@@ -70,6 +71,7 @@ TOOLS = [
         "description": "Get the JSON schema definition of a project",
         "inputSchema": {
             "type": "object",
+            "description": "Specify the project whose schema to retrieve",
             "properties": {
                 "project_id": {
                     "type": "string",
@@ -110,6 +112,7 @@ TOOLS = [
         "description": "Check the status of a deployment job",
         "inputSchema": {
             "type": "object",
+            "description": "Specify the job to check",
             "properties": {
                 "job_id": {
                     "type": "string",
@@ -132,6 +135,7 @@ TOOLS = [
         "description": "Get detailed project info including deployment status and resource usage",
         "inputSchema": {
             "type": "object",
+            "description": "Specify the project to get info for",
             "properties": {
                 "project_id": {
                     "type": "string",
@@ -154,6 +158,7 @@ TOOLS = [
         "description": "Get the deployment and version history (git commits) for a project",
         "inputSchema": {
             "type": "object",
+            "description": "Specify the project to get history for",
             "properties": {
                 "project_id": {
                     "type": "string",
@@ -212,6 +217,7 @@ TOOLS = [
         "description": "Get resource usage metrics (CPU, memory) for a project",
         "inputSchema": {
             "type": "object",
+            "description": "Specify the project to get usage metrics for",
             "properties": {
                 "project_id": {
                     "type": "string",
@@ -234,6 +240,7 @@ TOOLS = [
         "description": "Get the schema as it was at a specific version/commit",
         "inputSchema": {
             "type": "object",
+            "description": "Specify the project and version to retrieve schema for",
             "properties": {
                 "project_id": {
                     "type": "string",
@@ -264,6 +271,7 @@ TOOLS = [
         "description": "Create a new RationalBloks project from a JSON schema",
         "inputSchema": {
             "type": "object",
+            "description": "Project name, schema definition, and optional description",
             "properties": {
                 "name": {
                     "type": "string",
@@ -294,6 +302,7 @@ TOOLS = [
         "description": "Update a project's schema (saves to database, does NOT deploy)",
         "inputSchema": {
             "type": "object",
+            "description": "Project to update and new schema definition",
             "properties": {
                 "project_id": {
                     "type": "string",
@@ -320,6 +329,7 @@ TOOLS = [
         "description": "Deploy a project to the staging environment",
         "inputSchema": {
             "type": "object",
+            "description": "Specify the project to deploy to staging",
             "properties": {
                 "project_id": {
                     "type": "string",
@@ -342,6 +352,7 @@ TOOLS = [
         "description": "Promote staging to production (requires paid plan)",
         "inputSchema": {
             "type": "object",
+            "description": "Specify the project to deploy to production",
             "properties": {
                 "project_id": {
                     "type": "string",
@@ -364,6 +375,7 @@ TOOLS = [
         "description": "Delete a project (removes GitHub repo, K8s deployments, and database)",
         "inputSchema": {
             "type": "object",
+            "description": "Specify the project to permanently delete",
             "properties": {
                 "project_id": {
                     "type": "string",
@@ -386,6 +398,7 @@ TOOLS = [
         "description": "Rollback a project to a previous version",
         "inputSchema": {
             "type": "object",
+            "description": "Project, version, and environment for rollback",
             "properties": {
                 "project_id": {
                     "type": "string",
@@ -416,6 +429,7 @@ TOOLS = [
         "description": "Rename a project (changes display name, not project_code)",
         "inputSchema": {
             "type": "object",
+            "description": "Project to rename and new display name",
             "properties": {
                 "project_id": {
                     "type": "string",

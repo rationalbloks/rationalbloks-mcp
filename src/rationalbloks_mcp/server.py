@@ -569,6 +569,7 @@ class RationalBloksMCPServer:
                 "configSchema": {
                     "type": "object",
                     "title": "RationalBloks Configuration",
+                    "required": [],  # All properties are optional - Smithery quality score
                     "properties": {
                         "apiKey": {
                             "type": "string",

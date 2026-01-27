@@ -4,18 +4,20 @@
 
 name: rationalbloks
 displayName: RationalBloks
-version: 0.1.17
-description: Enterprise-grade Backend-as-a-Service platform for AI agents
+version: 0.1.19
+description: Enterprise-grade Backend-as-a-Service platform for AI agents. Build production APIs from JSON schemas in minutes.
 author: RationalBloks
 homepage: https://rationalbloks.com
 repository: https://github.com/rationalbloks/rationalbloks-mcp
 icon: https://rationalbloks.com/logo.svg
+documentation: https://rationalbloks.com/docs/mcp
 
 # Configuration schema for Smithery UI
 # All fields optional with defaults - apiKey only needed for authenticated operations
 configSchema:
   type: object
   title: RationalBloks Configuration
+  required: []  # All properties are optional
   properties:
     apiKey:
       type: string
