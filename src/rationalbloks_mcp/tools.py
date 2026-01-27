@@ -17,6 +17,9 @@
 #   - Write Operations (7): Create, update, deploy, delete
 # ============================================================================
 
+# Public API
+__all__ = ["TOOLS"]
+
 TOOLS = [
     # =========================================================================
     # READ TOOLS (11 total) - All readOnlyHint=True

@@ -46,12 +46,15 @@ from starlette.requests import Request
 from .client import RationalBloksClient
 from .tools import TOOLS
 
-# Version - read dynamically to avoid circular import
-try:
-    from importlib.metadata import version as _get_version
-    __version__ = _get_version("rationalbloks-mcp")
-except Exception:
-    __version__ = "0.1.10"
+# ============================================================================
+# VERSION - Import from package root (Chain Mantra: Single Source of Truth)
+# ============================================================================
+# Deferred import to avoid circular dependency during module loading
+from importlib.metadata import version as _get_pkg_version
+__version__ = _get_pkg_version("rationalbloks-mcp")
+
+# Public API
+__all__ = ["RationalBloksMCPServer"]
 
 
 # ============================================================================
@@ -351,10 +354,10 @@ class RationalBloksMCPServer:
                                 description=f"Deployment status and metadata for {project_name}",
                                 mimeType="application/json"
                             ))
-                except Exception:
-                    # Fail silently for dynamic resources
-                    # WHY: Static resources still available
-                    pass
+                except Exception as e:
+                    # Log warning but continue - static resources are still available
+                    # Chain Mantra: Dynamic resources are optional, but failures must be visible
+                    print(f"[rationalbloks-mcp] Warning: Failed to list dynamic resources: {e}", file=sys.stderr)
             
             return resources
         
@@ -442,24 +445,33 @@ class RationalBloksMCPServer:
         # Get the appropriate client for the current request
         # STDIO mode: Returns pre-configured client with environment API key
         # HTTP mode: Extracts API key from Authorization Bearer header per-request
-        # WHY: Dual transport requires different authentication strategies
+        # Chain Mantra: Single path through code, explicit None returns
         
+        # STDIO mode - return pre-configured client
         if not self.http_mode:
             return self.client
         
         # HTTP mode - extract API key from Authorization: Bearer header
-        try:
-            ctx = self.server.request_context
-            if ctx.request and isinstance(ctx.request, Request):
-                auth_header = ctx.request.headers.get("authorization", "")
-                if auth_header.startswith("Bearer "):
-                    api_key = auth_header[7:]  # Remove "Bearer " prefix
-                    if api_key.startswith("rb_sk_"):
-                        return RationalBloksClient(api_key)
-        except (LookupError, AttributeError):
-            pass
+        BEARER_PREFIX = "Bearer "
         
-        return None
+        # Get request context (may not exist if called outside request)
+        ctx = getattr(self.server, 'request_context', None)
+        if ctx is None:
+            return None
+        
+        request = getattr(ctx, 'request', None)
+        if request is None or not isinstance(request, Request):
+            return None
+        
+        auth_header = request.headers.get("authorization", "")
+        if not auth_header.startswith(BEARER_PREFIX):
+            return None
+        
+        api_key = auth_header[len(BEARER_PREFIX):]
+        if not api_key.startswith("rb_sk_"):
+            return None
+        
+        return RationalBloksClient(api_key)
     
     def _get_init_options(self) -> InitializationOptions:
         # Get MCP initialization options for STDIO transport
@@ -612,12 +624,18 @@ class RationalBloksMCPServer:
                 yield
         
         # Build Starlette ASGI application
+        # Multiple paths for MCP endpoint compatibility:
+        # - /sse: SSE endpoint for Smithery and cloud clients (documented URL)
+        # - /mcp: Alternative path for clarity
+        # - /: Root fallback for direct connections
         app = Starlette(
             debug=False,
             routes=[
                 Route("/.well-known/mcp/server-card.json", endpoint=server_card, methods=["GET"]),
                 Route("/health", endpoint=health, methods=["GET"]),
-                Mount("/", app=handle_streamable),  # MCP JSON-RPC endpoint at root
+                Mount("/sse", app=handle_streamable),    # Primary SSE endpoint (matches frontend docs)
+                Mount("/mcp", app=handle_streamable),    # Alternative MCP path
+                Mount("/", app=handle_streamable),       # Root fallback for direct connections
             ],
             lifespan=lifespan,
         )
@@ -637,6 +655,9 @@ class RationalBloksMCPServer:
         host = os.environ.get("HOST", "0.0.0.0")
         
         print(f"[rationalbloks-mcp] Streamable HTTP server starting on {host}:{port}", file=sys.stderr)
-        print(f"[rationalbloks-mcp] MCP endpoint: http://{host}:{port}/mcp", file=sys.stderr)
+        print(f"[rationalbloks-mcp] MCP endpoints:", file=sys.stderr)
+        print(f"[rationalbloks-mcp]   - http://{host}:{port}/sse (primary)", file=sys.stderr)
+        print(f"[rationalbloks-mcp]   - http://{host}:{port}/mcp (alternative)", file=sys.stderr)
+        print(f"[rationalbloks-mcp]   - http://{host}:{port}/ (root fallback)", file=sys.stderr)
         
         uvicorn.run(app, host=host, port=port, log_level="info")

@@ -21,18 +21,28 @@ import os
 import time
 from typing import Any
 
-# Version - read dynamically to avoid circular import
-try:
-    from importlib.metadata import version as _get_version
-    __version__ = _get_version("rationalbloks-mcp")
-except Exception:
-    __version__ = "0.1.10"
+# ============================================================================
+# VERSION - Import from package root (Chain Mantra: Single Source of Truth)
+# ============================================================================
+# Deferred import to avoid circular dependency during module loading
+# The version is set after the module is fully loaded via __init__.py
+_version_cache: str | None = None
+
+def _get_version() -> str:
+    global _version_cache
+    if _version_cache is None:
+        from importlib.metadata import version
+        _version_cache = version("rationalbloks-mcp")
+    return _version_cache
 
 # Default configuration (can be overridden via environment variables)
 GATEWAY_URL = os.environ.get("RATIONALBLOKS_BASE_URL", "https://logicblok.rationalbloks.com")
 REQUEST_TIMEOUT = float(os.environ.get("RATIONALBLOKS_TIMEOUT", "30"))
 MAX_RETRIES = 3
 RETRY_DELAY = 1.0  # Base delay in seconds, exponentially increases
+
+# Public API
+__all__ = ["RationalBloksClient"]
 
 
 class RationalBloksClient:
@@ -59,7 +69,7 @@ class RationalBloksClient:
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
-                "User-Agent": f"rationalbloks-mcp/{__version__}"
+                "User-Agent": f"rationalbloks-mcp/{_get_version()}"
             },
             timeout=self.timeout,
             follow_redirects=True

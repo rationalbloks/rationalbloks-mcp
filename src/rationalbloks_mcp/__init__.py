@@ -26,15 +26,17 @@ from .server import RationalBloksMCPServer
 from .client import RationalBloksClient
 from .tools import TOOLS
 
-# Version - single source of truth read from pyproject.toml metadata
-try:
-    from importlib.metadata import version as _get_version
-    __version__ = _get_version("rationalbloks-mcp")
-except Exception:
-    __version__ = "0.1.10"  # Fallback matches pyproject.toml
+# ============================================================================
+# VERSION - Single Source of Truth (Chain Mantra)
+# ============================================================================
+# Read from pyproject.toml via importlib.metadata
+# If this fails, the package is not installed correctly - fail immediately
+# NO FALLBACKS - there is only ONE correct path
+from importlib.metadata import version as _get_version
+__version__ = _get_version("rationalbloks-mcp")
 
 __author__ = "RationalBloks"
-__all__ = ["RationalBloksMCPServer", "RationalBloksClient", "TOOLS", "main"]
+__all__ = ["RationalBloksMCPServer", "RationalBloksClient", "TOOLS", "main", "__version__"]
 
 
 def main() -> None:
