@@ -354,7 +354,7 @@ class AppGenerator:
         
         types_file = project_path / "src" / "types" / "generated.ts"
         types_file.parent.mkdir(parents=True, exist_ok=True)
-        types_file.write_text(types_content)
+        types_file.write_text(types_content, encoding="utf-8")
         
         return types_file
     
@@ -437,7 +437,7 @@ export default api;
         
         api_file = project_path / "src" / "services" / "appApi.ts"
         api_file.parent.mkdir(parents=True, exist_ok=True)
-        api_file.write_text(api_content)
+        api_file.write_text(api_content, encoding="utf-8")
         
         return api_file
     
@@ -607,7 +607,7 @@ export default function {type_name}View() {{
         
         view_file = project_path / "src" / "components" / "views" / f"{type_name}View.tsx"
         view_file.parent.mkdir(parents=True, exist_ok=True)
-        view_file.write_text(view_content)
+        view_file.write_text(view_content, encoding="utf-8")
         
         return view_file
     
@@ -836,7 +836,7 @@ export default function {singular}FormView() {{
 '''
         
         form_file = project_path / "src" / "components" / "views" / f"{singular}FormView.tsx"
-        form_file.write_text(view_content)
+        form_file.write_text(view_content, encoding="utf-8")
         
         return form_file
     
@@ -966,7 +966,7 @@ export default function DashboardView() {{
 '''
         
         dashboard_file = project_path / "src" / "components" / "views" / "DashboardView.tsx"
-        dashboard_file.write_text(view_content)
+        dashboard_file.write_text(view_content, encoding="utf-8")
         
         return dashboard_file
     
@@ -991,7 +991,7 @@ export default function DashboardView() {{
         
         # Read existing App.tsx
         if app_file.exists():
-            content = app_file.read_text()
+            content = app_file.read_text(encoding="utf-8")
             
             # Find where to insert imports (after last import statement)
             import_section = "\n".join(imports)
@@ -1063,7 +1063,7 @@ export default function App() {{
   );
 }}
 '''
-            app_file.write_text(new_content)
+            app_file.write_text(new_content, encoding="utf-8")
     
     def _update_navbar(self, project_path: Path, app_name: str, schema: dict) -> None:
         """Update Navbar configuration with app-specific navigation."""
@@ -1089,7 +1089,7 @@ export const NAV_ITEMS: NavItem[] = {json.dumps(nav_items, indent=2)};
 '''
         
         navbar_config.parent.mkdir(parents=True, exist_ok=True)
-        navbar_config.write_text(config_content)
+        navbar_config.write_text(config_content, encoding="utf-8")
     
     def _cleanup_template_files(self, project_path: Path) -> None:
         """Remove template-specific files that don't apply to the generated app."""
@@ -1118,11 +1118,11 @@ export const NAV_ITEMS: NavItem[] = {json.dumps(nav_items, indent=2)};
         pkg_file = project_path / "package.json"
         
         if pkg_file.exists():
-            pkg = json.loads(pkg_file.read_text())
+            pkg = json.loads(pkg_file.read_text(encoding="utf-8"))
             pkg["name"] = self._slugify(name)
             pkg["description"] = description
             pkg["version"] = "1.0.0"
-            pkg_file.write_text(json.dumps(pkg, indent=2))
+            pkg_file.write_text(json.dumps(pkg, indent=2), encoding="utf-8")
     
     def _configure_env(self, project_path: Path, api_url: str) -> None:
         """Configure .env file with API URL."""
@@ -1133,7 +1133,7 @@ export const NAV_ITEMS: NavItem[] = {json.dumps(nav_items, indent=2)};
             shutil.copy(env_example, env_file)
         
         if env_file.exists():
-            content = env_file.read_text()
+            content = env_file.read_text(encoding="utf-8")
             lines = content.split("\n")
             new_lines = []
             updated = False
@@ -1148,7 +1148,7 @@ export const NAV_ITEMS: NavItem[] = {json.dumps(nav_items, indent=2)};
             if not updated:
                 new_lines.append(f"VITE_DATABASE_API_URL={api_url}")
             
-            env_file.write_text("\n".join(new_lines))
+            env_file.write_text("\n".join(new_lines), encoding="utf-8")
     
     def _run_npm_install(self, project_path: Path) -> dict:
         """Run npm install in the project directory."""

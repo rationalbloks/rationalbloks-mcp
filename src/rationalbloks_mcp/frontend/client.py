@@ -251,10 +251,10 @@ class FrontendClient:
             shutil.copy(env_example, env_file)
         elif not env_file.exists():
             # Create minimal .env
-            env_file.write_text("")
+            env_file.write_text("", encoding="utf-8")
         
         # Read existing content
-        env_content = env_file.read_text()
+        env_content = env_file.read_text(encoding="utf-8")
         lines = env_content.split("\n")
         
         # Track what we need to update
@@ -274,7 +274,7 @@ class FrontendClient:
         if not updated_vars["VITE_DATABASE_API_URL"]:
             new_lines.append(f"VITE_DATABASE_API_URL={api_url}")
         
-        env_file.write_text("\n".join(new_lines))
+        env_file.write_text("\n".join(new_lines), encoding="utf-8")
         
         return {
             "success": True,
