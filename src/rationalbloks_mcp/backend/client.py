@@ -8,6 +8,8 @@
 # ============================================================================
 
 import httpx
+import ssl
+import certifi
 import json
 from typing import Any
 
@@ -24,10 +26,13 @@ class LogicBlokClient:
     def __init__(self, api_key: str) -> None:
         # Initialize client with API key (rb_sk_...)
         self.api_key = api_key
+        # Use certifi for SSL certs (fixes issues in isolated uvx environments)
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
         self._client = httpx.AsyncClient(
             base_url=self.BASE_URL,
             headers={"Authorization": f"Bearer {api_key}"},
             timeout=30.0,
+            verify=ssl_context,
         )
     
     async def close(self) -> None:
