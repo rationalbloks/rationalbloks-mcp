@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/rationalbloks-mcp.svg)](https://pypi.org/project/rationalbloks-mcp/)
 
-## 🚀 What's New in v0.2.0
+## 🚀 What's New in v0.2.1
 
 **Unified Package** - Single package with 3 modes:
 - **full**: All 23 tools (backend + frontend) - DEFAULT
