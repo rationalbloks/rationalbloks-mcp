@@ -60,8 +60,8 @@ DOCS_GETTING_STARTED = """# Getting Started with RationalBloks MCP
 RationalBloks MCP supports three modes:
 
 - **backend**: API/database tools only (18 tools)
-- **frontend**: Frontend generation tools only (5 tools)
-- **full**: All tools combined (23 tools) - DEFAULT
+- **frontend**: Frontend generation tools only (6 tools)
+- **full**: All tools combined (24 tools) - DEFAULT
 
 Set mode via environment: RATIONALBLOKS_MODE=backend|frontend|full
 

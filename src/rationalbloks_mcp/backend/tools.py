@@ -4,11 +4,11 @@
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
 # 18 Backend tools for API/database operations:
-# READ (10): list_projects, get_project, get_schema, get_user_info,
+# READ (11): list_projects, get_project, get_schema, get_user_info,
 #            get_job_status, get_project_info, get_version_history,
 #            get_template_schemas, get_subscription_status, get_project_usage,
 #            get_schema_at_version
-# WRITE (8): create_project, update_schema, deploy_staging, deploy_production,
+# WRITE (7): create_project, update_schema, deploy_staging, deploy_production,
 #            delete_project, rollback_project, rename_project
 # ============================================================================
 

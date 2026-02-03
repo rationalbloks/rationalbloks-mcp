@@ -1,17 +1,20 @@
 # RationalBloks MCP Server
 
-**Unified MCP Server for RationalBloks** - Build fullstack applications with AI agents. Connect Claude Desktop, Cursor, VS Code Copilot to manage backends AND generate frontends.
+**Unified MCP Server for RationalBloks** - Build fullstack applications with AI agents. Connect Claude Desktop, Cursor, VS Code Copilot, or any MCP-compatible client to create complete backends AND generate frontends.
 
 [![License](https://img.shields.io/badge/license-Proprietary-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/rationalbloks-mcp.svg)](https://pypi.org/project/rationalbloks-mcp/)
 
-## 🚀 What's New in v0.2.2
+## 🚀 What's New in v0.3.0
 
-**Unified Package** - Single package with 3 modes:
-- **full**: All 23 tools (backend + frontend) - DEFAULT
-- **backend**: 18 API/database tools
-- **frontend**: 5 frontend generation tools
+**Complete App Generation** - The new `create_app` tool transforms a template into a fully working application in one step:
+
+- **Full Mode**: All 24 tools (18 backend + 6 frontend) - DEFAULT
+- **Backend Mode**: 18 API/database tools
+- **Frontend Mode**: 6 frontend generation tools
+
+**Key Feature**: `create_app` performs 13 automated steps including backend creation, TypeScript generation, API services, views, forms, dashboard, routing, and npm install - no manual steps required!
 
 ## Installation
 
@@ -21,6 +24,9 @@ uv pip install rationalbloks-mcp
 
 # Using pip
 pip install rationalbloks-mcp
+
+# Using pipx (isolated environment)
+pipx install rationalbloks-mcp
 ```
 
 ## Quick Start
@@ -75,9 +81,15 @@ Add to `claude_desktop_config.json`:
 - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
+#### Smithery (One-Click Install)
+
+```bash
+npx @smithery/cli install @rationalbloks/mcp
+```
+
 ## Modes
 
-### Full Mode (Default) - 23 Tools
+### Full Mode (Default) - 24 Tools
 
 All tools for complete fullstack development:
 
@@ -97,7 +109,7 @@ rationalbloks-mcp
 # or: rationalbloks-mcp-backend
 ```
 
-### Frontend Mode - 5 Tools
+### Frontend Mode - 6 Tools
 
 Frontend generation only:
 
@@ -112,59 +124,92 @@ rationalbloks-mcp
 ### Backend Tools (18)
 
 **Read Operations (11):**
-- `list_projects` - List all projects
-- `get_project` - Get project details
-- `get_schema` - Get JSON schema
-- `get_user_info` - Get user information
-- `get_job_status` - Check deployment status
-- `get_project_info` - Detailed project info
-- `get_version_history` - Git history
-- `get_template_schemas` - Available templates ⭐ Start here!
-- `get_subscription_status` - Plan and limits
-- `get_project_usage` - Resource metrics
-- `get_schema_at_version` - Schema at specific commit
+| Tool | Description |
+|------|-------------|
+| `list_projects` | List all projects |
+| `get_project` | Get project details |
+| `get_schema` | Get JSON schema |
+| `get_user_info` | Get user information |
+| `get_job_status` | Check deployment status |
+| `get_project_info` | Detailed project info |
+| `get_version_history` | Git commit history |
+| `get_template_schemas` | Available templates ⭐ Start here! |
+| `get_subscription_status` | Plan and limits |
+| `get_project_usage` | Resource metrics |
+| `get_schema_at_version` | Schema at specific commit |
 
 **Write Operations (7):**
-- `create_project` - Create new project from schema
-- `update_schema` - Update project schema
-- `deploy_staging` - Deploy to staging
-- `deploy_production` - Deploy to production
-- `delete_project` - Delete project
-- `rollback_project` - Rollback to previous version
-- `rename_project` - Rename project
+| Tool | Description |
+|------|-------------|
+| `create_project` | Create new project from schema |
+| `update_schema` | Update project schema |
+| `deploy_staging` | Deploy to staging |
+| `deploy_production` | Deploy to production |
+| `delete_project` | Delete project |
+| `rollback_project` | Rollback to previous version |
+| `rename_project` | Rename project |
 
-### Frontend Tools (5)
+### Frontend Tools (6)
 
-- `clone_template` - Clone rationalbloksfront template
-- `get_template_structure` - Explore template file structure
-- `read_template_file` - Read file from template
-- `create_backend` - Create backend via Backend tools
-- `configure_api_url` - Set API URL in frontend .env
+| Tool | Description |
+|------|-------------|
+| `create_app` | 🚀 **MAIN TOOL** - Create complete app in one step |
+| `clone_template` | Clone rationalbloksfront template |
+| `get_template_structure` | Explore template file structure |
+| `read_template_file` | Read file from template |
+| `create_backend` | Create backend via Backend MCP |
+| `configure_api_url` | Set API URL in frontend .env |
 
-## Fullstack Workflow
+## The `create_app` Tool
 
-Build a complete application in minutes:
+This is the primary tool that transforms a JSON schema into a complete working application:
 
-### 1. Clone Frontend Template
+### What It Does (13 Automated Steps)
+
+1. **Clone Template** - Clone rationalbloksfront from GitHub
+2. **Create Backend** - Create project via Backend MCP API
+3. **Wait for Deployment** - Poll until staging is ready
+4. **Generate Types** - Create TypeScript interfaces from schema
+5. **Generate API Service** - Create typed HTTP client
+6. **Generate Entity Views** - Create list/detail views for each entity
+7. **Generate Forms** - Create add/edit forms with validation
+8. **Generate Dashboard** - Create dashboard with entity cards
+9. **Update Routes** - Configure React Router
+10. **Update Navbar** - Add navigation links
+11. **Cleanup** - Remove placeholder files
+12. **Update package.json** - Set project name and description
+13. **Install Dependencies** - Run `npm install`
+
+### Usage
+
 ```
-"Use clone_template to create a new project called 'my-app' in ~/projects"
+"Create a task manager app with projects and tasks in ~/projects"
 ```
 
-### 2. Create Backend API
-```
-"Create a backend with users and posts tables"
-```
+The AI will:
+1. Infer the schema (projects, tasks tables)
+2. Call `create_app` with the schema
+3. Return a complete working React app connected to a live REST API
 
-### 3. Connect Frontend to Backend
-```
-"Use configure_api_url to connect my-app to the backend"
-```
+### Input Schema
 
-### 4. Run the App
-```bash
-cd ~/projects/my-app
-npm install
-npm run dev
+```json
+{
+  "name": "TaskManager",
+  "description": "A task management application",
+  "destination": "~/projects",
+  "schema": {
+    "projects": {
+      "name": {"type": "string", "required": true},
+      "description": {"type": "text"}
+    },
+    "tasks": {
+      "title": {"type": "string", "required": true},
+      "status": {"type": "string", "enum": ["todo", "in_progress", "done"]},
+      "project_id": {"type": "uuid", "foreign_key": "projects.id"}
+    }
+  }
+}
 ```
 
 ## Schema Format
@@ -227,6 +272,9 @@ npm run dev
 |----------|-------------|---------|
 | `RATIONALBLOKS_API_KEY` | Your API key | Required for STDIO |
 | `RATIONALBLOKS_MODE` | Mode: full, backend, frontend | `full` |
+| `RATIONALBLOKS_BASE_URL` | API Gateway URL | `https://businessblok.rationalbloks.com` |
+| `RATIONALBLOKS_TIMEOUT` | Request timeout (seconds) | `30` |
+| `RATIONALBLOKS_LOG_LEVEL` | Logging level | `INFO` |
 | `TRANSPORT` | Transport: stdio, http | `stdio` |
 
 ## Entry Points
@@ -234,17 +282,23 @@ npm run dev
 Three entry points for different use cases:
 
 ```bash
-# Full mode (all 23 tools)
+# Full mode (all 24 tools)
 rationalbloks-mcp
 
 # Backend only (18 tools)
 rationalbloks-mcp-backend
 
-# Frontend only (5 tools)
+# Frontend only (6 tools)
 rationalbloks-mcp-frontend
 ```
 
 ## Example Prompts
+
+### Quick Start (Recommended)
+
+> "Create a todo app with projects and tasks in ~/projects"
+
+This single prompt will create a complete working application!
 
 ### Backend Operations
 
@@ -256,6 +310,8 @@ rationalbloks-mcp-frontend
 
 > "Show me the deployment history"
 
+> "Get me some template schemas to start with"
+
 ### Frontend Operations
 
 > "Clone the frontend template to ~/projects/my-store"
@@ -266,16 +322,19 @@ rationalbloks-mcp-frontend
 
 ### Fullstack (Full Mode)
 
-> "Create a complete todo app with a React frontend and REST API"
+> "Create a complete inventory management system with products, categories, and suppliers"
 
 > "Build me an e-commerce store with product catalog and shopping cart"
+
+> "Create a CRM with customers, contacts, and deals"
 
 ## Troubleshooting
 
 ### "Command not found"
 ```bash
 pip show rationalbloks-mcp
-which rationalbloks-mcp
+which rationalbloks-mcp  # Unix
+where rationalbloks-mcp  # Windows
 ```
 
 ### "API key required"
@@ -291,21 +350,41 @@ Ensure your key starts with `rb_sk_`
 2. Ensure FLAT format (no 'fields' nesting)
 3. Every field needs a 'type' property
 
+### Deployment stuck
+1. Use `get_job_status` to check deployment status
+2. Use `get_project_info` for detailed pod status
+3. Common cause: schema format error (nested 'fields' key)
+
 ## Architecture
 
 ```
 rationalbloks-mcp/
-├── core/           # Shared infrastructure
-│   ├── auth.py     # API key validation
-│   ├── transport.py # STDIO + HTTP transport
-│   └── server.py   # Base MCP server
-├── backend/        # 18 backend tools
-│   ├── client.py   # LogicBlok HTTP client
-│   └── tools.py    # Tool definitions
-└── frontend/       # 5 frontend tools
-    ├── client.py   # Template operations
-    └── tools.py    # Tool definitions
+├── src/rationalbloks_mcp/
+│   ├── __init__.py      # Unified entry point (24 tools)
+│   ├── core/            # Shared infrastructure
+│   │   ├── auth.py      # API key validation
+│   │   ├── transport.py # STDIO + HTTP transport
+│   │   └── server.py    # Base MCP server
+│   ├── backend/         # 18 backend tools
+│   │   ├── client.py    # LogicBlok HTTP client
+│   │   └── tools.py     # Tool definitions
+│   └── frontend/        # 6 frontend tools
+│       ├── client.py        # Template operations
+│       ├── tools.py         # Tool definitions
+│       └── app_generator.py # Complete app generation
+├── pyproject.toml       # Package configuration
+├── smithery.yaml        # Smithery marketplace config
+└── README.md            # This file
 ```
+
+## Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 0.3.0 | 2026-02-03 | Added `create_app` tool for complete app generation |
+| 0.2.2 | 2026-01-28 | Fixed frontend template URL |
+| 0.2.0 | 2026-01-25 | Unified backend + frontend package |
+| 0.1.0 | 2026-01-20 | Initial release (backend only) |
 
 ## Support
 

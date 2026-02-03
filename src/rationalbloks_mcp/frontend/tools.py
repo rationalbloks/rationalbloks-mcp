@@ -3,7 +3,8 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# 5 Frontend tools for frontend generation:
+# 6 Frontend tools for frontend generation:
+# - create_app: MAIN TOOL - Creates complete app from schema (end-to-end)
 # - clone_template: Clone rationalbloksfront template
 # - get_template_structure: Explore template file structure
 # - read_template_file: Read file from template
@@ -20,6 +21,7 @@ from mcp.types import Prompt, PromptArgument, PromptMessage, GetPromptResult, Te
 from .. import __version__
 from ..core import BaseMCPServer
 from .client import FrontendClient
+from .app_generator import AppGenerator
 
 # Public API
 __all__ = [
@@ -34,6 +36,93 @@ __all__ = [
 # ============================================================================
 
 FRONTEND_TOOLS = [
+    # ========================================================================
+    # MAIN TOOL - create_app (the complete automation)
+    # ========================================================================
+    {
+        "name": "create_app",
+        "title": "Create Complete App",
+        "description": """🚀 CREATE A COMPLETE WORKING APPLICATION IN ONE STEP
+
+This is the main tool that transforms a template into a fully functional app.
+It handles EVERYTHING: backend creation, frontend generation, configuration.
+
+WHAT IT DOES (13 automated steps):
+1. Clone the rationalbloksfront template
+2. Create backend API from your schema
+3. Wait for backend deployment (2-5 minutes)
+4. Generate TypeScript types from schema
+5. Generate API service with CRUD operations
+6. Generate list views for each entity
+7. Generate create/edit forms for each entity
+8. Generate dashboard with entity stats
+9. Update routes in App.tsx
+10. Update Navbar with navigation
+11. Remove template-specific files
+12. Update package.json with app info
+13. Run npm install
+
+SCHEMA FORMAT (FLAT - CRITICAL):
+{
+  "tasks": {
+    "title": {"type": "string", "max_length": 200, "required": true},
+    "description": {"type": "text"},
+    "status": {"type": "string", "enum": ["pending", "in_progress", "completed"], "default": "pending"},
+    "due_date": {"type": "date"}
+  }
+}
+
+⚠️ SCHEMA RULES:
+- FLAT format: table → field → properties (NO "fields" nesting!)
+- string: MUST have max_length
+- decimal: MUST have precision and scale
+- Use "datetime" NOT "timestamp"
+- DON'T define: id, created_at, updated_at (automatic)
+- DON'T create users/customers tables (use app_users)
+
+AFTER COMPLETION:
+- cd into project directory
+- npm run dev
+- Open http://localhost:5173
+- Login and start using your app!
+
+RESULT:
+Returns project path, backend URL, list of generated files, and any errors.""",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Application name (e.g., 'TaskManager', 'InventoryApp')"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "What the app does (used for backend project)"
+                },
+                "destination": {
+                    "type": "string",
+                    "description": "Parent directory to create project in (e.g., '~/projects' or 'C:/Projects')"
+                },
+                "schema": {
+                    "type": "object",
+                    "description": "Backend schema in FLAT format. Every field MUST have 'type'. Use get_template_schemas to see examples."
+                },
+                "wait_for_deployment": {
+                    "type": "boolean",
+                    "description": "Wait for backend to deploy before continuing (default: true, takes 2-5 min)"
+                },
+                "run_npm_install": {
+                    "type": "boolean",
+                    "description": "Run npm install after generation (default: true)"
+                }
+            },
+            "required": ["name", "description", "destination", "schema"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+    },
+    # ========================================================================
+    # INDIVIDUAL TOOLS (for granular control)
+    # ========================================================================
     {
         "name": "clone_template",
         "title": "Clone Template",
@@ -169,19 +258,21 @@ WORKFLOW:
         "title": "Configure API URL",
         "description": """Configure the backend API URL in a cloned frontend project.
 
-Updates the .env file with VITE_API_URL pointing to your RationalBloks backend.
+Updates the .env file with VITE_DATABASE_API_URL pointing to your RationalBloks backend.
 
 USAGE:
 1. Clone template with clone_template
-2. Create backend with create_backend (note the API URL)
-3. Run configure_api_url with the project path and API URL
+2. Create backend with create_backend (note the staging URL)
+3. Run configure_api_url with the project path and staging URL
 
 EXAMPLE:
 - project_path: ~/projects/my-app
-- api_url: https://my-project.customersblok.rationalbloks.com
+- api_url: https://abc123-staging.customersblok.rationalbloks.com
 
 This updates .env with:
-VITE_API_URL=https://my-project.customersblok.rationalbloks.com""",
+VITE_DATABASE_API_URL=https://abc123-staging.customersblok.rationalbloks.com
+
+NOTE: VITE_BUSINESS_LOGIC_API_URL (for platform auth) is already configured in the template.""",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -191,7 +282,7 @@ VITE_API_URL=https://my-project.customersblok.rationalbloks.com""",
                 },
                 "api_url": {
                     "type": "string",
-                    "description": "Backend API URL from create_backend"
+                    "description": "Backend staging URL from create_backend (e.g., https://xxx-staging.customersblok.rationalbloks.com)"
                 }
             },
             "required": ["project_path", "api_url"]
@@ -236,20 +327,31 @@ FRONTEND_PROMPTS = [
 # ============================================================================
 
 class FrontendMCPServer(BaseMCPServer):
-    # Frontend MCP server with 5 frontend generation tools
-    # Extends BaseMCPServer with: Template cloning and exploration, backend integration, frontend configuration
+    # Frontend MCP server with 6 frontend generation tools
+    # Extends BaseMCPServer with: Complete app generation, template cloning, backend integration
     
     INSTRUCTIONS = """RationalBloks MCP Server - Frontend Mode
 
-Generate frontend applications from the rationalbloksfront template.
+🚀 MAIN TOOL: create_app
+Creates a COMPLETE working application in one step:
+- Clones template, creates backend, generates views, configures everything
+- Just provide: name, description, destination, schema
+- Result: Ready-to-run app with npm run dev
 
-WORKFLOW:
-1. clone_template - Clone the template to local directory
-2. create_backend - Create backend API (optional but recommended)
-3. configure_api_url - Connect frontend to backend
-4. npm install && npm run dev
+INDIVIDUAL TOOLS (for granular control):
+- clone_template: Clone template only
+- create_backend: Create backend API only
+- configure_api_url: Set API URL only
+- get_template_structure: Explore template
+- read_template_file: Read template files
 
-Available: 5 frontend tools for template and configuration."""
+WORKFLOW with create_app:
+1. Use get_template_schemas to see schema examples
+2. Call create_app with name, description, destination, schema
+3. Wait for completion (2-5 minutes)
+4. cd into project && npm run dev
+
+Available: 6 frontend tools for complete app generation."""
     
     def __init__(
         self,
@@ -286,8 +388,29 @@ Available: 5 frontend tools for template and configuration."""
         api_key = self.get_api_key_for_request()
         return FrontendClient(api_key)
     
+    def _get_app_generator(self) -> AppGenerator:
+        # Get app generator with current API key
+        api_key = self.get_api_key_for_request()
+        if not api_key:
+            raise ValueError("API key required for create_app")
+        return AppGenerator(api_key)
+    
     async def _handle_frontend_tool(self, name: str, arguments: dict) -> Any:
         # Handle all frontend tool calls
+        
+        # create_app uses AppGenerator (the main tool)
+        if name == "create_app":
+            generator = self._get_app_generator()
+            return await generator.create_app(
+                name=arguments["name"],
+                description=arguments["description"],
+                destination=arguments["destination"],
+                schema=arguments["schema"],
+                wait_for_deployment=arguments.get("wait_for_deployment", True),
+                run_npm_install=arguments.get("run_npm_install", True),
+            )
+        
+        # Other tools use FrontendClient
         async with self._get_client() as client:
             if name == "clone_template":
                 return await client.clone_template(

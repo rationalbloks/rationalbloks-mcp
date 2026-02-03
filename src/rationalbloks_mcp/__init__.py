@@ -5,8 +5,8 @@
 #
 # Unified MCP server supporting 3 modes:
 #   - backend:  18 API/database tools (projects, schemas, deployments)
-#   - frontend: 5 frontend generation tools (template, configuration)
-#   - full:     All 23 tools combined (DEFAULT)
+#   - frontend: 6 frontend generation tools (template, configuration, create_app)
+#   - full:     All 24 tools combined (DEFAULT)
 #
 # Usage:
 #   export RATIONALBLOKS_API_KEY=rb_sk_your_key_here
@@ -111,34 +111,42 @@ def _run_server(mode: Mode) -> None:
 
 
 def _create_full_server(api_key: str | None, http_mode: bool):
-    # Create a full server with all 23 tools
-    # Combines backend (18 tools) + frontend (5 tools)
+    # Create a full server with all 24 tools
+    # Combines backend (18 tools) + frontend (6 tools)
     from .core import BaseMCPServer
     from .backend.tools import BACKEND_TOOLS, BACKEND_PROMPTS
     from .backend.client import LogicBlokClient
     from .frontend.tools import FRONTEND_TOOLS, FRONTEND_PROMPTS
     from .frontend.client import FrontendClient
+    from .frontend.app_generator import AppGenerator
     
     FULL_INSTRUCTIONS = """RationalBloks MCP Server - Full Mode
 
-Build complete fullstack applications:
-- 18 backend tools for API/database operations
-- 5 frontend tools for template generation
+🚀 BUILD COMPLETE FULLSTACK APPS IN MINUTES
+
+MAIN TOOL: create_app (Frontend MCP)
+Creates a complete working application:
+- Clones template, creates backend, generates views, runs npm install
+- Just provide: name, description, destination, schema
 
 WORKFLOW:
-1. clone_template - Clone frontend template
-2. create_project - Create backend API from schema
-3. configure_api_url - Connect frontend to backend
-4. npm run dev
+1. Use get_template_schemas to see schema format examples
+2. Use create-project-from-description prompt to design schema from description
+3. Call create_app with name, description, destination, schema
+4. Wait 2-5 minutes for complete app generation
+5. cd into project && npm run dev
 
-SCHEMA FORMAT (FLAT):
-✅ {users: {email: {type: string}}} 
-❌ {users: {fields: {email: {type: string}}}}
+SCHEMA FORMAT (FLAT - CRITICAL):
+✅ {tasks: {title: {type: "string", max_length: 200}}} 
+❌ {tasks: {fields: {title: {type: "string"}}}}
 
-Use get_template_schemas to see correct format."""
+AVAILABLE:
+- 18 backend tools (API/database operations)
+- 6 frontend tools (app generation)
+- create_app: The main tool for complete app creation"""
     
     class FullMCPServer(BaseMCPServer):
-        # Full MCP server with all 23 tools
+        # Full MCP server with all 24 tools
         
         def __init__(self, api_key: str | None, http_mode: bool):
             super().__init__(
@@ -173,6 +181,12 @@ Use get_template_schemas to see correct format."""
             api_key = self.get_api_key_for_request()
             return FrontendClient(api_key)
         
+        def _get_app_generator(self) -> AppGenerator:
+            api_key = self.get_api_key_for_request()
+            if not api_key:
+                raise ValueError("API key required for create_app")
+            return AppGenerator(api_key)
+        
         async def _handle_tool(self, name: str, arguments: dict):
             # Route tool calls to appropriate client
             # Backend tools
@@ -181,13 +195,27 @@ Use get_template_schemas to see correct format."""
                 async with self._get_backend_client() as client:
                     return await self._call_backend_tool(client, name, arguments)
             
-            # Frontend tools
+            # Frontend tools - special handling for create_app
             frontend_tool_names = [t["name"] for t in FRONTEND_TOOLS]
             if name in frontend_tool_names:
+                if name == "create_app":
+                    return await self._call_create_app(arguments)
                 async with self._get_frontend_client() as client:
                     return await self._call_frontend_tool(client, name, arguments)
             
             raise ValueError(f"Unknown tool: {name}")
+        
+        async def _call_create_app(self, args: dict):
+            # Handle create_app with AppGenerator
+            generator = self._get_app_generator()
+            return await generator.create_app(
+                name=args["name"],
+                description=args["description"],
+                destination=args["destination"],
+                schema=args["schema"],
+                wait_for_deployment=args.get("wait_for_deployment", True),
+                run_npm_install=args.get("run_npm_install", True),
+            )
         
         async def _call_backend_tool(self, client: LogicBlokClient, name: str, args: dict):
             # Call a backend tool
@@ -275,7 +303,7 @@ Use get_template_schemas to see correct format."""
 
 def main() -> None:
     # Main entry point - uses RATIONALBLOKS_MODE environment variable
-    # Default mode is 'full' (all 23 tools)
+    # Default mode is 'full' (all 24 tools)
     mode = _get_mode()
     print(f"[rationalbloks-mcp] Starting in {mode} mode...", file=sys.stderr)
     _run_server(mode)
@@ -288,7 +316,7 @@ def main_backend() -> None:
 
 
 def main_frontend() -> None:
-    # Frontend-only entry point (5 tools)
+    # Frontend-only entry point (6 tools)
     print("[rationalbloks-mcp] Starting in frontend mode...", file=sys.stderr)
     _run_server("frontend")
 

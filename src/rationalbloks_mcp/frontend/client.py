@@ -20,7 +20,8 @@ __all__ = ["FrontendClient"]
 
 
 # GitHub repository for the template
-TEMPLATE_REPO = "https://github.com/rationalbloks/rationalbloksfront.git"
+# TODO: When rationalbloks org is created, change to: https://github.com/rationalbloks/rationalbloksfront.git
+TEMPLATE_REPO = "https://github.com/velosovictor/rationalbloksfront.git"
 TEMPLATE_BRANCH = "main"
 
 
@@ -147,33 +148,44 @@ class FrontendClient:
         path: str = "",
         max_depth: int = 3,
     ) -> dict[str, Any]:
-        # Get the file structure of the template
-        # Returns: Tree structure of the template
-        # This would ideally fetch from GitHub API
-        # For now, return the known structure
+        # Get the file structure of the rationalbloksfront template
+        # NOTE: This is a static representation - use clone_template for full access
+        # TODO: Implement GitHub API fetch for live structure
         return {
             "template": "rationalbloksfront",
+            "version": "Uses @rationalbloks/universalfront npm package",
             "structure": {
                 "src/": {
-                    "components/": ["Header.tsx", "Footer.tsx", "..."],
-                    "pages/": ["Home.tsx", "Dashboard.tsx", "..."],
-                    "hooks/": ["useAuth.ts", "useApi.ts", "..."],
-                    "services/": ["api.ts", "auth.ts", "..."],
-                    "styles/": ["globals.css", "..."],
-                    "App.tsx": "Main application component",
+                    "components/": {
+                        "shared/": "Reusable UI components (Navbar, ErrorBoundary, etc.)",
+                        "views/": "Page components (HomeView, ProjectsView, etc.)",
+                    },
+                    "config/": "App configuration (Navbar config, routes)",
+                    "contexts/": "React contexts (Auth, Theme)",
+                    "services/": "API client setup",
+                    "styles/": "Global CSS styles",
+                    "theme/": "MUI theme configuration",
+                    "App.tsx": "Main routes and providers",
                     "main.tsx": "Entry point",
                 },
-                "public/": ["favicon.ico", "logo.svg"],
-                "package.json": "Dependencies and scripts",
-                "vite.config.ts": "Vite configuration",
+                "public/": "Static assets (favicon, logo)",
+                "package.json": "Dependencies - includes @rationalbloks/universalfront",
+                "vite.config.ts": "Vite build configuration",
                 "tsconfig.json": "TypeScript configuration",
-                ".env.example": "Environment template",
+                ".env.example": "Environment variables template",
             },
             "key_files": [
-                {"path": "src/services/api.ts", "purpose": "API client configuration"},
-                {"path": ".env.example", "purpose": "Environment variables template"},
+                {"path": "src/services/api.ts", "purpose": "API client extending BaseApi from universalfront"},
+                {"path": ".env.example", "purpose": "Environment variables (VITE_DATABASE_API_URL, etc.)"},
                 {"path": "src/App.tsx", "purpose": "Main application routes"},
+                {"path": "src/theme/createAppTheme.ts", "purpose": "MUI theme customization"},
             ],
+            "dependencies": {
+                "@rationalbloks/universalfront": "Core mechanics (auth, API client, utilities)",
+                "@mui/material": "UI component library",
+                "react-router-dom": "Client-side routing",
+                "@react-oauth/google": "Google OAuth integration",
+            },
         }
     
     async def read_template_file(
@@ -219,7 +231,8 @@ class FrontendClient:
         project_path: str,
         api_url: str,
     ) -> dict[str, Any]:
-        # Configure the API URL in the frontend project
+        # Configure the backend API URL in the frontend project
+        # Sets VITE_DATABASE_API_URL to point to the user's deployed backend
         # Returns: Configuration result
         project = Path(project_path).expanduser().resolve()
         
@@ -236,34 +249,42 @@ class FrontendClient:
         # Create .env from example if needed
         if not env_file.exists() and env_example.exists():
             shutil.copy(env_example, env_file)
+        elif not env_file.exists():
+            # Create minimal .env
+            env_file.write_text("")
         
-        # Update or create .env with API URL
-        env_content = ""
-        if env_file.exists():
-            env_content = env_file.read_text()
-        
-        # Update VITE_API_URL
+        # Read existing content
+        env_content = env_file.read_text()
         lines = env_content.split("\n")
-        updated = False
+        
+        # Track what we need to update
+        updated_vars = {
+            "VITE_DATABASE_API_URL": False,
+        }
         new_lines = []
         
         for line in lines:
-            if line.startswith("VITE_API_URL="):
-                new_lines.append(f"VITE_API_URL={api_url}")
-                updated = True
+            if line.startswith("VITE_DATABASE_API_URL="):
+                new_lines.append(f"VITE_DATABASE_API_URL={api_url}")
+                updated_vars["VITE_DATABASE_API_URL"] = True
             else:
                 new_lines.append(line)
         
-        if not updated:
-            new_lines.append(f"VITE_API_URL={api_url}")
+        # Add any vars that weren't found
+        if not updated_vars["VITE_DATABASE_API_URL"]:
+            new_lines.append(f"VITE_DATABASE_API_URL={api_url}")
         
         env_file.write_text("\n".join(new_lines))
         
         return {
             "success": True,
             "env_file": str(env_file),
-            "api_url": api_url,
+            "configured": {
+                "VITE_DATABASE_API_URL": api_url,
+            },
+            "note": "VITE_BUSINESS_LOGIC_API_URL (platform auth) is pre-configured in the template",
             "next_steps": [
+                "npm install  # Install dependencies",
                 "npm run dev  # Start development server",
                 f"# Your frontend will connect to {api_url}",
             ],

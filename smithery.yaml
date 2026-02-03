@@ -4,8 +4,8 @@
 
 name: rationalbloks
 displayName: RationalBloks
-version: 0.2.2
-description: Unified MCP Server - Build fullstack apps with AI. 18 backend tools + 5 frontend tools.
+version: 0.3.0
+description: Unified MCP Server - Build fullstack apps with AI. 18 backend tools + 6 frontend tools.
 author: RationalBloks
 homepage: https://rationalbloks.com
 repository: https://github.com/rationalbloks/rationalbloks-mcp
@@ -64,7 +64,7 @@ startCommand:
       required: false
       default: ""
     RATIONALBLOKS_MODE:
-      description: "Server mode: full (all 23 tools), backend (18 tools), frontend (5 tools)"
+      description: "Server mode: full (all 24 tools), backend (18 tools), frontend (6 tools)"
       required: false
       default: "full"
     RATIONALBLOKS_BASE_URL:
