@@ -72,32 +72,84 @@ Visit https://rationalbloks.com/docs for full documentation.
 
 DOCS_SCHEMA_REFERENCE = """# RationalBloks Schema Reference
 
-## Field Types
+═══════════════════════════════════════════════════════════════════════════
+CRITICAL SCHEMA RULES:
+═══════════════════════════════════════════════════════════════════════════
 
-- string: Text fields (varchar)
-- text: Long text fields
-- integer: Whole numbers
-- decimal: Decimal numbers
-- boolean: True/false values
-- uuid: Primary/foreign keys
-- date: Date only
-- datetime: Date and time
-- json: JSON data
+## 1. FLAT FORMAT (REQUIRED)
 
-## Schema Format (FLAT)
-
+✅ CORRECT:
 {
   "users": {
-    "email": {"type": "string", "required": true, "unique": true},
-    "name": {"type": "string", "required": true}
+    "email": {"type": "string", "max_length": 255, "required": true, "unique": true},
+    "name": {"type": "string", "max_length": 100, "required": true}
   },
   "posts": {
-    "title": {"type": "string", "required": true},
+    "title": {"type": "string", "max_length": 200, "required": true},
+    "content": {"type": "text"},
     "user_id": {"type": "uuid", "foreign_key": "users.id"}
   }
 }
 
-⚠️ DO NOT nest fields under a 'fields' key!
+❌ WRONG (DO NOT nest under 'fields'):
+{
+  "users": {
+    "fields": {
+      "email": {"type": "string"}
+    }
+  }
+}
+
+## 2. Field Types
+
+- string: MUST have max_length (e.g., "max_length": 255)
+- text: Long text fields
+- integer: Whole numbers
+- decimal: MUST have precision and scale (e.g., "precision": 10, "scale": 2)
+- boolean: True/false values
+- uuid: Primary/foreign keys
+- date: Date only
+- datetime: Date and time (NOT "timestamp")
+- json: JSON data
+
+## 3. Automatic Fields (DO NOT define)
+
+- id (uuid, primary key)
+- created_at (datetime)
+- updated_at (datetime)
+
+## 4. User Authentication
+
+❌ NEVER create: users, customers, employees, members tables
+✅ USE: built-in app_users table with foreign keys
+
+Example:
+{
+  "employee_profiles": {
+    "user_id": {"type": "uuid", "foreign_key": "app_users.id", "required": true},
+    "department": {"type": "string", "max_length": 100}
+  }
+}
+
+## 5. Authorization
+
+Add user_id → app_users.id for user-owned resources:
+{
+  "orders": {
+    "user_id": {"type": "uuid", "foreign_key": "app_users.id"},
+    "total": {"type": "decimal", "precision": 10, "scale": 2}
+  }
+}
+
+## 6. Field Options
+
+- required: true/false
+- unique: true/false
+- default: any value
+- enum: ["value1", "value2"]
+- foreign_key: "table_name.id"
+
+Full docs: https://infra.rationalbloks.com/documentation
 """
 
 DOCS_API_REFERENCE = """# RationalBloks MCP API Reference

@@ -156,11 +156,68 @@ BACKEND_TOOLS = [
         },
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}
     },
-    # --- WRITE OPERATIONS ---
     {
         "name": "create_project",
         "title": "Create Project",
-        "description": """Create a new RationalBloks project from a JSON schema. ⚠️ CRITICAL: Schema MUST be in FLAT format (table_name → field_name → properties). DO NOT nest fields under a 'fields' key or the deployment will fail. ✅ CORRECT FORMAT: {users: {email: {type: string, required: true, unique: true}, name: {type: string, required: true}}, posts: {title: {type: string, required: true}, content: {type: text}, user_id: {type: uuid, foreign_key: users.id}}} ❌ WRONG FORMAT (will fail): {users: {fields: {email: {type: string}}}} ← DO NOT ADD 'fields' KEY. FIELD TYPES: string (varchar), text (long text), integer (whole numbers), decimal (decimal numbers), boolean (true/false), uuid (use for primary/foreign keys), date (date only), timestamp (date and time), json (JSON data). FIELD PROPERTIES: type (REQUIRED), required (boolean), unique (boolean), default (any), foreign_key (string format table.field), enum (array of allowed values). BEST PRACTICES: (1) Every field MUST have a 'type' property, (2) Use get_template_schemas to see complete examples, (3) Foreign keys use format 'table_name.id', (4) Primary keys auto-generated (don't define 'id' field), (5) Timestamps auto-generated (created_at, updated_at). After creation, use get_job_status with the returned job_id to monitor deployment.""",
+        "description": """Create a new RationalBloks project from a JSON schema.
+
+⚠️ CRITICAL RULES - READ BEFORE CREATING SCHEMA:
+
+1. FLAT FORMAT (REQUIRED):
+   ✅ CORRECT: {users: {email: {type: "string", max_length: 255}}}
+   ❌ WRONG: {users: {fields: {email: {type: "string"}}}}
+   DO NOT nest under 'fields' key!
+
+2. FIELD TYPE REQUIREMENTS:
+   • string: MUST have "max_length" (e.g., max_length: 255)
+   • decimal: MUST have "precision" and "scale" (e.g., precision: 10, scale: 2)
+   • datetime: Use "datetime" NOT "timestamp"
+   • ALL fields: MUST have "type" property
+
+3. AUTOMATIC FIELDS (DON'T define):
+   • id (uuid, primary key)
+   • created_at (datetime)
+   • updated_at (datetime)
+
+4. USER AUTHENTICATION:
+   ❌ NEVER create "users", "customers", "employees" tables with email/password
+   ✅ USE built-in app_users table
+   
+   Example:
+   {
+     "employee_profiles": {
+       "user_id": {type: "uuid", foreign_key: "app_users.id", required: true},
+       "department": {type: "string", max_length: 100}
+     }
+   }
+
+5. AUTHORIZATION:
+   Add user_id → app_users.id to enable "only see your own data"
+   
+   Example:
+   {
+     "orders": {
+       "user_id": {type: "uuid", foreign_key: "app_users.id"},
+       "total": {type: "decimal", precision: 10, scale: 2}
+     }
+   }
+
+6. FIELD OPTIONS:
+   • required: true/false
+   • unique: true/false
+   • default: any value
+   • enum: ["val1", "val2"]
+   • foreign_key: "table.id"
+
+AVAILABLE TYPES: string, text, integer, decimal, boolean, uuid, date, datetime, json
+
+WORKFLOW:
+1. Use get_template_schemas FIRST to see valid examples
+2. Create schema following ALL rules above
+3. Call this tool
+4. Monitor with get_job_status (2-5 min deployment)
+
+After creation, use get_job_status with returned job_id to monitor deployment.""",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -175,7 +232,29 @@ BACKEND_TOOLS = [
     {
         "name": "update_schema",
         "title": "Update Schema",
-        "description": """Update a project's schema (saves to database, does NOT deploy). ⚠️ CRITICAL: Schema MUST be in FLAT format (same as create_project). Every field MUST have a 'type' property or deployment will fail. ✅ CORRECT FORMAT: {users: {email: {type: string, required: true}, name: {type: string}}} ❌ WRONG: DO NOT nest under 'fields' key! NOTE: This only saves the schema. You must call deploy_staging afterwards to apply changes. Use get_schema first to see the current schema structure, then modify it. Use get_template_schemas to see valid schema examples.""",
+        "description": """Update a project's schema (saves to database, does NOT deploy).
+
+⚠️ CRITICAL: Follow ALL rules from create_project:
+• FLAT format (no 'fields' nesting)
+• string: MUST have max_length
+• decimal: MUST have precision + scale
+• Use "datetime" NOT "timestamp"
+• DON'T define: id, created_at, updated_at
+• NEVER create users/customers/employees tables (use app_users)
+
+⚠️ MIGRATION RULES:
+• New fields MUST be "required": false OR have "default" value
+• Cannot add required field without default to existing tables
+• Safe: {new_field: {type: "string", max_length: 100, required: false}}
+
+WORKFLOW:
+1. Use get_schema to see current schema
+2. Modify following ALL rules
+3. Call update_schema (saves only)
+4. Call deploy_staging to apply changes
+5. Monitor with get_job_status
+
+NOTE: This only saves the schema. You MUST call deploy_staging afterwards to apply changes.""",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -311,12 +390,78 @@ class BackendMCPServer(BaseMCPServer):
 
 Build production REST APIs from JSON schemas in seconds.
 
-CRITICAL: Schema MUST be in FLAT format:
-✅ {users: {email: {type: string}}} 
-❌ {users: {fields: {email: {type: string}}}}
+═══════════════════════════════════════════════════════════════════════════
+CRITICAL SCHEMA RULES (read BEFORE creating any schema):
+═══════════════════════════════════════════════════════════════════════════
+
+1. FLAT FORMAT (REQUIRED):
+   ✅ CORRECT: {"users": {"email": {"type": "string", "max_length": 255}}}
+   ❌ WRONG:   {"users": {"fields": {"email": {"type": "string"}}}}
+   → Never nest under 'fields' key! Deployment will fail.
+
+2. FIELD TYPE REQUIREMENTS:
+   • string:  MUST have "max_length" property (e.g., "max_length": 255)
+   • decimal: MUST have "precision" and "scale" (e.g., "precision": 10, "scale": 2)
+   • datetime: Use "datetime" type, NOT "timestamp"
+   • All fields: MUST have "type" property
+
+3. AUTOMATIC FIELDS (do NOT define these):
+   • id (uuid, primary key) - auto-generated
+   • created_at (datetime) - auto-generated
+   • updated_at (datetime) - auto-generated
+
+4. USER AUTHENTICATION PATTERN:
+   ❌ NEVER create "users", "customers", "employees", "members" tables with email/password
+   ✅ ALWAYS use built-in app_users table for authentication
+   
+   Example:
+   {
+     "employee_profiles": {
+       "user_id": {"type": "uuid", "foreign_key": "app_users.id", "required": true},
+       "department": {"type": "string", "max_length": 100}
+     }
+   }
+
+5. AUTHORIZATION (user ownership):
+   • Add user_id foreign key to app_users.id for user-owned resources
+   • This enables automatic "only see your own data" security
+   
+   Example:
+   {
+     "orders": {
+       "user_id": {"type": "uuid", "foreign_key": "app_users.id"},
+       "total": {"type": "decimal", "precision": 10, "scale": 2}
+     }
+   }
+
+6. SCHEMA UPDATES (migrations):
+   • New fields MUST be "required": false OR have "default" value
+   • Cannot add required field without default to existing tables
+   • Safe: {"new_field": {"type": "string", "max_length": 100, "required": false}}
+
+7. FOREIGN KEYS:
+   • Format: "foreign_key": "table_name.id"
+   • Example: {"user_id": {"type": "uuid", "foreign_key": "app_users.id"}}
+
+8. FIELD OPTIONS:
+   • required: true/false (default: false)
+   • unique: true/false (default: false)
+   • default: any value (must match type)
+   • enum: ["value1", "value2"] (allowed values)
+
+═══════════════════════════════════════════════════════════════════════════
+WORKFLOW:
+═══════════════════════════════════════════════════════════════════════════
+
+1. Use get_template_schemas to see complete valid examples
+2. Create schema following ALL rules above
+3. Call create_project with valid schema
+4. Monitor with get_job_status (deployment takes 2-5 minutes)
+5. If CrashLoopBackOff → schema format error (check rules 1-2)
+6. Use get_project_info to see detailed deployment status
 
 Available: 18 backend tools for projects, schemas, deployments.
-Use get_template_schemas first to see correct format."""
+Full documentation: https://infra.rationalbloks.com/documentation"""
     
     def __init__(
         self,
@@ -435,26 +580,61 @@ Use get_template_schemas first to see correct format."""
                         type="text",
                         text=f"""Create a RationalBloks project schema for: {description}
 
-CRITICAL FORMAT RULES:
-1. Schema MUST be FLAT: table_name → field_name → properties
-2. Every field MUST have a 'type' property
-3. DO NOT nest under 'fields' key
+═══════════════════════════════════════════════════════════════════════════
+CRITICAL SCHEMA RULES - FOLLOW EXACTLY:
+═══════════════════════════════════════════════════════════════════════════
 
-Example correct format:
-{{
-  "users": {{
-    "email": {{"type": "string", "required": true, "unique": true}},
-    "name": {{"type": "string", "required": true}}
-  }},
-  "posts": {{
-    "title": {{"type": "string", "required": true}},
-    "user_id": {{"type": "uuid", "foreign_key": "users.id"}}
-  }}
-}}
+1. FLAT FORMAT (REQUIRED):
+   ✅ CORRECT: {{"users": {{"email": {{"type": "string", "max_length": 255}}}}}}
+   ❌ WRONG: {{"users": {{"fields": {{"email": {{"type": "string"}}}}}}}}
+   DO NOT nest under 'fields' key!
 
-Available types: string, text, integer, decimal, boolean, uuid, date, timestamp, json
+2. FIELD TYPE REQUIREMENTS:
+   • string: MUST have "max_length" (e.g., "max_length": 255)
+   • decimal: MUST have "precision" and "scale" (e.g., "precision": 10, "scale": 2)
+   • datetime: Use "datetime" NOT "timestamp"
+   • ALL fields: MUST have "type" property
 
-Generate the schema now:""",
+3. AUTOMATIC FIELDS (DON'T define):
+   • id (uuid, primary key)
+   • created_at (datetime)
+   • updated_at (datetime)
+
+4. USER AUTHENTICATION:
+   ❌ NEVER create "users", "customers", "employees", "members" tables
+   ✅ USE built-in app_users table
+   
+   Example:
+   {{
+     "employee_profiles": {{
+       "user_id": {{"type": "uuid", "foreign_key": "app_users.id", "required": true}},
+       "department": {{"type": "string", "max_length": 100}}
+     }}
+   }}
+
+5. AUTHORIZATION (user ownership):
+   • Add user_id foreign key to app_users.id for user-owned resources
+   
+   Example:
+   {{
+     "orders": {{
+       "user_id": {{"type": "uuid", "foreign_key": "app_users.id"}},
+       "total": {{"type": "decimal", "precision": 10, "scale": 2}}
+     }}
+   }}
+
+6. FIELD OPTIONS:
+   • required: true/false
+   • unique: true/false
+   • default: any value
+   • enum: ["value1", "value2"]
+   • foreign_key: "table_name.id"
+
+AVAILABLE TYPES: string, text, integer, decimal, boolean, uuid, date, datetime, json
+
+═══════════════════════════════════════════════════════════════════════════
+
+Generate the schema now following ALL rules above:""",
                     ),
                 )
             ]
@@ -482,12 +662,39 @@ Schema:
 
 Error: {error}
 
-COMMON ISSUES:
-1. Nested 'fields' key - REMOVE IT
-2. Missing 'type' property - ADD IT
-3. Wrong format - Use FLAT structure
+═══════════════════════════════════════════════════════════════════════════
+COMMON SCHEMA ERRORS:
+═══════════════════════════════════════════════════════════════════════════
 
-Provide the corrected schema:""",
+1. NESTED 'fields' KEY:
+   ❌ {{"users": {{"fields": {{"email": {{...}}}}}}}}
+   ✅ {{"users": {{"email": {{...}}}}}}
+
+2. MISSING TYPE PROPERTY:
+   ❌ {{"name": {{"required": true}}}}
+   ✅ {{"name": {{"type": "string", "max_length": 100, "required": true}}}}
+
+3. STRING WITHOUT max_length:
+   ❌ {{"email": {{"type": "string"}}}}
+   ✅ {{"email": {{"type": "string", "max_length": 255}}}}
+
+4. DECIMAL WITHOUT precision/scale:
+   ❌ {{"price": {{"type": "decimal"}}}}
+   ✅ {{"price": {{"type": "decimal", "precision": 10, "scale": 2}}}}
+
+5. USING "timestamp" INSTEAD OF "datetime":
+   ❌ {{"created": {{"type": "timestamp"}}}}
+   ✅ {{"created": {{"type": "datetime"}}}}
+
+6. DEFINING AUTOMATIC FIELDS:
+   ❌ {{"id": {{...}}}}, {{"created_at": {{...}}}}, {{"updated_at": {{...}}}}
+   ✅ Don't define these - they're automatic
+
+7. CREATING users/customers/employees TABLE:
+   ❌ {{"users": {{"email": {{...}}, "password": {{...}}}}}}
+   ✅ Use app_users pattern with foreign key
+
+CHECK ALL THESE ISSUES and provide the corrected schema:""",
                     ),
                 )
             ]
