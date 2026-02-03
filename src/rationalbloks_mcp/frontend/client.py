@@ -344,7 +344,7 @@ export default function {type_name}View() {{
         </Button>
       </Box>
 
-      {{error && <Alert severity="error" sx={{{{ mb: 2 }}}}>{error}</Alert>}}
+      {{error && <Alert severity="error" sx={{{{ mb: 2 }}}}>{{error}}</Alert>}}
 
       <TableContainer component={{Paper}}>
         <Table>
@@ -523,7 +523,7 @@ export default function {singular}FormView() {{
         {{isEdit ? "Edit" : "Create"}} {singular}
       </Typography>
 
-      {{error && <Alert severity="error" sx={{{{ mb: 2 }}}}>{error}</Alert>}}
+      {{error && <Alert severity="error" sx={{{{ mb: 2 }}}}>{{error}}</Alert>}}
 
       <Paper sx={{{{ p: 3 }}}}>
         <form onSubmit={{handleSubmit}}>
