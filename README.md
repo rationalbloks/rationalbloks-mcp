@@ -8,15 +8,18 @@
 
 ## 🚀 What's New in v0.4.0
 
-**Gateway Protocol Fix** - Updated client to use `/api/mcp/execute` endpoint pattern instead of REST endpoints.
+**Major Architecture Redesign** - Frontend MCP completely rewritten with granular, flexible tools:
 
-**Complete App Generation** - The `create_app` tool transforms a template into a fully working application in one step:
-
-- **Full Mode**: All 24 tools (18 backend + 6 frontend) - DEFAULT
+- **Full Mode**: All 32 tools (18 backend + 14 frontend) - DEFAULT
 - **Backend Mode**: 18 API/database tools
-- **Frontend Mode**: 6 frontend generation tools
+- **Frontend Mode**: 14 frontend generation tools
 
-**Key Feature**: `create_app` performs 13 automated steps including backend creation, TypeScript generation, API services, views, forms, dashboard, routing, and npm install - no manual steps required!
+**Key Changes:**
+- 14 granular frontend tools that work on ANY existing project
+- `scaffold_frontend` - Apply all generators to your project (no cloning required)
+- `generate_types`, `generate_api_service`, `generate_entity_view`, etc.
+- All file operations use `encoding="utf-8"` for Windows compatibility
+- `create_app` still available for full automation (clone + backend + scaffold)
 
 ## Installation
 
@@ -91,7 +94,7 @@ npx @smithery/cli install @rationalbloks/mcp
 
 ## Modes
 
-### Full Mode (Default) - 24 Tools
+### Full Mode (Default) - 32 Tools
 
 All tools for complete fullstack development:
 
@@ -111,7 +114,7 @@ rationalbloks-mcp
 # or: rationalbloks-mcp-backend
 ```
 
-### Frontend Mode - 6 Tools
+### Frontend Mode - 14 Tools
 
 Frontend generation only:
 
@@ -151,16 +154,71 @@ rationalbloks-mcp
 | `rollback_project` | Rollback to previous version |
 | `rename_project` | Rename project |
 
-### Frontend Tools (6)
+### Frontend Tools (14)
 
+**Generation Tools (8) - Work on ANY existing project:**
 | Tool | Description |
 |------|-------------|
-| `create_app` | 🚀 **MAIN TOOL** - Create complete app in one step |
-| `clone_template` | Clone rationalbloksfront template |
-| `get_template_structure` | Explore template file structure |
-| `read_template_file` | Read file from template |
-| `create_backend` | Create backend via Backend MCP |
+| `generate_types` | Generate TypeScript interfaces from schema |
+| `generate_api_service` | Generate API client with CRUD operations |
+| `generate_entity_view` | Generate list view for ONE entity |
+| `generate_entity_form` | Generate create/edit form for ONE entity |
+| `generate_all_views` | Generate all views for all entities |
+| `generate_dashboard` | Generate dashboard with entity stats |
+| `update_routes` | Add routes to App.tsx |
+| `update_navbar` | Update navigation configuration |
+
+**Scaffold Tools (2):**
+| Tool | Description |
+|------|-------------|
+| `scaffold_frontend` | 🚀 **RECOMMENDED** - Apply ALL generators to existing project |
+| `create_app` | Full automation (clone + backend + scaffold) |
+
+**Utility Tools (4):**
+| Tool | Description |
+|------|-------------|
+| `clone_template` | Clone rationalbloksfront template from GitHub |
 | `configure_api_url` | Set API URL in frontend .env |
+| `create_backend` | Create backend via Backend MCP |
+| `get_template_structure` | Explore template file structure |
+
+## Recommended Workflow
+
+### If You Already Have a Project (Most Common)
+
+Use `scaffold_frontend` - the RECOMMENDED approach for most use cases:
+
+```
+"Scaffold my frontend at ~/projects/my-app using this schema..."
+```
+
+This:
+1. Generates TypeScript types
+2. Creates API service with CRUD operations
+3. Generates list views for each entity
+4. Generates create/edit forms for each entity
+5. Creates a dashboard with entity stats
+6. Updates App.tsx with routes
+7. Updates Navbar with navigation
+8. Optionally sets API URL in .env
+
+**Benefits:** Works on ANY existing project. No cloning. No backend creation.
+
+### If You Need a Fresh Template First
+
+Use `clone_template`, then `scaffold_frontend`:
+
+```
+"Clone the template to ~/projects/my-app, then scaffold using this schema..."
+```
+
+### If You Want Everything Automated
+
+Use `create_app` for the full automation flow (clone + backend + scaffold):
+
+```
+"Create a complete task manager app in ~/projects"
+```
 
 ## The `create_app` Tool
 
@@ -362,7 +420,7 @@ Ensure your key starts with `rb_sk_`
 ```
 rationalbloks-mcp/
 ├── src/rationalbloks_mcp/
-│   ├── __init__.py      # Unified entry point (24 tools)
+│   ├── __init__.py      # Unified entry point (32 tools)
 │   ├── core/            # Shared infrastructure
 │   │   ├── auth.py      # API key validation
 │   │   ├── transport.py # STDIO + HTTP transport
@@ -370,10 +428,10 @@ rationalbloks-mcp/
 │   ├── backend/         # 18 backend tools
 │   │   ├── client.py    # LogicBlok HTTP client
 │   │   └── tools.py     # Tool definitions
-│   └── frontend/        # 6 frontend tools
-│       ├── client.py        # Template operations
+│   └── frontend/        # 14 frontend tools
+│       ├── client.py        # Generation methods
 │       ├── tools.py         # Tool definitions
-│       └── app_generator.py # Complete app generation
+│       └── app_generator.py # Full app automation
 ├── pyproject.toml       # Package configuration
 ├── smithery.yaml        # Smithery marketplace config
 └── README.md            # This file
@@ -382,7 +440,14 @@ rationalbloks-mcp/
 ## Version History
 
 | Version | Date | Changes |
-|---------|------|---------|| 0.4.0 | 2026-02-03 | Fixed client to use /api/mcp/execute gateway pattern || 0.3.3 | 2026-02-03 | Added certifi for SSL cert resolution || 0.3.2 | 2026-02-03 | Fixed API URL (businessblok → logicblok) || 0.3.1 | 2026-02-03 | Fixed wildcard handler lookup bug || 0.3.0 | 2026-02-03 | Added `create_app` tool for complete app generation |
+|---------|------|---------|
+| 0.4.0 | 2026-02-03 | Major redesign: 14 granular frontend tools, scaffold_frontend |
+| 0.3.5 | 2026-02-03 | Fixed encoding for Windows (utf-8) |
+| 0.3.4 | 2026-02-03 | Fixed client to use /api/mcp/execute gateway pattern |
+| 0.3.3 | 2026-02-03 | Added certifi for SSL cert resolution |
+| 0.3.2 | 2026-02-03 | Fixed API URL (businessblok → logicblok) |
+| 0.3.1 | 2026-02-03 | Fixed wildcard handler lookup bug |
+| 0.3.0 | 2026-02-03 | Added create_app tool for complete app generation |
 | 0.2.2 | 2026-01-28 | Fixed frontend template URL |
 | 0.2.0 | 2026-01-25 | Unified backend + frontend package |
 | 0.1.0 | 2026-01-20 | Initial release (backend only) |

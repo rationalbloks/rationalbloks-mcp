@@ -3,13 +3,27 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# Frontend mode provides 6 tools for frontend generation:
-# - create_app: MAIN TOOL - Complete app generation in one step
+# Frontend mode provides 14 tools for flexible frontend generation:
+#
+# GENERATION TOOLS (work on any existing project):
+# - generate_types: TypeScript interfaces from schema
+# - generate_api_service: API client with CRUD operations
+# - generate_entity_view: List view for ONE entity
+# - generate_entity_form: Create/edit form for ONE entity
+# - generate_all_views: All views for all entities
+# - generate_dashboard: Dashboard with stats
+# - update_routes: Wire up routes in App.tsx
+# - update_navbar: Update navigation links
+#
+# SCAFFOLD TOOLS:
+# - scaffold_frontend: Apply ALL generators to existing project
+# - create_app: Full automation (clone + backend + scaffold)
+#
+# UTILITY TOOLS:
 # - clone_template: Clone rationalbloksfront template
-# - get_template_structure: Explore template file structure
-# - read_template_file: Read file from template
-# - create_backend: Create backend via Backend MCP
 # - configure_api_url: Set API URL in frontend .env
+# - create_backend: Create backend via Backend MCP
+# - get_template_structure: Explore template file structure
 # ============================================================================
 
 from .client import FrontendClient

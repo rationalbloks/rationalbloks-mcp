@@ -369,7 +369,7 @@ AVAILABLE: 32 tools (18 backend + 14 frontend)"""
 
 def main() -> None:
     # Main entry point - uses RATIONALBLOKS_MODE environment variable
-    # Default mode is 'full' (all 24 tools)
+    # Default mode is 'full' (all 32 tools: 18 backend + 14 frontend)
     mode = _get_mode()
     print(f"[rationalbloks-mcp] Starting in {mode} mode...", file=sys.stderr)
     _run_server(mode)
