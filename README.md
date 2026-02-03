@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/rationalbloks-mcp.svg)](https://pypi.org/project/rationalbloks-mcp/)
 
-## 🚀 What's New in v0.4.0
+## 🚀 What's New in v0.4.1
 
 **Major Architecture Redesign** - Frontend MCP completely rewritten with granular, flexible tools:
 
@@ -441,7 +441,7 @@ rationalbloks-mcp/
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.4.0 | 2026-02-03 | Major redesign: 14 granular frontend tools, scaffold_frontend |
+| 0.4.1 | 2026-02-03 | Major redesign: 14 granular frontend tools, scaffold_frontend |
 | 0.3.5 | 2026-02-03 | Fixed encoding for Windows (utf-8) |
 | 0.3.4 | 2026-02-03 | Fixed client to use /api/mcp/execute gateway pattern |
 | 0.3.3 | 2026-02-03 | Added certifi for SSL cert resolution |

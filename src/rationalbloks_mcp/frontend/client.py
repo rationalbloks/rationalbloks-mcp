@@ -714,10 +714,12 @@ export default function DashboardView() {{
         
         # Add API calls for each entity
         for card in stats_cards:
+            card_name = card["name"]
+            card_type = card["type"]
             view_content += f'''      try {{
-        const {card["name"]}Data = await api.get{card["type"]}();
-        results["{card["name"]}"] = {card["name"]}Data.length;
-      }} catch {{ results["{card["name"]}"] = 0; }}
+        const {card_name}Data = await api.get{card_type}();
+        results["{card_name}"] = {card_name}Data.length;
+      }} catch (_e) {{ results["{card_name}"] = 0; }}
 '''
         
         view_content += f'''      setStats(results);
@@ -745,15 +747,17 @@ export default function DashboardView() {{
         
         # Add stat cards
         for card in stats_cards:
+            card_name = card["name"]
+            card_label = card["label"]
             view_content += f'''        <Grid item xs={{12}} sm={{6}} md={{4}} lg={{3}}>
           <Card>
-            <CardActionArea onClick={{() => navigate("/{card["name"]}")}}>
+            <CardActionArea onClick={{() => navigate("/{card_name}")}}>
               <CardContent>
                 <Typography variant="h3" color="primary">
-                  {{stats["{card["name"]}"] || 0}}
+                  {{stats["{card_name}"] || 0}}
                 </Typography>
                 <Typography color="text.secondary">
-                  {card["label"]}
+                  {card_label}
                 </Typography>
               </CardContent>
             </CardActionArea>
