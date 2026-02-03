@@ -1,11 +1,11 @@
 # RationalBloks MCP Server - Smithery Configuration
+# Unified MCP supporting 3 modes: backend, frontend, full
 # This enables one-click installation via: npx @smithery/cli install @rationalbloks/mcp
-# NOTE: Version should match pyproject.toml (update both together)
 
 name: rationalbloks
 displayName: RationalBloks
-version: 0.1.20
-description: Enterprise-grade Backend-as-a-Service platform for AI agents. Build production APIs from JSON schemas in minutes.
+version: 1.0.0
+description: Unified MCP Server - Build fullstack apps with AI. 18 backend tools + 5 frontend tools.
 author: RationalBloks
 homepage: https://rationalbloks.com
 repository: https://github.com/rationalbloks/rationalbloks-mcp
@@ -13,22 +13,30 @@ icon: https://rationalbloks.com/logo.svg
 documentation: https://rationalbloks.com/docs/mcp
 
 # Configuration schema for Smithery UI
-# All fields optional with defaults - apiKey only needed for authenticated operations
 configSchema:
   type: object
   title: RationalBloks Configuration
-  required: []  # All properties are optional
+  required: []
   properties:
     apiKey:
       type: string
       title: API Key
-      description: Your RationalBloks API key (get it from rationalbloks.com/settings). Optional for browsing documentation.
+      description: Your RationalBloks API key (get it from rationalbloks.com/settings)
       default: ""
+    mode:
+      type: string
+      title: Mode
+      description: Server mode - which tools to enable
+      default: full
+      enum:
+        - full
+        - backend
+        - frontend
     baseUrl:
       type: string
       title: API Gateway URL
       description: RationalBloks API Gateway URL
-      default: https://logicblok.rationalbloks.com
+      default: https://businessblok.rationalbloks.com
     timeout:
       type: number
       title: Timeout
@@ -52,13 +60,17 @@ startCommand:
     - rationalbloks-mcp
   env:
     RATIONALBLOKS_API_KEY:
-      description: "Your RationalBloks API Key (get it from rationalbloks.com/settings). Optional for browsing documentation."
+      description: "Your RationalBloks API Key (get it from rationalbloks.com/settings)"
       required: false
       default: ""
+    RATIONALBLOKS_MODE:
+      description: "Server mode: full (all 23 tools), backend (18 tools), frontend (5 tools)"
+      required: false
+      default: "full"
     RATIONALBLOKS_BASE_URL:
       description: "API Gateway URL"
       required: false
-      default: "https://logicblok.rationalbloks.com"
+      default: "https://businessblok.rationalbloks.com"
     RATIONALBLOKS_TIMEOUT:
       description: "Request timeout in seconds"
       required: false

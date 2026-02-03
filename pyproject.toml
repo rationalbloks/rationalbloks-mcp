@@ -4,17 +4,17 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rationalbloks-mcp"
-version = "0.1.20"
-description = "Enterprise-grade MCP Server for RationalBloks - Connect AI agents to your backend projects"
+version = "1.0.0"
+description = "Unified MCP Server for RationalBloks - Backend API + Frontend Generation for AI agents"
 readme = "README.md"
 license = {text = "Proprietary"}
 requires-python = ">=3.10"
 authors = [
     { name = "RationalBloks", email = "support@rationalbloks.com" }
 ]
-keywords = ["mcp", "ai", "backend", "database", "api", "claude", "gpt", "cursor", "smithery"]
+keywords = ["mcp", "ai", "backend", "frontend", "database", "api", "claude", "gpt", "cursor", "smithery", "fullstack"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: Other/Proprietary License",
     "Programming Language :: Python :: 3",
@@ -44,8 +44,11 @@ Documentation = "https://rationalbloks.com/docs/mcp"
 Repository = "https://github.com/rationalbloks/rationalbloks-mcp"
 Issues = "https://github.com/rationalbloks/rationalbloks-mcp/issues"
 
+# Three entry points for different modes
 [project.scripts]
 rationalbloks-mcp = "rationalbloks_mcp:main"
+rationalbloks-mcp-backend = "rationalbloks_mcp:main_backend"
+rationalbloks-mcp-frontend = "rationalbloks_mcp:main_frontend"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/rationalbloks_mcp"]
