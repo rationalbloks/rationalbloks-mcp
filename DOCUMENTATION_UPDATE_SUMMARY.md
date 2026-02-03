@@ -1,7 +1,6 @@
 # RationalBloks MCP - Documentation Update Summary
 
-## Date: 2026-01-XX
-## Version: 0.2.1 → 0.2.2 (pending)
+## Version: 0.2.2
 
 ---
 
@@ -194,7 +193,7 @@ Each error includes visual before/after examples.
 - ✅ No Python syntax errors
 - ✅ All imports valid
 - ✅ Tool schemas unchanged (backwards compatible)
-- ✅ Version 0.2.1 maintained (no breaking changes)
+- ✅ Version 0.2.2 maintained (no breaking changes)
 
 ---
 
