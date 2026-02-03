@@ -236,13 +236,8 @@ FRONTEND_PROMPTS = [
 # ============================================================================
 
 class FrontendMCPServer(BaseMCPServer):
-    """Frontend MCP server with 5 frontend generation tools.
-    
-    Extends BaseMCPServer with frontend-specific:
-    - Template cloning and exploration
-    - Backend integration
-    - Frontend configuration
-    """
+    # Frontend MCP server with 5 frontend generation tools
+    # Extends BaseMCPServer with: Template cloning and exploration, backend integration, frontend configuration
     
     INSTRUCTIONS = """RationalBloks MCP Server - Frontend Mode
 
@@ -261,7 +256,7 @@ Available: 5 frontend tools for template and configuration."""
         api_key: str | None = None,
         http_mode: bool = False,
     ) -> None:
-        """Initialize frontend MCP server."""
+        # Initialize frontend MCP server
         super().__init__(
             name="rationalbloks-frontend",
             version=__version__,
@@ -287,12 +282,12 @@ Available: 5 frontend tools for template and configuration."""
         self.setup_handlers()
     
     def _get_client(self) -> FrontendClient:
-        """Get frontend client with current API key."""
+        # Get frontend client with current API key
         api_key = self.get_api_key_for_request()
         return FrontendClient(api_key)
     
     async def _handle_frontend_tool(self, name: str, arguments: dict) -> Any:
-        """Handle all frontend tool calls."""
+        # Handle all frontend tool calls
         async with self._get_client() as client:
             if name == "clone_template":
                 return await client.clone_template(
@@ -327,7 +322,7 @@ Available: 5 frontend tools for template and configuration."""
         name: str,
         arguments: dict[str, str] | None,
     ) -> GetPromptResult:
-        """Handle create-fullstack-app prompt."""
+        # Handle create-fullstack-app prompt
         app_name = arguments.get("app_name", "my-app") if arguments else "my-app"
         description = arguments.get("description", "") if arguments else ""
         destination = arguments.get("destination", "~/projects") if arguments else "~/projects"
@@ -365,13 +360,6 @@ def create_frontend_server(
     api_key: str | None = None,
     http_mode: bool = False,
 ) -> FrontendMCPServer:
-    """Factory function to create a frontend MCP server.
-    
-    Args:
-        api_key: API key (required for create_backend)
-        http_mode: If True, API key extracted per-request
-    
-    Returns:
-        Configured FrontendMCPServer instance
-    """
+    # Factory function to create a frontend MCP server
+    # Returns: Configured FrontendMCPServer instance
     return FrontendMCPServer(api_key=api_key, http_mode=http_mode)

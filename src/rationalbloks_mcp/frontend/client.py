@@ -25,26 +25,17 @@ TEMPLATE_BRANCH = "main"
 
 
 class FrontendClient:
-    """Client for frontend generation operations.
-    
-    Provides:
-    - Template cloning from GitHub
-    - Template file exploration
-    - Backend integration via LogicBlokClient
-    - Frontend configuration
-    """
+    # Client for frontend generation operations
+    # Provides: Template cloning from GitHub, template file exploration, backend integration, frontend configuration
     
     def __init__(self, api_key: str | None = None) -> None:
-        """Initialize frontend client.
-        
-        Args:
-            api_key: RationalBloks API key (required for create_backend)
-        """
+        # Initialize frontend client
+        # api_key: RationalBloks API key (required for create_backend)
         self.api_key = api_key
         self._backend_client: LogicBlokClient | None = None
     
     async def close(self) -> None:
-        """Close any open connections."""
+        # Close any open connections
         if self._backend_client:
             await self._backend_client.close()
     
@@ -55,7 +46,7 @@ class FrontendClient:
         await self.close()
     
     def _get_backend_client(self) -> LogicBlokClient:
-        """Get or create backend client."""
+        # Get or create backend client
         if not self.api_key:
             raise ValueError("API key required for backend operations")
         if not self._backend_client:
@@ -71,15 +62,8 @@ class FrontendClient:
         destination: str,
         project_name: str,
     ) -> dict[str, Any]:
-        """Clone the rationalbloksfront template to a local directory.
-        
-        Args:
-            destination: Directory to clone into
-            project_name: Name for the cloned project
-        
-        Returns:
-            Result with clone location and next steps
-        """
+        # Clone the rationalbloksfront template to a local directory
+        # Returns: Result with clone location and next steps
         dest_path = Path(destination).expanduser().resolve()
         project_path = dest_path / project_name
         
@@ -163,15 +147,8 @@ class FrontendClient:
         path: str = "",
         max_depth: int = 3,
     ) -> dict[str, Any]:
-        """Get the file structure of the template.
-        
-        Args:
-            path: Subdirectory to explore (empty for root)
-            max_depth: Maximum directory depth to show
-        
-        Returns:
-            Tree structure of the template
-        """
+        # Get the file structure of the template
+        # Returns: Tree structure of the template
         # This would ideally fetch from GitHub API
         # For now, return the known structure
         return {
@@ -203,14 +180,8 @@ class FrontendClient:
         self,
         file_path: str,
     ) -> dict[str, Any]:
-        """Read a specific file from the template.
-        
-        Args:
-            file_path: Path to the file within the template
-        
-        Returns:
-            File content and metadata
-        """
+        # Read a specific file from the template
+        # Returns: File content and metadata
         # This would fetch from GitHub raw content
         # For now, return a placeholder
         return {
@@ -229,16 +200,8 @@ class FrontendClient:
         schema: dict,
         description: str | None = None,
     ) -> dict[str, Any]:
-        """Create a backend project via the Backend MCP.
-        
-        Args:
-            name: Project name
-            schema: JSON schema in FLAT format
-            description: Optional project description
-        
-        Returns:
-            Backend project details with API URLs
-        """
+        # Create a backend project via the Backend MCP
+        # Returns: Backend project details with API URLs
         client = self._get_backend_client()
         result = await client.create_project(
             name=name,
@@ -256,15 +219,8 @@ class FrontendClient:
         project_path: str,
         api_url: str,
     ) -> dict[str, Any]:
-        """Configure the API URL in the frontend project.
-        
-        Args:
-            project_path: Path to the cloned frontend project
-            api_url: Backend API URL (e.g., https://project-abc.customersblok.rationalbloks.com)
-        
-        Returns:
-            Configuration result
-        """
+        # Configure the API URL in the frontend project
+        # Returns: Configuration result
         project = Path(project_path).expanduser().resolve()
         
         if not project.exists():
@@ -318,7 +274,7 @@ class FrontendClient:
     # ========================================================================
     
     def _list_files(self, path: Path, prefix: str = "") -> list[str]:
-        """List files in a directory recursively."""
+        # List files in a directory recursively
         files = []
         try:
             for item in sorted(path.iterdir()):

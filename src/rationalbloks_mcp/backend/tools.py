@@ -378,13 +378,8 @@ BACKEND_PROMPTS = [
 # ============================================================================
 
 class BackendMCPServer(BaseMCPServer):
-    """Backend MCP server with 18 API/database tools.
-    
-    Extends BaseMCPServer with backend-specific:
-    - LogicBlok client integration
-    - 18 backend tools
-    - Backend prompts
-    """
+    # Backend MCP server with 18 API/database tools
+    # Extends BaseMCPServer with: LogicBlok client integration, 18 backend tools, backend prompts
     
     INSTRUCTIONS = """RationalBloks MCP Server - Backend Mode
 
@@ -468,7 +463,7 @@ Full documentation: https://infra.rationalbloks.com/documentation"""
         api_key: str | None = None,
         http_mode: bool = False,
     ) -> None:
-        """Initialize backend MCP server."""
+        # Initialize backend MCP server
         super().__init__(
             name="rationalbloks-backend",
             version=__version__,
@@ -498,14 +493,14 @@ Full documentation: https://infra.rationalbloks.com/documentation"""
         self.setup_handlers()
     
     def _get_client(self) -> LogicBlokClient:
-        """Get LogicBlok client with current API key."""
+        # Get LogicBlok client with current API key
         api_key = self.get_api_key_for_request()
         if not api_key:
             raise ValueError("No API key available")
         return LogicBlokClient(api_key)
     
     async def _handle_backend_tool(self, name: str, arguments: dict) -> Any:
-        """Handle all backend tool calls."""
+        # Handle all backend tool calls
         async with self._get_client() as client:
             # Route to appropriate client method
             if name == "list_projects":
@@ -569,7 +564,7 @@ Full documentation: https://infra.rationalbloks.com/documentation"""
         name: str,
         arguments: dict[str, str] | None,
     ) -> GetPromptResult:
-        """Handle create-project-from-description prompt."""
+        # Handle create-project-from-description prompt
         description = arguments.get("description", "") if arguments else ""
         
         return GetPromptResult(
@@ -645,7 +640,7 @@ Generate the schema now following ALL rules above:""",
         name: str,
         arguments: dict[str, str] | None,
     ) -> GetPromptResult:
-        """Handle fix-schema-errors prompt."""
+        # Handle fix-schema-errors prompt
         schema = arguments.get("schema", "{}") if arguments else "{}"
         error = arguments.get("error_message", "Unknown error") if arguments else "Unknown error"
         
@@ -705,13 +700,6 @@ def create_backend_server(
     api_key: str | None = None,
     http_mode: bool = False,
 ) -> BackendMCPServer:
-    """Factory function to create a backend MCP server.
-    
-    Args:
-        api_key: API key (required for STDIO mode)
-        http_mode: If True, API key extracted per-request
-    
-    Returns:
-        Configured BackendMCPServer instance
-    """
+    # Factory function to create a backend MCP server
+    # Returns: Configured BackendMCPServer instance
     return BackendMCPServer(api_key=api_key, http_mode=http_mode)

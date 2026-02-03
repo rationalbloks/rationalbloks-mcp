@@ -42,16 +42,9 @@ def run_stdio(
     server: Server,
     init_options: InitializationOptions,
 ) -> None:
-    """Run MCP server in STDIO mode for local IDEs.
-    
-    Used by: Cursor, VS Code, Claude Desktop, Windsurf
-    
-    Args:
-        server: MCP Server instance
-        init_options: Initialization options for MCP handshake
-    
-    CHAIN: Single async run, no error branching
-    """
+    # Run MCP server in STDIO mode for local IDEs
+    # Used by: Cursor, VS Code, Claude Desktop, Windsurf
+    # CHAIN: Single async run, no error branching
     asyncio.run(_stdio_async(server, init_options))
 
 
@@ -59,7 +52,7 @@ async def _stdio_async(
     server: Server,
     init_options: InitializationOptions,
 ) -> None:
-    """Async STDIO handler with MCP stream management."""
+    # Async STDIO handler with MCP stream management
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, init_options)
 
@@ -75,19 +68,9 @@ def run_http(
     description: str,
     server_card_builder: Callable[[], dict] | None = None,
 ) -> None:
-    """Run MCP server in HTTP mode for cloud deployment.
-    
-    Used by: Smithery, Replit, web agents, cloud platforms
-    
-    Args:
-        server: MCP Server instance
-        name: Server name for server card
-        version: Server version for server card
-        description: Server description for server card
-        server_card_builder: Optional custom server card builder
-    
-    CHAIN: Build app → run uvicorn → no branching
-    """
+    # Run MCP server in HTTP mode for cloud deployment
+    # Used by: Smithery, Replit, web agents, cloud platforms
+    # CHAIN: Build app → run uvicorn → no branching
     import uvicorn
     
     app = create_http_app(server, name, version, description, server_card_builder)
@@ -110,21 +93,12 @@ def create_http_app(
     description: str,
     server_card_builder: Callable[[], dict] | None = None,
 ) -> Any:
-    """Create Starlette ASGI application for HTTP transport.
-    
-    Returns fully configured ASGI app with:
-    - Server card endpoint (/.well-known/mcp/server-card.json)
-    - Health check endpoint (/health)
-    - MCP SSE endpoints (/sse, /mcp, /)
-    - CORS middleware for browser clients
-    
-    Args:
-        server: MCP Server instance
-        name: Server name for server card
-        version: Server version for server card
-        description: Server description for server card
-        server_card_builder: Optional custom server card builder
-    """
+    # Create Starlette ASGI application for HTTP transport
+    # Returns fully configured ASGI app with:
+    # - Server card endpoint (/.well-known/mcp/server-card.json)
+    # - Health check endpoint (/health)
+    # - MCP SSE endpoints (/sse, /mcp, /)
+    # - CORS middleware for browser clients
     from starlette.applications import Starlette
     from starlette.routing import Route, Mount
     from starlette.responses import JSONResponse
@@ -139,7 +113,7 @@ def create_http_app(
     )
     
     async def server_card(request):
-        """MCP Server Card for Smithery discovery."""
+        # MCP Server Card for Smithery discovery
         if server_card_builder:
             card = server_card_builder()
         else:
@@ -147,16 +121,16 @@ def create_http_app(
         return JSONResponse(card)
     
     async def health(request):
-        """Health check endpoint for Kubernetes probes."""
+        # Health check endpoint for Kubernetes probes
         return JSONResponse({"status": "ok", "version": version})
     
     async def handle_streamable(scope: Scope, receive: Receive, send: Send):
-        """Handle Streamable HTTP requests for MCP protocol."""
+        # Handle Streamable HTTP requests for MCP protocol
         await session_manager.handle_request(scope, receive, send)
     
     @contextlib.asynccontextmanager
     async def lifespan(app: Starlette) -> AsyncIterator[None]:
-        """Application lifespan for session manager."""
+        # Application lifespan for session manager
         async with session_manager.run():
             yield
     
@@ -186,7 +160,7 @@ def create_http_app(
 
 
 def _build_default_server_card(name: str, version: str, description: str) -> dict:
-    """Build default MCP server card for Smithery."""
+    # Build default MCP server card for Smithery
     return {
         "name": name,
         "displayName": "RationalBloks MCP",

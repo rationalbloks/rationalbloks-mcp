@@ -28,18 +28,9 @@ BEARER_PREFIX = "Bearer "
 
 
 def validate_api_key(api_key: str | None) -> tuple[bool, str | None]:
-    """Validate API key format.
-    
-    Args:
-        api_key: The API key to validate
-        
-    Returns:
-        Tuple of (is_valid, error_message)
-        If valid: (True, None)
-        If invalid: (False, "error description")
-    
-    CHAIN MANTRA: Single validation path, explicit errors
-    """
+    # Validate API key format
+    # Returns: (is_valid: bool, error_message: str | None)
+    # CHAIN MANTRA: Single validation path, explicit errors
     if not api_key:
         return False, "API key is required"
     
@@ -57,16 +48,9 @@ def validate_api_key(api_key: str | None) -> tuple[bool, str | None]:
 
 
 def extract_api_key_from_request(request: Request) -> str | None:
-    """Extract API key from HTTP Authorization header.
-    
-    Args:
-        request: Starlette Request object
-        
-    Returns:
-        API key string if found and valid format, None otherwise
-    
-    Expected header format: Authorization: Bearer rb_sk_...
-    """
+    # Extract API key from HTTP Authorization header
+    # Expected format: Authorization: Bearer rb_sk_...
+    # Returns: API key string or None if not found/invalid
     if request is None:
         return None
     
@@ -86,33 +70,30 @@ def extract_api_key_from_request(request: Request) -> str | None:
 
 
 class APIKeyCache:
-    """In-memory cache for validated API keys.
-    
-    Stores validation results to avoid repeated calls to auth server.
-    Cache is per-server-instance (not persistent across restarts).
-    
-    SECURITY:
-    - Only stores key prefix (first 20 chars) as cache key
-    - Full key never stored in cache
-    - Cache cleared on server restart
-    """
+    # In-memory cache for validated API keys
+    # Stores validation results to avoid repeated calls to auth server
+    # Cache is per-server-instance (not persistent across restarts)
+    # SECURITY:
+    # - Only stores key prefix (first 20 chars) as cache key
+    # - Full key never stored in cache
+    # - Cache cleared on server restart
     
     def __init__(self, max_size: int = 100) -> None:
-        """Initialize cache with maximum size."""
+        # Initialize cache with maximum size
         self._cache: dict[str, dict[str, Any]] = {}
         self._max_size = max_size
     
     def _get_cache_key(self, api_key: str) -> str:
-        """Get cache key from API key (uses prefix only for security)."""
+        # Get cache key from API key (uses prefix only for security)
         return api_key[:20] if len(api_key) >= 20 else api_key
     
     def get(self, api_key: str) -> dict[str, Any] | None:
-        """Get cached user info for API key."""
+        # Get cached user info for API key
         cache_key = self._get_cache_key(api_key)
         return self._cache.get(cache_key)
     
     def set(self, api_key: str, user_info: dict[str, Any]) -> None:
-        """Cache user info for API key."""
+        # Cache user info for API key
         # Evict oldest entries if cache is full
         if len(self._cache) >= self._max_size:
             # Simple eviction: clear half the cache
@@ -124,9 +105,9 @@ class APIKeyCache:
         self._cache[cache_key] = user_info
     
     def clear(self) -> None:
-        """Clear all cached entries."""
+        # Clear all cached entries
         self._cache.clear()
     
     def __len__(self) -> int:
-        """Return number of cached entries."""
+        # Return number of cached entries
         return len(self._cache)

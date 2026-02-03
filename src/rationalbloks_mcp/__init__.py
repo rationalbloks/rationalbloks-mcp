@@ -46,11 +46,8 @@ __all__ = [
 
 
 def _get_mode() -> Mode:
-    """Get mode from environment variable.
-    
-    Returns:
-        Mode string: "backend", "frontend", or "full"
-    """
+    # Get mode from environment variable
+    # Returns: Mode string: "backend", "frontend", or "full"
     mode = os.environ.get("RATIONALBLOKS_MODE", "full").lower()
     if mode not in ("backend", "frontend", "full"):
         print(f"WARNING: Invalid RATIONALBLOKS_MODE '{mode}', using 'full'", file=sys.stderr)
@@ -59,18 +56,10 @@ def _get_mode() -> Mode:
 
 
 def _validate_api_key(api_key: str | None, transport: str) -> str | None:
-    """Validate API key for the given transport.
-    
-    Args:
-        api_key: API key from environment
-        transport: "stdio" or "http"
-    
-    Returns:
-        Validated API key or None for HTTP mode
-    
-    Raises:
-        SystemExit: If API key is invalid for STDIO mode
-    """
+    # Validate API key for the given transport
+    # HTTP mode: API key provided per-request (returns None)
+    # STDIO mode: API key required at startup (returns validated key)
+    # Raises SystemExit if API key invalid for STDIO mode
     # HTTP mode: API key provided per-request
     if transport == "http":
         return None
@@ -93,11 +82,8 @@ def _validate_api_key(api_key: str | None, transport: str) -> str | None:
 
 
 def _run_server(mode: Mode) -> None:
-    """Run MCP server in the specified mode.
-    
-    Args:
-        mode: "backend", "frontend", or "full"
-    """
+    # Run MCP server in the specified mode
+    # mode: "backend", "frontend", or "full"
     api_key = os.environ.get("RATIONALBLOKS_API_KEY")
     transport = os.environ.get("TRANSPORT", "stdio").lower()
     http_mode = transport == "http"
@@ -125,10 +111,8 @@ def _run_server(mode: Mode) -> None:
 
 
 def _create_full_server(api_key: str | None, http_mode: bool):
-    """Create a full server with all 23 tools.
-    
-    Combines backend (18 tools) + frontend (5 tools).
-    """
+    # Create a full server with all 23 tools
+    # Combines backend (18 tools) + frontend (5 tools)
     from .core import BaseMCPServer
     from .backend.tools import BACKEND_TOOLS, BACKEND_PROMPTS
     from .backend.client import LogicBlokClient
@@ -154,7 +138,7 @@ SCHEMA FORMAT (FLAT):
 Use get_template_schemas to see correct format."""
     
     class FullMCPServer(BaseMCPServer):
-        """Full MCP server with all 23 tools."""
+        # Full MCP server with all 23 tools
         
         def __init__(self, api_key: str | None, http_mode: bool):
             super().__init__(
@@ -190,7 +174,7 @@ Use get_template_schemas to see correct format."""
             return FrontendClient(api_key)
         
         async def _handle_tool(self, name: str, arguments: dict):
-            """Route tool calls to appropriate client."""
+            # Route tool calls to appropriate client
             # Backend tools
             backend_tool_names = [t["name"] for t in BACKEND_TOOLS]
             if name in backend_tool_names:
@@ -206,7 +190,7 @@ Use get_template_schemas to see correct format."""
             raise ValueError(f"Unknown tool: {name}")
         
         async def _call_backend_tool(self, client: LogicBlokClient, name: str, args: dict):
-            """Call a backend tool."""
+            # Call a backend tool
             if name == "list_projects":
                 return await client.list_projects()
             elif name == "get_project":
@@ -255,7 +239,7 @@ Use get_template_schemas to see correct format."""
                 raise ValueError(f"Unknown backend tool: {name}")
         
         async def _call_frontend_tool(self, client: FrontendClient, name: str, args: dict):
-            """Call a frontend tool."""
+            # Call a frontend tool
             if name == "clone_template":
                 return await client.clone_template(
                     destination=args["destination"],
@@ -290,23 +274,21 @@ Use get_template_schemas to see correct format."""
 # ============================================================================
 
 def main() -> None:
-    """Main entry point - uses RATIONALBLOKS_MODE environment variable.
-    
-    Default mode is 'full' (all 23 tools).
-    """
+    # Main entry point - uses RATIONALBLOKS_MODE environment variable
+    # Default mode is 'full' (all 23 tools)
     mode = _get_mode()
     print(f"[rationalbloks-mcp] Starting in {mode} mode...", file=sys.stderr)
     _run_server(mode)
 
 
 def main_backend() -> None:
-    """Backend-only entry point (18 tools)."""
+    # Backend-only entry point (18 tools)
     print("[rationalbloks-mcp] Starting in backend mode...", file=sys.stderr)
     _run_server("backend")
 
 
 def main_frontend() -> None:
-    """Frontend-only entry point (5 tools)."""
+    # Frontend-only entry point (5 tools)
     print("[rationalbloks-mcp] Starting in frontend mode...", file=sys.stderr)
     _run_server("frontend")
 

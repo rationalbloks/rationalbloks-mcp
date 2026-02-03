@@ -178,16 +178,8 @@ def create_mcp_server(
     version: str,
     instructions: str,
 ) -> Server:
-    """Create a configured MCP Server instance.
-    
-    Args:
-        name: Server name (e.g., "rationalbloks", "rationalbloks-frontend")
-        version: Server version string
-        instructions: Server instructions for AI agents
-    
-    Returns:
-        Configured MCP Server instance
-    """
+    # Create a configured MCP Server instance
+    # Returns: Configured MCP Server with icons and metadata
     return Server(
         name=name,
         version=version,
@@ -201,18 +193,9 @@ def create_mcp_server(
 
 
 class BaseMCPServer:
-    """Base MCP server with shared infrastructure.
-    
-    Provides:
-    - Server initialization
-    - Common handlers (prompts, resources)
-    - Transport layer (STDIO + HTTP)
-    - Authentication utilities
-    
-    Subclasses add:
-    - Mode-specific tools
-    - Mode-specific tool handlers
-    """
+    # Base MCP server with shared infrastructure
+    # Provides: Server initialization, common handlers, transport layer, auth
+    # Subclasses add: Mode-specific tools and handlers
     
     def __init__(
         self,
@@ -222,15 +205,8 @@ class BaseMCPServer:
         api_key: str | None = None,
         http_mode: bool = False,
     ) -> None:
-        """Initialize base MCP server.
-        
-        Args:
-            name: Server name for MCP protocol
-            version: Server version string
-            instructions: Instructions for AI agents
-            api_key: API key (required for STDIO mode)
-            http_mode: If True, API key extracted per-request
-        """
+        # Initialize base MCP server
+        # CHAIN: Validate API key first, fail immediately if invalid
         self.name = name
         self.version = version
         self.instructions = instructions
@@ -263,32 +239,30 @@ class BaseMCPServer:
         }
     
     def register_tools(self, tools: list[dict]) -> None:
-        """Register tools for this server mode."""
+        # Register tools for this server mode
         self._tools.extend(tools)
     
     def register_tool_handler(self, name: str, handler: Callable) -> None:
-        """Register a handler function for a tool."""
+        # Register a handler function for a tool
         self._tool_handlers[name] = handler
     
     def register_prompts(self, prompts: list[Prompt]) -> None:
-        """Register prompts for this server mode."""
+        # Register prompts for this server mode
         self._prompts.extend(prompts)
     
     def register_prompt_handler(self, name: str, handler: Callable) -> None:
-        """Register a handler function for a prompt."""
+        # Register a handler function for a prompt
         self._prompt_handlers[name] = handler
     
     def setup_handlers(self) -> None:
-        """Set up all MCP protocol handlers.
-        
-        Call this AFTER registering tools and prompts.
-        """
+        # Set up all MCP protocol handlers
+        # Call this AFTER registering tools and prompts
         self._setup_tool_handlers()
         self._setup_prompt_handlers()
         self._setup_resource_handlers()
     
     def _setup_tool_handlers(self) -> None:
-        """Set up tool listing and execution handlers."""
+        # Set up tool listing and execution handlers
         
         @self.server.list_tools()
         async def list_tools() -> list[Tool]:
@@ -333,7 +307,7 @@ class BaseMCPServer:
                 return [TextContent(type="text", text=f"Error: {str(e)}")]
     
     def _setup_prompt_handlers(self) -> None:
-        """Set up prompt listing and execution handlers."""
+        # Set up prompt listing and execution handlers
         
         @self.server.list_prompts()
         async def list_prompts() -> list[Prompt]:
@@ -347,7 +321,7 @@ class BaseMCPServer:
             return handler(name, arguments)
     
     def _setup_resource_handlers(self) -> None:
-        """Set up resource listing and reading handlers."""
+        # Set up resource listing and reading handlers
         
         @self.server.list_resources()
         async def list_resources() -> list[Resource]:
@@ -370,11 +344,9 @@ class BaseMCPServer:
             raise ValueError(f"Unknown resource: {uri_str}")
     
     def get_api_key_for_request(self) -> str | None:
-        """Get API key for current request.
-        
-        STDIO mode: Returns stored API key
-        HTTP mode: Extracts from Authorization header
-        """
+        # Get API key for current request
+        # STDIO mode: Returns stored API key
+        # HTTP mode: Extracts from Authorization header
         if not self.http_mode:
             return self.api_key
         
@@ -390,7 +362,7 @@ class BaseMCPServer:
         return extract_api_key_from_request(request)
     
     def get_init_options(self) -> InitializationOptions:
-        """Get MCP initialization options."""
+        # Get MCP initialization options
         return InitializationOptions(
             server_name=self.name,
             server_version=self.version,
@@ -403,11 +375,8 @@ class BaseMCPServer:
         )
     
     def run(self, transport: str = "stdio") -> None:
-        """Run the MCP server with specified transport.
-        
-        Args:
-            transport: "stdio" for local IDEs or "http" for cloud
-        """
+        # Run the MCP server with specified transport
+        # transport: "stdio" for local IDEs or "http" for cloud
         if transport == "http":
             run_http(
                 server=self.server,
