@@ -3,7 +3,7 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# HTTP client for LogicBlok API (businessblok.rationalbloks.com)
+# HTTP client for LogicBlok API (logicblok.rationalbloks.com)
 # Handles all API communication for backend tools.
 # ============================================================================
 
@@ -19,7 +19,7 @@ class LogicBlokClient:
     # HTTP client for LogicBlok API
     # Provides: Authentication via Bearer token, all backend API operations, proper error handling
     
-    BASE_URL = "https://businessblok.rationalbloks.com"
+    BASE_URL = "https://logicblok.rationalbloks.com"
     
     def __init__(self, api_key: str) -> None:
         # Initialize client with API key (rb_sk_...)
