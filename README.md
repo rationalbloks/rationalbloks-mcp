@@ -6,9 +6,9 @@
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/rationalbloks-mcp.svg)](https://pypi.org/project/rationalbloks-mcp/)
 
-## 🚀 What's New in v0.3.3
+## 🚀 What's New in v0.3.4
 
-**SSL Fix** - Added certifi for proper SSL certificate resolution in isolated environments (uvx).
+**Gateway Protocol Fix** - Updated client to use `/api/mcp/execute` endpoint pattern instead of REST endpoints.
 
 **Complete App Generation** - The `create_app` tool transforms a template into a fully working application in one step:
 
@@ -382,7 +382,7 @@ rationalbloks-mcp/
 ## Version History
 
 | Version | Date | Changes |
-|---------|------|---------|| 0.3.3 | 2026-02-03 | Added certifi for SSL cert resolution || 0.3.2 | 2026-02-03 | Fixed API URL (businessblok → logicblok) || 0.3.1 | 2026-02-03 | Fixed wildcard handler lookup bug || 0.3.0 | 2026-02-03 | Added `create_app` tool for complete app generation |
+|---------|------|---------|| 0.3.4 | 2026-02-03 | Fixed client to use /api/mcp/execute gateway pattern || 0.3.3 | 2026-02-03 | Added certifi for SSL cert resolution || 0.3.2 | 2026-02-03 | Fixed API URL (businessblok → logicblok) || 0.3.1 | 2026-02-03 | Fixed wildcard handler lookup bug || 0.3.0 | 2026-02-03 | Added `create_app` tool for complete app generation |
 | 0.2.2 | 2026-01-28 | Fixed frontend template URL |
 | 0.2.0 | 2026-01-25 | Unified backend + frontend package |
 | 0.1.0 | 2026-01-20 | Initial release (backend only) |

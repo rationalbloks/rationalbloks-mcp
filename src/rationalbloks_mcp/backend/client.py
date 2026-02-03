@@ -3,8 +3,8 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# HTTP client for LogicBlok API (logicblok.rationalbloks.com)
-# Handles all API communication for backend tools.
+# HTTP client for LogicBlok MCP Gateway (logicblok.rationalbloks.com/api/mcp)
+# Uses the /api/mcp/execute endpoint with tool name + arguments pattern.
 # ============================================================================
 
 import httpx
@@ -18,8 +18,8 @@ __all__ = ["LogicBlokClient"]
 
 
 class LogicBlokClient:
-    # HTTP client for LogicBlok API
-    # Provides: Authentication via Bearer token, all backend API operations, proper error handling
+    # HTTP client for LogicBlok MCP Gateway
+    # All operations go through POST /api/mcp/execute with tool name and arguments
     
     BASE_URL = "https://logicblok.rationalbloks.com"
     
@@ -31,7 +31,7 @@ class LogicBlokClient:
         self._client = httpx.AsyncClient(
             base_url=self.BASE_URL,
             headers={"Authorization": f"Bearer {api_key}"},
-            timeout=30.0,
+            timeout=60.0,  # Longer timeout for deployment operations
             verify=ssl_context,
         )
     
@@ -45,77 +45,71 @@ class LogicBlokClient:
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self.close()
     
+    async def _execute(self, tool: str, arguments: dict | None = None) -> Any:
+        # Execute an MCP tool via the gateway
+        # All tools use POST /api/mcp/execute with {"tool": "...", "arguments": {...}}
+        payload = {"tool": tool, "arguments": arguments or {}}
+        response = await self._client.post("/api/mcp/execute", json=payload)
+        response.raise_for_status()
+        result = response.json()
+        
+        # Gateway returns {"success": bool, "result": ..., "error": ...}
+        if not result.get("success", False):
+            error = result.get("error", "Unknown error")
+            raise Exception(f"MCP Gateway error: {error}")
+        
+        return result.get("result")
+    
     # ========================================================================
     # READ OPERATIONS
     # ========================================================================
     
     async def list_projects(self) -> list[dict]:
         # List all projects for the authenticated user
-        response = await self._client.get("/mcp/projects")
-        response.raise_for_status()
-        return response.json()
+        return await self._execute("list_projects")
     
     async def get_project(self, project_id: str) -> dict:
         # Get details of a specific project
-        response = await self._client.get(f"/mcp/projects/{project_id}")
-        response.raise_for_status()
-        return response.json()
+        return await self._execute("get_project", {"project_id": project_id})
     
     async def get_project_info(self, project_id: str) -> dict:
         # Get detailed project info including deployment status
-        response = await self._client.get(f"/mcp/projects/{project_id}/info")
-        response.raise_for_status()
-        return response.json()
+        return await self._execute("get_project_info", {"project_id": project_id})
     
     async def get_schema(self, project_id: str) -> dict:
         # Get the current schema for a project
-        response = await self._client.get(f"/mcp/projects/{project_id}/schema")
-        response.raise_for_status()
-        return response.json()
+        return await self._execute("get_schema", {"project_id": project_id})
     
     async def get_schema_at_version(self, project_id: str, version: str) -> dict:
         # Get schema at a specific version/commit
-        response = await self._client.get(
-            f"/mcp/projects/{project_id}/schema/version/{version}"
-        )
-        response.raise_for_status()
-        return response.json()
+        return await self._execute("get_schema_at_version", {
+            "project_id": project_id,
+            "version": version
+        })
     
     async def get_version_history(self, project_id: str) -> list[dict]:
         # Get deployment history for a project
-        response = await self._client.get(f"/mcp/projects/{project_id}/versions")
-        response.raise_for_status()
-        return response.json()
+        return await self._execute("get_version_history", {"project_id": project_id})
     
     async def get_job_status(self, job_id: str) -> dict:
         # Check the status of a deployment job
-        response = await self._client.get(f"/mcp/jobs/{job_id}")
-        response.raise_for_status()
-        return response.json()
+        return await self._execute("get_job_status", {"job_id": job_id})
     
     async def get_project_usage(self, project_id: str) -> dict:
         # Get resource usage metrics for a project
-        response = await self._client.get(f"/mcp/projects/{project_id}/usage")
-        response.raise_for_status()
-        return response.json()
+        return await self._execute("get_project_usage", {"project_id": project_id})
     
     async def get_user_info(self) -> dict:
         # Get information about the authenticated user
-        response = await self._client.get("/mcp/user")
-        response.raise_for_status()
-        return response.json()
+        return await self._execute("get_user_info")
     
     async def get_subscription_status(self) -> dict:
         # Get subscription tier, limits, and usage
-        response = await self._client.get("/mcp/subscription")
-        response.raise_for_status()
-        return response.json()
+        return await self._execute("get_subscription_status")
     
     async def get_template_schemas(self) -> dict:
         # Get pre-built template schemas for common use cases
-        response = await self._client.get("/mcp/templates")
-        response.raise_for_status()
-        return response.json()
+        return await self._execute("get_template_schemas")
     
     # ========================================================================
     # WRITE OPERATIONS
@@ -129,48 +123,33 @@ class LogicBlokClient:
     ) -> dict:
         # Create a new project from a JSON schema
         # Returns: Project details with job_id for deployment tracking
-        payload = {"name": name, "schema": schema}
+        args = {"name": name, "schema": schema}
         if description:
-            payload["description"] = description
-        
-        response = await self._client.post("/mcp/projects", json=payload)
-        response.raise_for_status()
-        return response.json()
+            args["description"] = description
+        return await self._execute("create_project", args)
     
     async def update_schema(self, project_id: str, schema: dict) -> dict:
         # Update a project's schema (does NOT deploy)
         # Returns: Updated project details
-        response = await self._client.put(
-            f"/mcp/projects/{project_id}/schema",
-            json={"schema": schema},
-        )
-        response.raise_for_status()
-        return response.json()
+        return await self._execute("update_schema", {
+            "project_id": project_id,
+            "schema": schema
+        })
     
     async def deploy_staging(self, project_id: str) -> dict:
         # Deploy a project to staging environment
         # Returns: Deployment job details
-        response = await self._client.post(
-            f"/mcp/projects/{project_id}/deploy/staging"
-        )
-        response.raise_for_status()
-        return response.json()
+        return await self._execute("deploy_staging", {"project_id": project_id})
     
     async def deploy_production(self, project_id: str) -> dict:
         # Promote staging to production (requires paid plan)
         # Returns: Deployment job details
-        response = await self._client.post(
-            f"/mcp/projects/{project_id}/deploy/production"
-        )
-        response.raise_for_status()
-        return response.json()
+        return await self._execute("deploy_production", {"project_id": project_id})
     
     async def delete_project(self, project_id: str) -> dict:
         # Delete a project and all associated resources
         # Returns: Deletion confirmation
-        response = await self._client.delete(f"/mcp/projects/{project_id}")
-        response.raise_for_status()
-        return response.json()
+        return await self._execute("delete_project", {"project_id": project_id})
     
     async def rollback_project(
         self,
@@ -180,19 +159,16 @@ class LogicBlokClient:
     ) -> dict:
         # Rollback a project to a previous version
         # Returns: Rollback job details
-        response = await self._client.post(
-            f"/mcp/projects/{project_id}/rollback",
-            json={"version": version, "environment": environment},
-        )
-        response.raise_for_status()
-        return response.json()
+        return await self._execute("rollback_project", {
+            "project_id": project_id,
+            "version": version,
+            "environment": environment
+        })
     
     async def rename_project(self, project_id: str, name: str) -> dict:
         # Rename a project (display name only)
         # Returns: Updated project details
-        response = await self._client.patch(
-            f"/mcp/projects/{project_id}",
-            json={"name": name},
-        )
-        response.raise_for_status()
-        return response.json()
+        return await self._execute("rename_project", {
+            "project_id": project_id,
+            "name": name
+        })
