@@ -294,7 +294,8 @@ class BaseMCPServer:
             if name not in valid_tools:
                 raise ValueError(f"Unknown tool: {name}")
             
-            handler = self._tool_handlers.get(name)
+            # Check for specific handler first, then wildcard handler
+            handler = self._tool_handlers.get(name) or self._tool_handlers.get("*")
             if not handler:
                 raise ValueError(f"No handler registered for tool: {name}")
             

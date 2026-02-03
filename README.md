@@ -6,9 +6,11 @@
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/rationalbloks-mcp.svg)](https://pypi.org/project/rationalbloks-mcp/)
 
-## 🚀 What's New in v0.3.0
+## 🚀 What's New in v0.3.1
 
-**Complete App Generation** - The new `create_app` tool transforms a template into a fully working application in one step:
+**Bugfix Release** - Fixed wildcard handler lookup bug that caused "No handler registered" errors.
+
+**Complete App Generation** - The `create_app` tool transforms a template into a fully working application in one step:
 
 - **Full Mode**: All 24 tools (18 backend + 6 frontend) - DEFAULT
 - **Backend Mode**: 18 API/database tools
@@ -380,8 +382,7 @@ rationalbloks-mcp/
 ## Version History
 
 | Version | Date | Changes |
-|---------|------|---------|
-| 0.3.0 | 2026-02-03 | Added `create_app` tool for complete app generation |
+|---------|------|---------|| 0.3.1 | 2026-02-03 | Fixed wildcard handler lookup bug || 0.3.0 | 2026-02-03 | Added `create_app` tool for complete app generation |
 | 0.2.2 | 2026-01-28 | Fixed frontend template URL |
 | 0.2.0 | 2026-01-25 | Unified backend + frontend package |
 | 0.1.0 | 2026-01-20 | Initial release (backend only) |
