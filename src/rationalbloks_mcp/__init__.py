@@ -5,8 +5,8 @@
 #
 # Unified MCP server supporting 3 modes:
 #   - backend:  18 API/database tools (projects, schemas, deployments)
-#   - frontend: 6 frontend generation tools (template, configuration, create_app)
-#   - full:     All 24 tools combined (DEFAULT)
+#   - frontend: 14 frontend generation tools (types, views, forms, scaffold)
+#   - full:     All 32 tools combined (DEFAULT)
 #
 # Usage:
 #   export RATIONALBLOKS_API_KEY=rb_sk_your_key_here
@@ -111,8 +111,8 @@ def _run_server(mode: Mode) -> None:
 
 
 def _create_full_server(api_key: str | None, http_mode: bool):
-    # Create a full server with all 24 tools
-    # Combines backend (18 tools) + frontend (6 tools)
+    # Create a full server with all 32 tools
+    # Combines backend (18 tools) + frontend (14 tools)
     from .core import BaseMCPServer
     from .backend.tools import BACKEND_TOOLS, BACKEND_PROMPTS
     from .backend.client import LogicBlokClient
@@ -124,26 +124,39 @@ def _create_full_server(api_key: str | None, http_mode: bool):
 
 🚀 BUILD COMPLETE FULLSTACK APPS IN MINUTES
 
-MAIN TOOL: create_app (Frontend MCP)
-Creates a complete working application:
-- Clones template, creates backend, generates views, runs npm install
-- Just provide: name, description, destination, schema
+RECOMMENDED WORKFLOW:
+1. Already have a project? Use scaffold_frontend (generates all code from schema)
+2. Need to clone first? Use clone_template, then scaffold_frontend
+3. Starting from zero? Use create_app (clones + creates backend + scaffolds)
 
-WORKFLOW:
-1. Use get_template_schemas to see schema format examples
-2. Use create-project-from-description prompt to design schema from description
-3. Call create_app with name, description, destination, schema
-4. Wait 2-5 minutes for complete app generation
-5. cd into project && npm run dev
+FRONTEND GENERATION TOOLS (14 tools):
+🔧 Granular Tools (work on YOUR existing project):
+- generate_types: TypeScript interfaces from schema
+- generate_api_service: API client with CRUD operations  
+- generate_entity_view: List view for ONE entity
+- generate_entity_form: Create/edit form for ONE entity
+- generate_all_views: All views for all entities
+- generate_dashboard: Dashboard with stats
+- update_routes: Wire up routes in App.tsx
+- update_navbar: Update navigation links
+
+🚀 Scaffold Tools:
+- scaffold_frontend: Apply ALL generators to existing project
+- create_app: Full automation (clone + backend + scaffold)
+
+🔌 Utility Tools:
+- clone_template, configure_api_url, create_backend, get_template_structure
+
+BACKEND TOOLS (18 tools):
+- Project management: list_projects, get_project, create_project, etc.
+- Schema operations: get_schema, update_schema
+- Deployment: deploy_staging, deploy_production, rollback_project
 
 SCHEMA FORMAT (FLAT - CRITICAL):
 ✅ {tasks: {title: {type: "string", max_length: 200}}} 
 ❌ {tasks: {fields: {title: {type: "string"}}}}
 
-AVAILABLE:
-- 18 backend tools (API/database operations)
-- 6 frontend tools (app generation)
-- create_app: The main tool for complete app creation"""
+AVAILABLE: 32 tools (18 backend + 14 frontend)"""
     
     class FullMCPServer(BaseMCPServer):
         # Full MCP server with all 24 tools
@@ -268,7 +281,62 @@ AVAILABLE:
         
         async def _call_frontend_tool(self, client: FrontendClient, name: str, args: dict):
             # Call a frontend tool
-            if name == "clone_template":
+            # Generation tools
+            if name == "generate_types":
+                return await client.generate_types(
+                    project_path=args["project_path"],
+                    schema=args["schema"],
+                )
+            elif name == "generate_api_service":
+                return await client.generate_api_service(
+                    project_path=args["project_path"],
+                    schema=args["schema"],
+                    api_url=args.get("api_url"),
+                )
+            elif name == "generate_entity_view":
+                return await client.generate_entity_view(
+                    project_path=args["project_path"],
+                    table_name=args["table_name"],
+                    fields=args["fields"],
+                )
+            elif name == "generate_entity_form":
+                return await client.generate_entity_form(
+                    project_path=args["project_path"],
+                    table_name=args["table_name"],
+                    fields=args["fields"],
+                )
+            elif name == "generate_all_views":
+                return await client.generate_all_views(
+                    project_path=args["project_path"],
+                    schema=args["schema"],
+                )
+            elif name == "generate_dashboard":
+                return await client.generate_dashboard(
+                    project_path=args["project_path"],
+                    app_name=args["app_name"],
+                    schema=args["schema"],
+                )
+            elif name == "update_routes":
+                return await client.update_routes(
+                    project_path=args["project_path"],
+                    schema=args["schema"],
+                )
+            elif name == "update_navbar":
+                return await client.update_navbar(
+                    project_path=args["project_path"],
+                    app_name=args["app_name"],
+                    schema=args["schema"],
+                )
+            # Scaffold tool
+            elif name == "scaffold_frontend":
+                return await client.scaffold_frontend(
+                    project_path=args["project_path"],
+                    app_name=args["app_name"],
+                    schema=args["schema"],
+                    api_url=args.get("api_url"),
+                )
+            # Utility tools
+            elif name == "clone_template":
                 return await client.clone_template(
                     destination=args["destination"],
                     project_name=args["project_name"],
@@ -278,8 +346,6 @@ AVAILABLE:
                     path=args.get("path", ""),
                     max_depth=args.get("max_depth", 3),
                 )
-            elif name == "read_template_file":
-                return await client.read_template_file(file_path=args["file_path"])
             elif name == "create_backend":
                 return await client.create_backend(
                     name=args["name"],
@@ -316,7 +382,7 @@ def main_backend() -> None:
 
 
 def main_frontend() -> None:
-    # Frontend-only entry point (6 tools)
+    # Frontend-only entry point (14 tools)
     print("[rationalbloks-mcp] Starting in frontend mode...", file=sys.stderr)
     _run_server("frontend")
 
