@@ -159,7 +159,7 @@ Use get_template_schemas to see correct format."""
         def __init__(self, api_key: str | None, http_mode: bool):
             super().__init__(
                 name="rationalbloks",
-                version="1.0.0",
+                version=__version__,
                 instructions=FULL_INSTRUCTIONS,
                 api_key=api_key,
                 http_mode=http_mode,

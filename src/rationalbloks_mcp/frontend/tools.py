@@ -17,6 +17,7 @@ from typing import Any
 
 from mcp.types import Prompt, PromptArgument, PromptMessage, GetPromptResult, TextContent
 
+from .. import __version__
 from ..core import BaseMCPServer
 from .client import FrontendClient
 
@@ -263,7 +264,7 @@ Available: 5 frontend tools for template and configuration."""
         """Initialize frontend MCP server."""
         super().__init__(
             name="rationalbloks-frontend",
-            version="1.0.0",
+            version=__version__,
             instructions=self.INSTRUCTIONS,
             api_key=api_key,
             http_mode=http_mode,
