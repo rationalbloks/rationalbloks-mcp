@@ -26,16 +26,10 @@ TEMPLATE_BRANCH = "main"
 
 
 class FrontendClient:
-    """Client for frontend generation operations.
-    
-    Provides granular methods for:
-    - Type generation
-    - API service generation
-    - View generation (list and form)
-    - Dashboard generation
-    - Route and navbar updates
-    - Full scaffold
-    """
+    # Client for frontend generation operations.
+    # Provides granular methods for type generation, API service generation,
+    # view generation (list and form), dashboard generation, route and navbar
+    # updates, and full scaffold operations.
     
     def __init__(self, api_key: str | None = None) -> None:
         self.api_key = api_key
@@ -63,22 +57,22 @@ class FrontendClient:
     # ========================================================================
     
     def _slugify(self, name: str) -> str:
-        """Convert name to URL-safe slug."""
+        # Convert name to URL-safe slug
         slug = name.lower().replace(" ", "-")
         slug = re.sub(r"[^a-z0-9-]", "", slug)
         return slug
     
     def _pascal_case(self, name: str) -> str:
-        """Convert to PascalCase."""
+        # Convert to PascalCase
         return "".join(word.capitalize() for word in re.split(r"[_\s-]", name))
     
     def _camel_case(self, name: str) -> str:
-        """Convert to camelCase."""
+        # Convert to camelCase
         pascal = self._pascal_case(name)
         return pascal[0].lower() + pascal[1:] if pascal else ""
     
     def _schema_type_to_ts(self, schema_type: str) -> str:
-        """Convert schema type to TypeScript type."""
+        # Convert schema type to TypeScript type
         mapping = {
             "string": "string",
             "text": "string",
@@ -93,7 +87,7 @@ class FrontendClient:
         return mapping.get(schema_type, "unknown")
     
     def _get_singular(self, type_name: str) -> str:
-        """Get singular form of type name."""
+        # Get singular form of type name
         if type_name.endswith("s") and len(type_name) > 1:
             return type_name[:-1]
         return type_name
@@ -107,7 +101,7 @@ class FrontendClient:
         project_path: str,
         schema: dict,
     ) -> dict[str, Any]:
-        """Generate TypeScript types from schema."""
+        # Generate TypeScript types from schema
         project = Path(project_path).resolve()
         
         if not project.exists():
@@ -167,15 +161,14 @@ class FrontendClient:
         schema: dict,
         api_url: str | None = None,
     ) -> dict[str, Any]:
-        """Generate API service using THE ONE WAY architecture.
-        
-        Creates a minimal appApi.ts that:
-        - Uses createAuthApi from @rationalbloks/universalfront for auth
-        - Uses initApi/getApi from @rationalbloks/frontbuilderblok for CRUD
-        - Exports ENTITIES constant for type-safe entity names
-        
-        NO per-entity CRUD methods are generated - frontbuilderblok handles that!
-        """
+        # Generate API service using THE ONE WAY architecture
+        #
+        # Creates a minimal appApi.ts that:
+        # - Uses createAuthApi from @rationalbloks/universalfront for auth
+        # - Uses initApi/getApi from @rationalbloks/frontbuilderblok for CRUD
+        # - Exports ENTITIES constant for type-safe entity names
+        #
+        # NO per-entity CRUD methods are generated - frontbuilderblok handles that!
         project = Path(project_path).resolve()
         
         if not project.exists():
@@ -248,7 +241,7 @@ export type EntityName = typeof ENTITIES[keyof typeof ENTITIES];
         table_name: str,
         fields: dict,
     ) -> dict[str, Any]:
-        """Generate a list view component for one entity."""
+        # Generate a list view component for one entity
         project = Path(project_path).resolve()
         
         if not project.exists():
@@ -407,7 +400,7 @@ export default function {type_name}View() {{
         table_name: str,
         fields: dict,
     ) -> dict[str, Any]:
-        """Generate a create/edit form component for one entity."""
+        # Generate a create/edit form component for one entity
         project = Path(project_path).resolve()
         
         if not project.exists():
@@ -647,7 +640,7 @@ export default function {singular}FormView() {{
         project_path: str,
         schema: dict,
     ) -> dict[str, Any]:
-        """Generate all views for all entities."""
+        # Generate all views for all entities
         results = {"success": True, "files": [], "errors": []}
         
         for table_name, fields in schema.items():
@@ -676,7 +669,7 @@ export default function {singular}FormView() {{
         app_name: str,
         schema: dict,
     ) -> dict[str, Any]:
-        """Generate dashboard view."""
+        # Generate dashboard view
         project = Path(project_path).resolve()
         
         if not project.exists():
@@ -795,7 +788,7 @@ export default function DashboardView() {{
         project_path: str,
         schema: dict,
     ) -> dict[str, Any]:
-        """Update App.tsx with routes for all views."""
+        # Update App.tsx with routes for all views
         project = Path(project_path).resolve()
         
         if not project.exists():
@@ -901,7 +894,7 @@ export default function App() {{
         app_name: str,
         schema: dict,
     ) -> dict[str, Any]:
-        """Update navbar configuration."""
+        # Update navbar configuration
         project = Path(project_path).resolve()
         
         if not project.exists():
@@ -947,7 +940,7 @@ export const NAV_ITEMS: NavItem[] = {json.dumps(nav_items, indent=2)};
         schema: dict,
         api_url: str | None = None,
     ) -> dict[str, Any]:
-        """Apply all generators to an existing project."""
+        # Apply all generators to an existing project
         result = {
             "success": True,
             "project_path": project_path,
@@ -1056,7 +1049,7 @@ export const NAV_ITEMS: NavItem[] = {json.dumps(nav_items, indent=2)};
         destination: str,
         project_name: str,
     ) -> dict[str, Any]:
-        """Clone the template repository."""
+        # Clone the template repository
         dest_path = Path(destination).expanduser().resolve()
         project_path = dest_path / project_name
         
@@ -1105,7 +1098,7 @@ export const NAV_ITEMS: NavItem[] = {json.dumps(nav_items, indent=2)};
         project_path: str,
         api_url: str,
     ) -> dict[str, Any]:
-        """Configure the backend API URL in .env."""
+        # Configure the backend API URL in .env
         project = Path(project_path).expanduser().resolve()
         
         if not project.exists():
@@ -1150,7 +1143,7 @@ export const NAV_ITEMS: NavItem[] = {json.dumps(nav_items, indent=2)};
         schema: dict,
         description: str | None = None,
     ) -> dict[str, Any]:
-        """Create a backend project via the Backend MCP."""
+        # Create a backend project via the Backend MCP
         client = self._get_backend_client()
         return await client.create_project(name=name, schema=schema, description=description)
     
@@ -1159,7 +1152,7 @@ export const NAV_ITEMS: NavItem[] = {json.dumps(nav_items, indent=2)};
         path: str = "",
         max_depth: int = 3,
     ) -> dict[str, Any]:
-        """Get the file structure of the template."""
+        # Get the file structure of the template
         return {
             "template": "rationalbloksfront",
             "version": "Uses @rationalbloks/universalfront npm package",

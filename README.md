@@ -6,20 +6,24 @@
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/rationalbloks-mcp.svg)](https://pypi.org/project/rationalbloks-mcp/)
 
-## 🚀 What's New in v0.4.1
+## 🚀 What's New in v0.4.3
 
-**Major Architecture Redesign** - Frontend MCP completely rewritten with granular, flexible tools:
+**THE ONE WAY Architecture** - All generated code now uses our standardized npm packages:
 
-- **Full Mode**: All 32 tools (18 backend + 14 frontend) - DEFAULT
-- **Backend Mode**: 18 API/database tools
-- **Frontend Mode**: 14 frontend generation tools
+- **@rationalbloks/universalfront**: `createAuthApi` for authentication and token management
+- **@rationalbloks/frontbuilderblok**: `initApi` + `getApi` for generic CRUD operations
 
 **Key Changes:**
+- `generate_api_service` now generates THE ONE WAY pattern (no per-entity CRUD methods)
+- All views use `getApi().getAll<T>(ENTITIES.X)` instead of `api.getTasks()`
+- Forms use `getApi().create()` and `getApi().update()` for data operations
+- ENTITIES constant provides type-safe entity name references
+- Major simplification: ~50 lines per entity → ~40 lines TOTAL
+
+**Previous in v0.4.1:**
 - 14 granular frontend tools that work on ANY existing project
 - `scaffold_frontend` - Apply all generators to your project (no cloning required)
-- `generate_types`, `generate_api_service`, `generate_entity_view`, etc.
 - All file operations use `encoding="utf-8"` for Windows compatibility
-- `create_app` still available for full automation (clone + backend + scaffold)
 
 ## Installation
 
@@ -160,9 +164,9 @@ rationalbloks-mcp
 | Tool | Description |
 |------|-------------|
 | `generate_types` | Generate TypeScript interfaces from schema |
-| `generate_api_service` | Generate API client with CRUD operations |
-| `generate_entity_view` | Generate list view for ONE entity |
-| `generate_entity_form` | Generate create/edit form for ONE entity |
+| `generate_api_service` | Generate API service using THE ONE WAY pattern |
+| `generate_entity_view` | Generate list view using `getApi().getAll()` |
+| `generate_entity_form` | Generate form using `getApi().create/update()` |
 | `generate_all_views` | Generate all views for all entities |
 | `generate_dashboard` | Generate dashboard with entity stats |
 | `update_routes` | Add routes to App.tsx |
@@ -194,9 +198,9 @@ Use `scaffold_frontend` - the RECOMMENDED approach for most use cases:
 
 This:
 1. Generates TypeScript types
-2. Creates API service with CRUD operations
-3. Generates list views for each entity
-4. Generates create/edit forms for each entity
+2. Creates API service using THE ONE WAY pattern
+3. Generates list views for each entity (using `getApi().getAll()`)
+4. Generates create/edit forms for each entity (using `getApi().create/update()`)
 5. Creates a dashboard with entity stats
 6. Updates App.tsx with routes
 7. Updates Navbar with navigation
@@ -220,6 +224,63 @@ Use `create_app` for the full automation flow (clone + backend + scaffold):
 "Create a complete task manager app in ~/projects"
 ```
 
+## THE ONE WAY Architecture
+
+All generated frontend code uses our standardized npm packages for consistent, maintainable applications:
+
+### Generated appApi.ts
+
+```typescript
+import { createAuthApi } from "@rationalbloks/universalfront";
+import { initApi, getApi } from "@rationalbloks/frontbuilderblok";
+
+const API_URL = import.meta.env.VITE_DATABASE_API_URL;
+
+// Initialize auth API (handles tokens, login, logout)
+const authApi = createAuthApi(API_URL);
+
+// Initialize generic CRUD API (uses authApi for auth headers)
+initApi(authApi);
+
+// Type-safe entity constants
+export const ENTITIES = {
+  TASKS: "tasks",
+  PROJECTS: "projects"
+} as const;
+
+export { authApi, getApi };
+```
+
+### Usage in Components
+
+```typescript
+import { getApi, ENTITIES } from "../../services/appApi";
+import type { Task } from "../../types/generated";
+
+// Fetch all
+const tasks = await getApi().getAll<Task>(ENTITIES.TASKS);
+
+// Fetch one
+const task = await getApi().getOne<Task>(ENTITIES.TASKS, id);
+
+// Create
+await getApi().create<Task>(ENTITIES.TASKS, { title: "New Task" });
+
+// Update
+await getApi().update<Task>(ENTITIES.TASKS, id, { status: "done" });
+
+// Delete
+await getApi().remove(ENTITIES.TASKS, id);
+```
+
+### Benefits
+
+- **Simplified Code**: No per-entity CRUD methods to generate
+- **Type Safety**: ENTITIES constant provides type-safe entity names
+- **Consistent Patterns**: Same API pattern across all components
+- **Less Code**: ~40 lines total vs ~50 lines per entity
+- **Easier Maintenance**: Changes to API behavior happen in npm packages
+
 ## The `create_app` Tool
 
 This is the primary tool that transforms a JSON schema into a complete working application:
@@ -230,9 +291,9 @@ This is the primary tool that transforms a JSON schema into a complete working a
 2. **Create Backend** - Create project via Backend MCP API
 3. **Wait for Deployment** - Poll until staging is ready
 4. **Generate Types** - Create TypeScript interfaces from schema
-5. **Generate API Service** - Create typed HTTP client
-6. **Generate Entity Views** - Create list/detail views for each entity
-7. **Generate Forms** - Create add/edit forms with validation
+5. **Generate API Service** - Create appApi.ts using THE ONE WAY pattern
+6. **Generate Entity Views** - Create list views using `getApi().getAll()`
+7. **Generate Forms** - Create add/edit forms using `getApi().create/update()`
 8. **Generate Dashboard** - Create dashboard with entity cards
 9. **Update Routes** - Configure React Router
 10. **Update Navbar** - Add navigation links

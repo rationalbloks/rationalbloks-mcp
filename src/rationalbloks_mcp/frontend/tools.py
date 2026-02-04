@@ -717,7 +717,7 @@ Available: 14 frontend tools for maximum flexibility."""
         return AppGenerator(api_key)
     
     async def _handle_frontend_tool(self, name: str, arguments: dict) -> Any:
-        """Handle all frontend tool calls."""
+        # Handle all frontend tool calls
         
         # Create app uses AppGenerator (full automation)
         if name == "create_app":
