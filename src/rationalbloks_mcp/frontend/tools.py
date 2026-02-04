@@ -4,8 +4,8 @@
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
 # 14 Frontend tools using THE ONE WAY ARCHITECTURE:
-# - @rationalbloks/universalfront: createAuthApi for auth + tokens
-# - @rationalbloks/frontbuilderblok: initApi + getApi for generic CRUD
+# - @rationalbloks/frontblok-auth: createAuthApi for auth + tokens
+# - @rationalbloks/frontblok-crud: initApi + getApi for generic CRUD
 #
 # All generated code uses the pattern:
 #   const authApi = createAuthApi(API_URL);
@@ -115,17 +115,17 @@ USE WHEN:
         "description": """Generate API service using THE ONE WAY pattern from npm packages.
 
 Creates src/services/appApi.ts with:
-- createAuthApi from @rationalbloks/universalfront (auth + tokens)
-- initApi + getApi from @rationalbloks/frontbuilderblok (generic CRUD)
+- createAuthApi from @rationalbloks/frontblok-auth (auth + tokens)
+- initApi + getApi from @rationalbloks/frontblok-crud (generic CRUD)
 - ENTITIES constant for type-safe entity names
 
 THE ONE WAY PATTERN:
-All CRUD operations are handled generically by frontbuilderblok - no per-entity methods needed!
+All CRUD operations are handled generically by frontblok-crud - no per-entity methods needed!
 
 EXAMPLE OUTPUT:
 ```typescript
-import { createAuthApi } from "@rationalbloks/universalfront";
-import { initApi, getApi } from "@rationalbloks/frontbuilderblok";
+import { createAuthApi } from "@rationalbloks/frontblok-auth";
+import { initApi, getApi } from "@rationalbloks/frontblok-crud";
 
 const authApi = createAuthApi(API_URL);
 initApi(authApi);
@@ -145,7 +145,7 @@ const tasks = await getApi().getAll<Task>(ENTITIES.TASKS);
 await getApi().create<Task>(ENTITIES.TASKS, data);
 ```
 
-REQUIRES: @rationalbloks/universalfront and @rationalbloks/frontbuilderblok npm packages.""",
+REQUIRES: @rationalbloks/frontblok-auth and @rationalbloks/frontblok-crud npm packages.""",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -330,7 +330,7 @@ Modifies src/App.tsx to include:
 - Route definitions for edit forms (/{entity}/:id/edit)
 - Dashboard as default authenticated route
 
-PRESERVES: Auth provider, theme, and other existing setup from universalfront.
+PRESERVES: Auth provider, theme, and other existing setup from frontblok-auth.
 
 RUN THIS after generating views to wire up navigation.""",
         "inputSchema": {
@@ -390,8 +390,8 @@ This is the RECOMMENDED tool when you already have a rationalbloksfront-based pr
 (cloned template or existing app) and want to generate everything from a schema.
 
 USES THE ONE WAY ARCHITECTURE:
-- createAuthApi from @rationalbloks/universalfront (auth + tokens)
-- initApi + getApi from @rationalbloks/frontbuilderblok (generic CRUD)
+- createAuthApi from @rationalbloks/frontblok-auth (auth + tokens)
+- initApi + getApi from @rationalbloks/frontblok-crud (generic CRUD)
 - ENTITIES constant for type-safe entity names
 - All CRUD via getApi().getAll(), getApi().create(), etc.
 

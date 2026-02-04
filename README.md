@@ -10,8 +10,8 @@
 
 **THE ONE WAY Architecture** - All generated code now uses our standardized npm packages:
 
-- **@rationalbloks/universalfront**: `createAuthApi` for authentication and token management
-- **@rationalbloks/frontbuilderblok**: `initApi` + `getApi` for generic CRUD operations
+- **@rationalbloks/frontblok-auth**: `createAuthApi` for authentication and token management
+- **@rationalbloks/frontblok-crud**: `initApi` + `getApi` for generic CRUD operations
 
 **Key Changes:**
 - `generate_api_service` now generates THE ONE WAY pattern (no per-entity CRUD methods)
@@ -231,8 +231,8 @@ All generated frontend code uses our standardized npm packages for consistent, m
 ### Generated appApi.ts
 
 ```typescript
-import { createAuthApi } from "@rationalbloks/universalfront";
-import { initApi, getApi } from "@rationalbloks/frontbuilderblok";
+import { createAuthApi } from "@rationalbloks/frontblok-auth";
+import { initApi, getApi } from "@rationalbloks/frontblok-crud";
 
 const API_URL = import.meta.env.VITE_DATABASE_API_URL;
 

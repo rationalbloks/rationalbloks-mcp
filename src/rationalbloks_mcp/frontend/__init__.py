@@ -4,8 +4,8 @@
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
 # Frontend mode provides 14 tools using THE ONE WAY ARCHITECTURE:
-# - @rationalbloks/universalfront: createAuthApi for auth + tokens
-# - @rationalbloks/frontbuilderblok: initApi + getApi for generic CRUD
+# - @rationalbloks/frontblok-auth: createAuthApi for auth + tokens
+# - @rationalbloks/frontblok-crud: initApi + getApi for generic CRUD
 #
 # GENERATION TOOLS (work on any existing project):
 # - generate_types: TypeScript interfaces from schema
