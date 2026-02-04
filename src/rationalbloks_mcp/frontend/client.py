@@ -378,7 +378,7 @@ export default function {type_name}View() {{
                   </IconButton>
                 </TableCell>
               </TableRow>
-            )}}
+            ))}}
           </TableBody>
         </Table>
       </TableContainer>
