@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rationalbloks-mcp"
-version = "0.4.3"
+version = "0.4.4"
 description = "Unified MCP Server for RationalBloks - Backend API + Frontend Generation for AI agents"
 readme = "README.md"
 license = {text = "Proprietary"}

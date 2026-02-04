@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/rationalbloks-mcp.svg)](https://pypi.org/project/rationalbloks-mcp/)
 
-## 🚀 What's New in v0.4.3
+## 🚀 What's New in v0.4.4
 
 **THE ONE WAY Architecture** - All generated code now uses our standardized npm packages:
 
