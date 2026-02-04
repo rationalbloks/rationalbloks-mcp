@@ -3,13 +3,21 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# 14 Frontend tools for flexible frontend generation:
+# 14 Frontend tools using THE ONE WAY ARCHITECTURE:
+# - @rationalbloks/universalfront: createAuthApi for auth + tokens
+# - @rationalbloks/frontbuilderblok: initApi + getApi for generic CRUD
+#
+# All generated code uses the pattern:
+#   const authApi = createAuthApi(API_URL);
+#   initApi(authApi);
+#   export { authApi, getApi };
+#   export const ENTITIES = { TASKS: "tasks" } as const;
 #
 # GENERATION TOOLS (work on any existing project):
 # - generate_types: Generate TypeScript types from schema
-# - generate_api_service: Generate API client with CRUD operations
-# - generate_entity_view: Generate list view for ONE entity
-# - generate_entity_form: Generate create/edit form for ONE entity
+# - generate_api_service: Generate appApi.ts with THE ONE WAY pattern
+# - generate_entity_view: Generate list view using getApi().getAll()
+# - generate_entity_form: Generate form using getApi().create/update()
 # - generate_dashboard: Generate dashboard with entity stats
 # - generate_all_views: Generate all views for all entities
 # - update_routes: Add routes to App.tsx
@@ -104,31 +112,40 @@ USE WHEN:
     {
         "name": "generate_api_service",
         "title": "Generate API Service",
-        "description": """Generate a TypeScript API client with CRUD operations for all entities.
+        "description": """Generate API service using THE ONE WAY pattern from npm packages.
 
 Creates src/services/appApi.ts with:
-- Extends BaseApi from @rationalbloks/universalfront
-- CRUD methods for every entity (get, create, update, delete)
-- Proper TypeScript types for all operations
+- createAuthApi from @rationalbloks/universalfront (auth + tokens)
+- initApi + getApi from @rationalbloks/frontbuilderblok (generic CRUD)
+- ENTITIES constant for type-safe entity names
+
+THE ONE WAY PATTERN:
+All CRUD operations are handled generically by frontbuilderblok - no per-entity methods needed!
 
 EXAMPLE OUTPUT:
 ```typescript
-import { BaseApi } from "@rationalbloks/universalfront";
-import type { Task, CreateTaskInput } from '../types/generated';
+import { createAuthApi } from "@rationalbloks/universalfront";
+import { initApi, getApi } from "@rationalbloks/frontbuilderblok";
 
-class AppApi extends BaseApi {
-  // Tasks CRUD
-  async getTasks(): Promise<Task[]> { ... }
-  async getTask(id: string): Promise<Task> { ... }
-  async createTask(data: CreateTaskInput): Promise<Task> { ... }
-  async updateTask(id: string, data: UpdateTaskInput): Promise<Task> { ... }
-  async deleteTask(id: string): Promise<void> { ... }
-}
+const authApi = createAuthApi(API_URL);
+initApi(authApi);
 
-export const api = new AppApi();
+export const ENTITIES = {
+  TASKS: "tasks",
+  PROJECTS: "projects"
+} as const;
+
+export { authApi, getApi };
 ```
 
-REQUIRES: generate_types should be run first (or types must exist).""",
+USAGE IN COMPONENTS:
+```typescript
+import { getApi, ENTITIES } from "../../services/appApi";
+const tasks = await getApi().getAll<Task>(ENTITIES.TASKS);
+await getApi().create<Task>(ENTITIES.TASKS, data);
+```
+
+REQUIRES: @rationalbloks/universalfront and @rationalbloks/frontbuilderblok npm packages.""",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -152,14 +169,21 @@ REQUIRES: generate_types should be run first (or types must exist).""",
     {
         "name": "generate_entity_view",
         "title": "Generate Entity View",
-        "description": """Generate a list view component for ONE entity.
+        "description": """Generate a list view component for ONE entity using THE ONE WAY pattern.
 
 Creates src/components/views/{Entity}View.tsx with:
 - Data table with all fields
 - Loading and error states
-- Edit and Delete actions
+- Edit and Delete actions using getApi().remove()
 - "Add New" button
 - Uses MUI components
+
+USES THE ONE WAY PATTERN:
+```typescript
+import { getApi, ENTITIES } from "../../services/appApi";
+const data = await getApi().getAll<Task>(ENTITIES.TASKS);
+await getApi().remove(ENTITIES.TASKS, id);
+```
 
 GRANULAR CONTROL: Generate views one at a time for specific entities.
 
@@ -190,14 +214,22 @@ EXAMPLE: For table "tasks" with fields title, status, due_date:
     {
         "name": "generate_entity_form",
         "title": "Generate Entity Form",
-        "description": """Generate a create/edit form component for ONE entity.
+        "description": """Generate a create/edit form component for ONE entity using THE ONE WAY pattern.
 
 Creates src/components/views/{Entity}FormView.tsx with:
 - Form with inputs for all editable fields
 - Proper input types (text, number, select for enums, date picker)
 - Create mode and Edit mode (based on URL param)
 - Form validation
-- Submit handling with API calls
+- Submit handling using getApi().create() and getApi().update()
+
+USES THE ONE WAY PATTERN:
+```typescript
+import { getApi, ENTITIES } from "../../services/appApi";
+const data = await getApi().getOne<Task>(ENTITIES.TASKS, id);
+await getApi().create<Task>(ENTITIES.TASKS, formData);
+await getApi().update<Task>(ENTITIES.TASKS, id, formData);
+```
 
 GRANULAR CONTROL: Generate forms one at a time for specific entities.
 
@@ -258,13 +290,14 @@ Use generate_entity_view/generate_entity_form for granular control.""",
     {
         "name": "generate_dashboard",
         "title": "Generate Dashboard",
-        "description": """Generate a dashboard view with entity statistics and quick links.
+        "description": """Generate a dashboard view with entity statistics using THE ONE WAY pattern.
 
 Creates src/components/views/DashboardView.tsx with:
 - Welcome header with app name
 - Stats cards showing count for each entity
 - Quick action links to each entity list
-- Uses MUI Grid and Card components""",
+- Uses MUI Grid and Card components
+- Uses getApi().getAll() for fetching counts""",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -356,12 +389,18 @@ Creates/updates src/config/Navbar.tsx with:
 This is the RECOMMENDED tool when you already have a rationalbloksfront-based project
 (cloned template or existing app) and want to generate everything from a schema.
 
+USES THE ONE WAY ARCHITECTURE:
+- createAuthApi from @rationalbloks/universalfront (auth + tokens)
+- initApi + getApi from @rationalbloks/frontbuilderblok (generic CRUD)
+- ENTITIES constant for type-safe entity names
+- All CRUD via getApi().getAll(), getApi().create(), etc.
+
 WHAT IT DOES (8 steps on your EXISTING project):
 1. Generate TypeScript types (src/types/generated.ts)
-2. Generate API service (src/services/appApi.ts)
-3. Generate list views for each entity
-4. Generate create/edit forms for each entity
-5. Generate dashboard
+2. Generate API service using THE ONE WAY pattern (src/services/appApi.ts)
+3. Generate list views for each entity (using getApi().getAll())
+4. Generate create/edit forms for each entity (using getApi().create/update())
+5. Generate dashboard (using getApi() for stats)
 6. Update App.tsx with routes
 7. Update Navbar configuration
 8. Optionally configure API URL in .env
@@ -402,13 +441,17 @@ USE create_app if you need cloning + backend creation.""",
 Full automation: clone template + create backend + scaffold frontend.
 Use this when starting completely fresh with no existing project.
 
+USES THE ONE WAY ARCHITECTURE:
+All generated code uses createAuthApi + initApi + getApi from npm packages.
+No per-entity CRUD methods generated - everything uses generic getApi() calls.
+
 WHAT IT DOES (13 steps):
 1. Clone rationalbloksfront template from GitHub
 2. Create backend API from schema (via RationalBloks API)
 3. Wait for backend deployment (2-5 minutes)
 4. Generate TypeScript types
-5. Generate API service
-6. Generate all views
+5. Generate API service (THE ONE WAY pattern)
+6. Generate all views (using getApi().getAll())
 7. Generate dashboard
 8. Update routes
 9. Update navbar
