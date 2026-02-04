@@ -1,30 +1,25 @@
 # ============================================================================
-# RATIONALBLOKS MCP - FRONTEND CLIENT
+# RATIONALBLOKS MCP - FRONTEND CLIENT (THIN LAYER)
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# Client for frontend generation operations.
-# Provides granular methods for each generation task.
-# All file operations use encoding='utf-8' for Windows compatibility.
+# Client for frontend bootstrap operations ONLY.
+# The AI agent writes all views, forms, and custom UI.
 #
-# CHANGELOG:
-# v0.4.5 - Fixed update_routes, update_navbar, generate_api_service to match
-#          rationalbloksfront template architecture:
-#          - App.tsx uses proper provider hierarchy (ErrorBoundary, QueryClient,
-#            ThemeProvider, ClientAuthProvider) instead of GoogleOAuthProvider
-#          - Navbar.tsx uses createNavbar factory from components/shared/Navbar
-#          - datablokApi.ts exports ClientAuthProvider, useClientAuth
-#          - Views import from datablokApi instead of appApi
+# METHODS:
+#   - clone_template: Clone rationalbloksfront from GitHub
+#   - generate_types: Generate TypeScript interfaces from schema
+#   - generate_api_service: Generate datablokApi.ts (THE ONE WAY glue)
+#   - configure_api_url: Set VITE_DATABASE_API_URL in .env
+#   - get_template_structure: Explore template file structure
+#
 # ============================================================================
 
-import json
 import re
 import subprocess
 import shutil
 from pathlib import Path
 from typing import Any
-
-from ..backend.client import LogicBlokClient
 
 # Public API
 __all__ = ["FrontendClient"]
@@ -35,18 +30,22 @@ TEMPLATE_BRANCH = "main"
 
 
 class FrontendClient:
-    # Client for frontend generation operations.
-    # Provides granular methods for type generation, API service generation,
-    # view generation (list and form), dashboard generation, route and navbar
-    # updates, and full scaffold operations.
+    """Client for frontend bootstrap operations.
+    
+    This is a THIN LAYER that only provides:
+    - Template cloning
+    - Type generation from schema
+    - API service generation (datablokApi.ts)
+    - Environment configuration
+    
+    The AI agent writes all views, forms, and custom UI.
+    """
     
     def __init__(self, api_key: str | None = None) -> None:
         self.api_key = api_key
-        self._backend_client: LogicBlokClient | None = None
     
     async def close(self) -> None:
-        if self._backend_client:
-            await self._backend_client.close()
+        pass
     
     async def __aenter__(self) -> "FrontendClient":
         return self
@@ -54,34 +53,16 @@ class FrontendClient:
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self.close()
     
-    def _get_backend_client(self) -> LogicBlokClient:
-        if not self.api_key:
-            raise ValueError("API key required for backend operations")
-        if not self._backend_client:
-            self._backend_client = LogicBlokClient(self.api_key)
-        return self._backend_client
-    
     # ========================================================================
     # UTILITY METHODS
     # ========================================================================
     
-    def _slugify(self, name: str) -> str:
-        # Convert name to URL-safe slug
-        slug = name.lower().replace(" ", "-")
-        slug = re.sub(r"[^a-z0-9-]", "", slug)
-        return slug
-    
     def _pascal_case(self, name: str) -> str:
-        # Convert to PascalCase
+        """Convert to PascalCase."""
         return "".join(word.capitalize() for word in re.split(r"[_\s-]", name))
     
-    def _camel_case(self, name: str) -> str:
-        # Convert to camelCase
-        pascal = self._pascal_case(name)
-        return pascal[0].lower() + pascal[1:] if pascal else ""
-    
     def _schema_type_to_ts(self, schema_type: str) -> str:
-        # Convert schema type to TypeScript type
+        """Convert schema type to TypeScript type."""
         mapping = {
             "string": "string",
             "text": "string",
@@ -96,21 +77,90 @@ class FrontendClient:
         return mapping.get(schema_type, "unknown")
     
     def _get_singular(self, type_name: str) -> str:
-        # Get singular form of type name
-        if type_name.endswith("s") and len(type_name) > 1:
+        """Get singular form of type name."""
+        if type_name.endswith("ies"):
+            return type_name[:-3] + "y"
+        elif type_name.endswith("s") and len(type_name) > 1:
             return type_name[:-1]
         return type_name
     
     # ========================================================================
-    # GENERATION METHODS
+    # BOOTSTRAP METHODS
     # ========================================================================
+    
+    async def clone_template(
+        self,
+        destination: str,
+        project_name: str,
+    ) -> dict[str, Any]:
+        """Clone the rationalbloksfront template from GitHub.
+        
+        Creates a fresh project with:
+        - React + Vite + TypeScript
+        - frontblok-auth and frontblok-crud installed
+        - MUI components
+        - Template views and shared components
+        """
+        dest = Path(destination).resolve()
+        project_dir = dest / project_name
+        
+        if project_dir.exists():
+            return {
+                "success": False, 
+                "error": f"Directory already exists: {project_dir}"
+            }
+        
+        dest.mkdir(parents=True, exist_ok=True)
+        
+        try:
+            # Clone the template
+            subprocess.run(
+                ["git", "clone", "--branch", TEMPLATE_BRANCH, TEMPLATE_REPO, project_name],
+                cwd=str(dest),
+                check=True,
+                capture_output=True,
+            )
+            
+            # Remove .git directory
+            git_dir = project_dir / ".git"
+            if git_dir.exists():
+                shutil.rmtree(git_dir)
+            
+            # Initialize new git repo
+            subprocess.run(
+                ["git", "init"],
+                cwd=str(project_dir),
+                check=True,
+                capture_output=True,
+            )
+            
+            return {
+                "success": True,
+                "project_path": str(project_dir),
+                "next_steps": [
+                    "1. Use generate_types with your schema",
+                    "2. Use generate_api_service with your schema",
+                    "3. Use configure_api_url with your backend URL",
+                    "4. Write custom views for each entity (AI creativity!)",
+                    "5. Run npm install && npm run dev",
+                ],
+            }
+            
+        except subprocess.CalledProcessError as e:
+            return {
+                "success": False,
+                "error": f"Git clone failed: {e.stderr.decode() if e.stderr else str(e)}",
+            }
     
     async def generate_types(
         self,
         project_path: str,
         schema: dict,
     ) -> dict[str, Any]:
-        # Generate TypeScript types from schema
+        """Generate TypeScript interfaces from schema.
+        
+        Creates src/types/generated.ts with interfaces for each entity.
+        """
         project = Path(project_path).resolve()
         
         if not project.exists():
@@ -126,14 +176,27 @@ class FrontendClient:
             type_name = self._pascal_case(table_name)
             singular = self._get_singular(type_name)
             
+            # Collect enum types for this entity
+            enum_types = {}
+            for field_name, field_def in fields.items():
+                if "enum" in field_def:
+                    enum_types[field_name] = field_def["enum"]
+            
             # Main interface
             types_content += f"export interface {singular} {{\n"
             types_content += "  id: string;\n"
             
             for field_name, field_def in fields.items():
-                if field_name.startswith("_"):  # Skip internal fields like _id
+                if field_name.startswith("_"):
                     continue
-                ts_type = self._schema_type_to_ts(field_def.get("type", "string"))
+                
+                # Handle enum types
+                if "enum" in field_def:
+                    enum_values = " | ".join([f"'{v}'" for v in field_def["enum"]])
+                    ts_type = enum_values
+                else:
+                    ts_type = self._schema_type_to_ts(field_def.get("type", "string"))
+                
                 optional = "" if field_def.get("required") else "?"
                 types_content += f"  {field_name}{optional}: {ts_type};\n"
             
@@ -146,7 +209,13 @@ class FrontendClient:
             for field_name, field_def in fields.items():
                 if field_name.startswith("_") or field_name == "user_id":
                     continue
-                ts_type = self._schema_type_to_ts(field_def.get("type", "string"))
+                
+                if "enum" in field_def:
+                    enum_values = " | ".join([f"'{v}'" for v in field_def["enum"]])
+                    ts_type = enum_values
+                else:
+                    ts_type = self._schema_type_to_ts(field_def.get("type", "string"))
+                
                 optional = "" if field_def.get("required") else "?"
                 types_content += f"  {field_name}{optional}: {ts_type};\n"
             types_content += "}\n\n"
@@ -170,16 +239,14 @@ class FrontendClient:
         schema: dict,
         api_url: str | None = None,
     ) -> dict[str, Any]:
-        # Generate API service using THE ONE WAY architecture
-        # 
-        # Writes to datablokApi.ts to match rationalbloksfront template pattern.
-        # This file provides:
-        # - authApi singleton from frontblok-auth
-        # - CRUD via getApi() from frontblok-crud  
-        # - ClientAuthProvider and useClientAuth for React context
-        # - ENTITIES constant for type-safe entity names
-        #
-        # NO per-entity CRUD methods - frontblok-crud handles that!
+        """Generate datablokApi.ts - THE ONE WAY glue file.
+        
+        Creates src/services/datablokApi.ts with:
+        - authApi singleton from frontblok-auth
+        - CRUD via getApi() from frontblok-crud
+        - ClientAuthProvider and useClientAuth for React context
+        - ENTITIES constant for type-safe entity names
+        """
         project = Path(project_path).resolve()
         
         if not project.exists():
@@ -250,22 +317,9 @@ export const ClientAuthProvider = createAuthProvider(authApi);
 export const useClientAuth = useAuth;
 '''
         
-        # Write to datablokApi.ts to match template pattern
         api_file = project / "src" / "services" / "datablokApi.ts"
         api_file.parent.mkdir(parents=True, exist_ok=True)
         api_file.write_text(api_content, encoding="utf-8")
-        
-        # Also create appApi.ts as an alias for backwards compatibility
-        alias_content = '''// ============================================================================
-// App API - Alias for datablokApi
-// Generated by RationalBloks Frontend MCP
-// ============================================================================
-// This is an alias - import from datablokApi.ts for the main API service.
-
-export * from './datablokApi';
-'''
-        alias_file = project / "src" / "services" / "appApi.ts"
-        alias_file.write_text(alias_content, encoding="utf-8")
         
         return {
             "success": True,
@@ -274,1007 +328,13 @@ export * from './datablokApi';
             "architecture": "THE_ONE_WAY",
         }
     
-    async def generate_entity_view(
-        self,
-        project_path: str,
-        table_name: str,
-        fields: dict,
-    ) -> dict[str, Any]:
-        # Generate a list view component for one entity
-        project = Path(project_path).resolve()
-        
-        if not project.exists():
-            return {"success": False, "error": f"Project not found: {project}"}
-        
-        type_name = self._pascal_case(table_name)
-        singular = self._get_singular(type_name)
-        
-        # Get display columns (exclude user_id and internal fields)
-        columns = []
-        for field_name, field_def in fields.items():
-            if field_name not in ["user_id"] and not field_name.startswith("_") and field_def.get("type") != "json":
-                columns.append(field_name)
-        
-        # Limit to first 6 columns for table display
-        display_columns = columns[:6]
-        
-        entity_const = table_name.upper()
-        
-        view_content = f'''// ============================================================================
-// {type_name} List View - Auto-generated by RationalBloks Frontend MCP
-// ============================================================================
-
-import {{ useState, useEffect }} from "react";
-import {{ useNavigate }} from "react-router-dom";
-import {{
-  Box,
-  Typography,
-  Button,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  CircularProgress,
-  Alert,
-}} from "@mui/material";
-import {{ Add, Edit, Delete }} from "@mui/icons-material";
-import {{ getApi, ENTITIES }} from "../../services/datablokApi";
-import type {{ {singular} }} from "../../types/generated";
-
-export default function {type_name}View() {{
-  const navigate = useNavigate();
-  const [items, setItems] = useState<{singular}[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {{
-    loadData();
-  }}, []);
-
-  const loadData = async () => {{
-    try {{
-      setLoading(true);
-      const data = await getApi().getAll<{singular}>(ENTITIES.{entity_const});
-      setItems(data);
-      setError(null);
-    }} catch (err) {{
-      setError("Failed to load {table_name}");
-      console.error(err);
-    }} finally {{
-      setLoading(false);
-    }}
-  }};
-
-  const handleDelete = async (id: string) => {{
-    if (!confirm("Are you sure you want to delete this item?")) return;
-    try {{
-      await getApi().remove(ENTITIES.{entity_const}, id);
-      loadData();
-    }} catch (err) {{
-      setError("Failed to delete item");
-    }}
-  }};
-
-  if (loading) {{
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    );
-  }}
-
-  return (
-    <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={{3}}>
-        <Typography variant="h4">{type_name}</Typography>
-        <Button
-          variant="contained"
-          startIcon={{<Add />}}
-          onClick={{() => navigate("/{table_name}/new")}}
-        >
-          Add New
-        </Button>
-      </Box>
-
-      {{error && <Alert severity="error" sx={{{{ mb: 2 }}}}>{{error}}</Alert>}}
-
-      <TableContainer component={{Paper}}>
-        <Table>
-          <TableHead>
-            <TableRow>
-'''
-        
-        # Add column headers
-        for col in display_columns:
-            header = col.replace("_", " ").title()
-            view_content += f'              <TableCell>{header}</TableCell>\n'
-        
-        view_content += '''              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {items.map((item) => (
-              <TableRow key={item.id}>
-'''
-        
-        # Add column values
-        for col in display_columns:
-            view_content += f'                <TableCell>{{String(item.{col} ?? "")}}</TableCell>\n'
-        
-        view_content += f'''                <TableCell align="right">
-                  <IconButton onClick={{() => navigate(`/{table_name}/${{item.id}}/edit`)}}>
-                    <Edit />
-                  </IconButton>
-                  <IconButton onClick={{() => handleDelete(item.id)}} color="error">
-                    <Delete />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
-  );
-}}
-'''
-        
-        view_file = project / "src" / "components" / "views" / f"{type_name}View.tsx"
-        view_file.parent.mkdir(parents=True, exist_ok=True)
-        view_file.write_text(view_content, encoding="utf-8")
-        
-        return {
-            "success": True,
-            "file": str(view_file),
-            "columns": display_columns,
-        }
-    
-    async def generate_entity_form(
-        self,
-        project_path: str,
-        table_name: str,
-        fields: dict,
-    ) -> dict[str, Any]:
-        # Generate a create/edit form component for one entity
-        project = Path(project_path).resolve()
-        
-        if not project.exists():
-            return {"success": False, "error": f"Project not found: {project}"}
-        
-        type_name = self._pascal_case(table_name)
-        singular = self._get_singular(type_name)
-        
-        # Get editable fields (exclude user_id and internal fields)
-        editable_fields = {k: v for k, v in fields.items() 
-                          if k not in ["user_id"] and not k.startswith("_")}
-        
-        # Build initial state
-        initial_state_parts = []
-        for field_name, field_def in editable_fields.items():
-            field_type = field_def.get("type", "string")
-            default = field_def.get("default", "")
-            if field_type == "boolean":
-                default_val = "true" if default else "false"
-            elif field_type == "integer":
-                default_val = str(default) if default else "0"
-            elif field_type == "decimal":
-                default_val = str(default) if default else "0"
-            else:
-                default_val = f'"{default}"' if default else '""'
-            initial_state_parts.append(f'    {field_name}: {default_val}')
-        
-        initial_state = ",\n".join(initial_state_parts)
-        
-        # Entity name constant (uppercase for ENTITIES)
-        entity_const = table_name.upper()
-        
-        view_content = f'''// ============================================================================
-// {singular} Form View - Auto-generated by RationalBloks Frontend MCP
-// Uses THE ONE WAY pattern: getApi() from @rationalbloks/frontblok-crud
-// ============================================================================
-
-import {{ useState, useEffect }} from "react";
-import {{ useNavigate, useParams }} from "react-router-dom";
-import {{
-  Box,
-  Typography,
-  Button,
-  Paper,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormControlLabel,
-  Checkbox,
-  CircularProgress,
-  Alert,
-}} from "@mui/material";
-import {{ getApi, ENTITIES }} from "../../services/datablokApi";
-import type {{ {singular}, Create{singular}Input }} from "../../types/generated";
-
-export default function {singular}FormView() {{
-  const navigate = useNavigate();
-  const {{ id }} = useParams();
-  const isEdit = Boolean(id);
-
-  const [formData, setFormData] = useState<Create{singular}Input>({{
-{initial_state}
-  }});
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {{
-    if (isEdit && id) {{
-      loadData();
-    }}
-  }}, [id]);
-
-  const loadData = async () => {{
-    try {{
-      setLoading(true);
-      const data = await getApi().getOne<{singular}>(ENTITIES.{entity_const}, id!);
-      setFormData(data);
-      setError(null);
-    }} catch (err) {{
-      setError("Failed to load data");
-    }} finally {{
-      setLoading(false);
-    }}
-  }};
-
-  const handleSubmit = async (e: React.FormEvent) => {{
-    e.preventDefault();
-    try {{
-      setSaving(true);
-      if (isEdit && id) {{
-        await getApi().update<{singular}>(ENTITIES.{entity_const}, id, formData);
-      }} else {{
-        await getApi().create<{singular}>(ENTITIES.{entity_const}, formData);
-      }}
-      navigate("/{table_name}");
-    }} catch (err) {{
-      setError("Failed to save");
-    }} finally {{
-      setSaving(false);
-    }}
-  }};
-
-  const handleChange = (field: keyof Create{singular}Input, value: unknown) => {{
-    setFormData((prev) => ({{ ...prev, [field]: value }}));
-  }};
-
-  if (loading) {{
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    );
-  }}
-
-  return (
-    <Box>
-      <Typography variant="h4" mb={{3}}>
-        {{isEdit ? "Edit" : "Create"}} {singular}
-      </Typography>
-
-      {{error && <Alert severity="error" sx={{{{ mb: 2 }}}}>{{error}}</Alert>}}
-
-      <Paper sx={{{{ p: 3 }}}}>
-        <form onSubmit={{handleSubmit}}>
-          <Box display="flex" flexDirection="column" gap={{2}}>
-'''
-        
-        # Generate form fields
-        for field_name, field_def in editable_fields.items():
-            field_type = field_def.get("type", "string")
-            label = field_name.replace("_", " ").title()
-            required = field_def.get("required", False)
-            enum_values = field_def.get("enum", [])
-            
-            if enum_values:
-                # Select dropdown for enum
-                options = "\n".join([f'              <MenuItem value="{v}">{v.replace("_", " ").title()}</MenuItem>' for v in enum_values])
-                view_content += f'''            <FormControl fullWidth>
-              <InputLabel>{label}</InputLabel>
-              <Select
-                value={{formData.{field_name} || ""}}
-                label="{label}"
-                onChange={{(e) => handleChange("{field_name}", e.target.value)}}
-                {"required" if required else ""}
-              >
-{options}
-              </Select>
-            </FormControl>
-'''
-            elif field_type == "boolean":
-                view_content += f'''            <FormControlLabel
-              control={{
-                <Checkbox
-                  checked={{Boolean(formData.{field_name})}}
-                  onChange={{(e) => handleChange("{field_name}", e.target.checked)}}
-                />
-              }}
-              label="{label}"
-            />
-'''
-            elif field_type in ["integer", "decimal"]:
-                view_content += f'''            <TextField
-              label="{label}"
-              type="number"
-              value={{formData.{field_name} || ""}}
-              onChange={{(e) => handleChange("{field_name}", Number(e.target.value))}}
-              fullWidth
-              {"required" if required else ""}
-            />
-'''
-            elif field_type == "text":
-                view_content += f'''            <TextField
-              label="{label}"
-              value={{formData.{field_name} || ""}}
-              onChange={{(e) => handleChange("{field_name}", e.target.value)}}
-              fullWidth
-              multiline
-              rows={{4}}
-              {"required" if required else ""}
-            />
-'''
-            elif field_type in ["date", "datetime"]:
-                input_type = "date" if field_type == "date" else "datetime-local"
-                view_content += f'''            <TextField
-              label="{label}"
-              type="{input_type}"
-              value={{formData.{field_name} || ""}}
-              onChange={{(e) => handleChange("{field_name}", e.target.value)}}
-              fullWidth
-              InputLabelProps={{{{ shrink: true }}}}
-              {"required" if required else ""}
-            />
-'''
-            else:
-                # Default text field
-                view_content += f'''            <TextField
-              label="{label}"
-              value={{formData.{field_name} || ""}}
-              onChange={{(e) => handleChange("{field_name}", e.target.value)}}
-              fullWidth
-              {"required" if required else ""}
-            />
-'''
-        
-        view_content += f'''
-            <Box display="flex" gap={{2}} mt={{2}}>
-              <Button type="submit" variant="contained" disabled={{saving}}>
-                {{saving ? "Saving..." : isEdit ? "Update" : "Create"}}
-              </Button>
-              <Button variant="outlined" onClick={{() => navigate("/{table_name}")}}>
-                Cancel
-              </Button>
-            </Box>
-          </Box>
-        </form>
-      </Paper>
-    </Box>
-  );
-}}
-'''
-        
-        form_file = project / "src" / "components" / "views" / f"{singular}FormView.tsx"
-        form_file.parent.mkdir(parents=True, exist_ok=True)
-        form_file.write_text(view_content, encoding="utf-8")
-        
-        return {
-            "success": True,
-            "file": str(form_file),
-            "fields": list(editable_fields.keys()),
-        }
-    
-    async def generate_all_views(
-        self,
-        project_path: str,
-        schema: dict,
-    ) -> dict[str, Any]:
-        # Generate all views for all entities
-        results = {"success": True, "files": [], "errors": []}
-        
-        for table_name, fields in schema.items():
-            # Generate list view
-            view_result = await self.generate_entity_view(project_path, table_name, fields)
-            if view_result["success"]:
-                results["files"].append(view_result["file"])
-            else:
-                results["errors"].append(f"{table_name} view: {view_result.get('error')}")
-            
-            # Generate form view
-            form_result = await self.generate_entity_form(project_path, table_name, fields)
-            if form_result["success"]:
-                results["files"].append(form_result["file"])
-            else:
-                results["errors"].append(f"{table_name} form: {form_result.get('error')}")
-        
-        if results["errors"]:
-            results["success"] = False
-        
-        return results
-    
-    async def generate_dashboard(
-        self,
-        project_path: str,
-        app_name: str,
-        schema: dict,
-    ) -> dict[str, Any]:
-        # Generate dashboard view
-        project = Path(project_path).resolve()
-        
-        if not project.exists():
-            return {"success": False, "error": f"Project not found: {project}"}
-        
-        # Build stats cards
-        stats_cards = []
-        for table_name in schema.keys():
-            type_name = self._pascal_case(table_name)
-            label = type_name.replace("_", " ")
-            stats_cards.append({"name": table_name, "type": type_name, "label": label})
-        
-        view_content = f'''// ============================================================================
-// Dashboard View - Auto-generated by RationalBloks Frontend MCP
-// Uses THE ONE WAY pattern: getApi() from @rationalbloks/frontblok-crud
-// ============================================================================
-
-import {{ useState, useEffect }} from "react";
-import {{ useNavigate }} from "react-router-dom";
-import {{
-  Box,
-  Typography,
-  Grid,
-  Card,
-  CardContent,
-  CardActionArea,
-  CircularProgress,
-}} from "@mui/material";
-import {{ getApi, ENTITIES }} from "../../services/datablokApi";
-
-export default function DashboardView() {{
-  const navigate = useNavigate();
-  const [stats, setStats] = useState<Record<string, number>>({{}}); 
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {{
-    loadStats();
-  }}, []);
-
-  const loadStats = async () => {{
-    try {{
-      const results: Record<string, number> = {{}};
-'''
-        
-        # Add API calls for each entity using getApi()
-        for card in stats_cards:
-            card_name = card["name"]
-            entity_const = card_name.upper()
-            view_content += f'''      try {{
-        const {card_name}Data = await getApi().getAll(ENTITIES.{entity_const});
-        results["{card_name}"] = {card_name}Data.length;
-      }} catch (_e) {{ results["{card_name}"] = 0; }}
-'''
-        
-        view_content += f'''      setStats(results);
-    }} finally {{
-      setLoading(false);
-    }}
-  }};
-
-  if (loading) {{
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    );
-  }}
-
-  return (
-    <Box>
-      <Typography variant="h4" mb={{3}}>
-        Welcome to {app_name}!
-      </Typography>
-
-      <Grid container spacing={{3}}>
-'''
-        
-        # Add stat cards
-        for card in stats_cards:
-            card_name = card["name"]
-            card_label = card["label"]
-            view_content += f'''        <Grid item xs={{12}} sm={{6}} md={{4}} lg={{3}}>
-          <Card>
-            <CardActionArea onClick={{() => navigate("/{card_name}")}}>
-              <CardContent>
-                <Typography variant="h3" color="primary">
-                  {{stats["{card_name}"] || 0}}
-                </Typography>
-                <Typography color="text.secondary">
-                  {card_label}
-                </Typography>
-              </CardContent>
-            </CardActionArea>
-          </Card>
-        </Grid>
-'''
-        
-        view_content += '''      </Grid>
-    </Box>
-  );
-}
-'''
-        
-        dashboard_file = project / "src" / "components" / "views" / "DashboardView.tsx"
-        dashboard_file.parent.mkdir(parents=True, exist_ok=True)
-        dashboard_file.write_text(view_content, encoding="utf-8")
-        
-        return {
-            "success": True,
-            "file": str(dashboard_file),
-            "stats": [c["name"] for c in stats_cards],
-        }
-    
-    async def update_routes(
-        self,
-        project_path: str,
-        schema: dict,
-    ) -> dict[str, Any]:
-        # Update App.tsx with routes for all views
-        # Uses THE ONE WAY architecture matching rationalbloksfront template
-        project = Path(project_path).resolve()
-        
-        if not project.exists():
-            return {"success": False, "error": f"Project not found: {project}"}
-        
-        # Build imports and routes
-        view_imports = ['import DashboardView from \'./components/views/DashboardView\';']
-        protected_routes = []
-        
-        for table_name in schema.keys():
-            type_name = self._pascal_case(table_name)
-            singular = self._get_singular(type_name)
-            
-            view_imports.append(f"import {type_name}View from './components/views/{type_name}View';")
-            view_imports.append(f"import {singular}FormView from './components/views/{singular}FormView';")
-            
-            # Protected routes with ProtectedRoute wrapper
-            protected_routes.append(f'''            <Route path="/{table_name}" element={{
-              <ProtectedRoute><{type_name}View /></ProtectedRoute>
-            }} />''')
-            protected_routes.append(f'''            <Route path="/{table_name}/new" element={{
-              <ProtectedRoute><{singular}FormView /></ProtectedRoute>
-            }} />''')
-            protected_routes.append(f'''            <Route path="/{table_name}/:id/edit" element={{
-              <ProtectedRoute><{singular}FormView /></ProtectedRoute>
-            }} />''')
-        
-        view_import_section = "\n".join(view_imports)
-        protected_route_section = "\n".join(protected_routes)
-        
-        # Create App.tsx matching rationalbloksfront template architecture
-        app_content = f'''// ============================================================================
-// App.tsx - Generated by RationalBloks Frontend MCP
-// Uses THE ONE WAY architecture with frontblok-auth + frontblok-crud
-// ============================================================================
-
-import {{ QueryClient, QueryClientProvider }} from '@tanstack/react-query';
-import {{ ThemeProvider }} from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import {{ BrowserRouter, Routes, Route, Navigate }} from 'react-router-dom';
-import {{ Box, Toolbar }} from '@mui/material';
-import {{ ClientAuthProvider, useClientAuth }} from './services/datablokApi';
-
-// App-specific styling and components
-import {{ createAppTheme }} from './theme';
-import ErrorBoundary from './components/shared/ErrorBoundary';
-
-// Navbar using factory pattern
-import Navbar from './config/Navbar';
-
-// Auth views (from template)
-import ClientAuthView from './components/views/ClientAuthView';
-import ForgotPasswordView from './components/views/ForgotPasswordView';
-import ResetPasswordView from './components/views/ResetPasswordView';
-import VerifyEmailView from './components/views/VerifyEmailView';
-import UserSettingsView from './components/views/UserSettingsView';
-
-// Generated views
-{view_import_section}
-
-// Create React Query client
-const queryClient = new QueryClient({{
-  defaultOptions: {{
-    queries: {{
-      retry: 2,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      refetchOnWindowFocus: false,
-    }},
-  }},
-}});
-
-// Create theme
-const theme = createAppTheme();
-
-// Protected Route Component
-const ProtectedRoute = ({{ children }}: {{ children: React.ReactNode }}) => {{
-  const {{ isAuthenticated }} = useClientAuth();
-  
-  if (!isAuthenticated) {{
-    return <Navigate to="/auth" replace />;
-  }}
-  
-  return <>{{children}}</>;
-}};
-
-// App Router Component
-const AppRouter = () => {{
-  const {{ isAuthenticated }} = useClientAuth();
-
-  return (
-    <Box sx={{{{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      minHeight: '100vh',
-      width: '100%',
-      maxWidth: '100vw',
-      overflow: 'hidden' 
-    }}}}>
-      <Navbar />
-      
-      <Box 
-        component="main" 
-        sx={{{{ 
-          flexGrow: 1,
-          width: '100%',
-          maxWidth: '100%',
-          overflow: 'auto',
-          backgroundColor: 'background.default'
-        }}}}
-      >
-        <Toolbar /> {{/* Spacer for fixed navbar */}}
-        <Box sx={{{{ p: 3 }}}}>
-          <Routes>
-            {{/* Public Routes */}}
-            <Route path="/" element={{
-              isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/auth" replace />
-            }} />
-            <Route path="/auth" element={{
-              isAuthenticated ? <Navigate to="/dashboard" replace /> : <ClientAuthView />
-            }} />
-            
-            {{/* Authentication Flow Routes (Public) */}}
-            <Route path="/forgot-password" element={{<ForgotPasswordView />}} />
-            <Route path="/reset-password" element={{<ResetPasswordView />}} />
-            <Route path="/verify-email" element={{<VerifyEmailView />}} />
-            
-            {{/* Dashboard */}}
-            <Route path="/dashboard" element={{
-              <ProtectedRoute><DashboardView /></ProtectedRoute>
-            }} />
-            
-            {{/* Generated Entity Routes */}}
-{protected_route_section}
-            
-            {{/* Settings */}}
-            <Route path="/settings" element={{
-              <ProtectedRoute><UserSettingsView /></ProtectedRoute>
-            }} />
-            
-            {{/* Redirect unknown routes */}}
-            <Route path="*" element={{<Navigate to="/" replace />}} />
-          </Routes>
-        </Box>
-      </Box>
-    </Box>
-  );
-}};
-
-function App() {{
-  return (
-    <ErrorBoundary>
-      <QueryClientProvider client={{queryClient}}>
-        <ThemeProvider theme={{theme}}>
-          <CssBaseline />
-          <BrowserRouter>
-            <ClientAuthProvider>
-              <AppRouter />
-            </ClientAuthProvider>
-          </BrowserRouter>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
-  );
-}}
-
-export default App;
-'''
-        
-        app_file = project / "src" / "App.tsx"
-        app_file.write_text(app_content, encoding="utf-8")
-        
-        return {
-            "success": True,
-            "file": str(app_file),
-            "routes": [f"/{t}" for t in schema.keys()] + ["/dashboard"],
-        }
-    
-    async def update_navbar(
-        self,
-        project_path: str,
-        app_name: str,
-        schema: dict,
-    ) -> dict[str, Any]:
-        # Update navbar configuration using factory pattern
-        # Matches rationalbloksfront template architecture
-        project = Path(project_path).resolve()
-        
-        if not project.exists():
-            return {"success": False, "error": f"Project not found: {project}"}
-        
-        # Build authenticated nav items for each entity
-        nav_items = []
-        for table_name in schema.keys():
-            type_name = self._pascal_case(table_name)
-            # Make human-readable label with spaces
-            label = type_name
-            # Add spaces before capital letters for readability
-            import re as regex
-            label = regex.sub(r'(?<!^)(?=[A-Z])', ' ', label)
-            nav_items.append({
-                "id": f"/{table_name}",
-                "label": label,
-            })
-        
-        # Build nav items string
-        nav_items_code = ""
-        for item in nav_items:
-            nav_items_code += f'  {{ id: \'{item["id"]}\', label: \'{item["label"]}\', icon: <ListIcon /> }},\n'
-        
-        config_content = f'''// ============================================================================
-// Navbar Configuration - Generated by RationalBloks Frontend MCP
-// Uses createNavbar factory from components/shared/Navbar
-// ============================================================================
-
-import React from 'react';
-import {{
-  Dashboard as DashboardIcon,
-  List as ListIcon,
-  Settings as SettingsIcon,
-}} from '@mui/icons-material';
-import {{ createNavbar, NavigationItem }} from '../components/shared/Navbar';
-import {{ useClientAuth }} from '../services/datablokApi';
-
-// ========================================================================
-// BRAND CONFIGURATION
-// ========================================================================
-
-const BRAND_CONFIG = {{
-  name: '{app_name}',
-  logo: '/favicon.ico',
-}};
-
-// ========================================================================
-// NAVIGATION CONFIGURATION
-// ========================================================================
-
-// Navigation items for non-authenticated users
-const PUBLIC_NAV_ITEMS: NavigationItem[] = [
-  {{ id: '/', label: 'Home', icon: <DashboardIcon /> }},
-];
-
-// Additional navigation items for authenticated users
-const AUTHENTICATED_NAV_ITEMS: NavigationItem[] = [
-  {{ id: '/dashboard', label: 'Dashboard', icon: <DashboardIcon /> }},
-{nav_items_code}];
-
-// ========================================================================
-// CREATE THE NAVBAR
-// ========================================================================
-
-const Navbar = createNavbar({{
-  brand: BRAND_CONFIG,
-  navigation: {{
-    public: PUBLIC_NAV_ITEMS,
-    authenticated: AUTHENTICATED_NAV_ITEMS,
-  }},
-  useAuth: useClientAuth,
-  userRoleLabel: 'User',
-  authRoute: '/auth',
-  settingsRoute: '/settings',
-}});
-
-export default Navbar;
-'''
-        
-        navbar_config = project / "src" / "config" / "Navbar.tsx"
-        navbar_config.parent.mkdir(parents=True, exist_ok=True)
-        navbar_config.write_text(config_content, encoding="utf-8")
-        
-        return {
-            "success": True,
-            "file": str(navbar_config),
-            "nav_items": [{"label": "Dashboard", "path": "/dashboard"}] + nav_items,
-        }
-    
-    # ========================================================================
-    # SCAFFOLD METHOD
-    # ========================================================================
-    
-    async def scaffold_frontend(
-        self,
-        project_path: str,
-        app_name: str,
-        schema: dict,
-        api_url: str | None = None,
-    ) -> dict[str, Any]:
-        # Apply all generators to an existing project
-        result = {
-            "success": True,
-            "project_path": project_path,
-            "app_name": app_name,
-            "steps_completed": [],
-            "steps_failed": [],
-            "files_generated": [],
-        }
-        
-        # Step 1: Generate types
-        try:
-            types_result = await self.generate_types(project_path, schema)
-            if types_result["success"]:
-                result["steps_completed"].append("generate_types")
-                result["files_generated"].append(types_result["file"])
-            else:
-                result["steps_failed"].append({"step": "generate_types", "error": types_result.get("error")})
-        except Exception as e:
-            result["steps_failed"].append({"step": "generate_types", "error": str(e)})
-        
-        # Step 2: Generate API service
-        try:
-            api_result = await self.generate_api_service(project_path, schema, api_url)
-            if api_result["success"]:
-                result["steps_completed"].append("generate_api_service")
-                result["files_generated"].append(api_result["file"])
-            else:
-                result["steps_failed"].append({"step": "generate_api_service", "error": api_result.get("error")})
-        except Exception as e:
-            result["steps_failed"].append({"step": "generate_api_service", "error": str(e)})
-        
-        # Step 3: Generate all views
-        try:
-            views_result = await self.generate_all_views(project_path, schema)
-            if views_result["success"]:
-                result["steps_completed"].append("generate_all_views")
-                result["files_generated"].extend(views_result["files"])
-            else:
-                result["steps_failed"].append({"step": "generate_all_views", "error": views_result.get("errors")})
-        except Exception as e:
-            result["steps_failed"].append({"step": "generate_all_views", "error": str(e)})
-        
-        # Step 4: Generate dashboard
-        try:
-            dashboard_result = await self.generate_dashboard(project_path, app_name, schema)
-            if dashboard_result["success"]:
-                result["steps_completed"].append("generate_dashboard")
-                result["files_generated"].append(dashboard_result["file"])
-            else:
-                result["steps_failed"].append({"step": "generate_dashboard", "error": dashboard_result.get("error")})
-        except Exception as e:
-            result["steps_failed"].append({"step": "generate_dashboard", "error": str(e)})
-        
-        # Step 5: Update routes
-        try:
-            routes_result = await self.update_routes(project_path, schema)
-            if routes_result["success"]:
-                result["steps_completed"].append("update_routes")
-                result["files_generated"].append(routes_result["file"])
-            else:
-                result["steps_failed"].append({"step": "update_routes", "error": routes_result.get("error")})
-        except Exception as e:
-            result["steps_failed"].append({"step": "update_routes", "error": str(e)})
-        
-        # Step 6: Update navbar
-        try:
-            navbar_result = await self.update_navbar(project_path, app_name, schema)
-            if navbar_result["success"]:
-                result["steps_completed"].append("update_navbar")
-                result["files_generated"].append(navbar_result["file"])
-            else:
-                result["steps_failed"].append({"step": "update_navbar", "error": navbar_result.get("error")})
-        except Exception as e:
-            result["steps_failed"].append({"step": "update_navbar", "error": str(e)})
-        
-        # Step 7: Configure API URL (if provided)
-        if api_url:
-            try:
-                env_result = await self.configure_api_url(project_path, api_url)
-                if env_result["success"]:
-                    result["steps_completed"].append("configure_api_url")
-                else:
-                    result["steps_failed"].append({"step": "configure_api_url", "error": env_result.get("error")})
-            except Exception as e:
-                result["steps_failed"].append({"step": "configure_api_url", "error": str(e)})
-        
-        # Determine overall success
-        critical_steps = ["generate_types", "generate_api_service", "generate_all_views", "update_routes"]
-        result["success"] = all(step in result["steps_completed"] for step in critical_steps)
-        
-        result["next_steps"] = [
-            f"cd {project_path}",
-            "npm install",
-            "npm run dev",
-            "Open http://localhost:5173",
-        ]
-        
-        return result
-    
-    # ========================================================================
-    # UTILITY METHODS
-    # ========================================================================
-    
-    async def clone_template(
-        self,
-        destination: str,
-        project_name: str,
-    ) -> dict[str, Any]:
-        # Clone the template repository
-        dest_path = Path(destination).expanduser().resolve()
-        project_path = dest_path / project_name
-        
-        if project_path.exists():
-            return {"success": False, "error": f"Directory already exists: {project_path}"}
-        
-        dest_path.mkdir(parents=True, exist_ok=True)
-        
-        try:
-            result = subprocess.run(
-                ["git", "clone", "--depth", "1", "--branch", TEMPLATE_BRANCH, TEMPLATE_REPO, str(project_path)],
-                capture_output=True,
-                text=True,
-                timeout=120,
-            )
-            
-            if result.returncode != 0:
-                return {"success": False, "error": f"Git clone failed: {result.stderr}"}
-            
-            # Remove .git and reinitialize
-            git_dir = project_path / ".git"
-            if git_dir.exists():
-                shutil.rmtree(git_dir)
-            
-            subprocess.run(["git", "init"], cwd=str(project_path), capture_output=True)
-            
-            return {
-                "success": True,
-                "project_path": str(project_path),
-                "next_steps": [
-                    f"Use scaffold_frontend with project_path='{project_path}'",
-                    "npm install",
-                    "npm run dev",
-                ],
-            }
-            
-        except subprocess.TimeoutExpired:
-            return {"success": False, "error": "Git clone timed out after 120 seconds"}
-        except FileNotFoundError:
-            return {"success": False, "error": "Git is not installed or not in PATH"}
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-    
     async def configure_api_url(
         self,
         project_path: str,
         api_url: str,
     ) -> dict[str, Any]:
-        # Configure the backend API URL in .env
-        project = Path(project_path).expanduser().resolve()
+        """Set the backend API URL in .env file."""
+        project = Path(project_path).resolve()
         
         if not project.exists():
             return {"success": False, "error": f"Project not found: {project}"}
@@ -1282,71 +342,97 @@ export default Navbar;
         env_file = project / ".env"
         env_example = project / ".env.example"
         
-        # Create .env from example if needed
+        # If .env doesn't exist, copy from .env.example
         if not env_file.exists() and env_example.exists():
             shutil.copy(env_example, env_file)
-        elif not env_file.exists():
-            env_file.write_text("", encoding="utf-8")
         
-        # Read and update
-        env_content = env_file.read_text(encoding="utf-8")
-        lines = env_content.split("\n")
-        
-        updated = False
-        new_lines = []
-        for line in lines:
-            if line.startswith("VITE_DATABASE_API_URL="):
-                new_lines.append(f"VITE_DATABASE_API_URL={api_url}")
-                updated = True
+        if not env_file.exists():
+            # Create minimal .env
+            env_content = f"VITE_DATABASE_API_URL={api_url}\n"
+            env_file.write_text(env_content, encoding="utf-8")
+        else:
+            # Update existing .env
+            content = env_file.read_text(encoding="utf-8")
+            
+            if "VITE_DATABASE_API_URL=" in content:
+                # Replace existing line
+                lines = content.split("\n")
+                new_lines = []
+                for line in lines:
+                    if line.startswith("VITE_DATABASE_API_URL="):
+                        new_lines.append(f"VITE_DATABASE_API_URL={api_url}")
+                    else:
+                        new_lines.append(line)
+                content = "\n".join(new_lines)
             else:
-                new_lines.append(line)
-        
-        if not updated:
-            new_lines.append(f"VITE_DATABASE_API_URL={api_url}")
-        
-        env_file.write_text("\n".join(new_lines), encoding="utf-8")
+                # Add new line
+                content += f"\nVITE_DATABASE_API_URL={api_url}\n"
+            
+            env_file.write_text(content, encoding="utf-8")
         
         return {
             "success": True,
-            "env_file": str(env_file),
-            "configured": {"VITE_DATABASE_API_URL": api_url},
+            "file": str(env_file),
+            "api_url": api_url,
         }
-    
-    async def create_backend(
-        self,
-        name: str,
-        schema: dict,
-        description: str | None = None,
-    ) -> dict[str, Any]:
-        # Create a backend project via the Backend MCP
-        client = self._get_backend_client()
-        return await client.create_project(name=name, schema=schema, description=description)
     
     async def get_template_structure(
         self,
         path: str = "",
         max_depth: int = 3,
     ) -> dict[str, Any]:
-        # Get the file structure of the template
+        """Get the structure of the rationalbloksfront template.
+        
+        Returns a tree view of key directories and files.
+        """
+        # Return a static representation of the template structure
+        structure = """
+rationalbloksfront/
+├── src/
+│   ├── App.tsx                    ← Provider hierarchy + routes
+│   ├── main.tsx                   ← createAppRoot(App, config)
+│   ├── components/
+│   │   ├── shared/                ← Reusable UI components
+│   │   │   ├── Navbar.tsx         ← createNavbar factory
+│   │   │   ├── ErrorBoundary.tsx
+│   │   │   └── ...
+│   │   └── views/                 ← Page components (YOU write these)
+│   │       ├── ClientAuthView.tsx
+│   │       ├── UserSettingsView.tsx
+│   │       ├── ForgotPasswordView.tsx
+│   │       └── ...                ← Add your custom views here
+│   ├── config/
+│   │   └── Navbar.tsx             ← createNavbar() with your nav items
+│   ├── services/
+│   │   ├── datablokApi.ts         ← THE ONE WAY glue (generated)
+│   │   └── logicblokApi.ts        ← Business logic API (optional)
+│   ├── types/
+│   │   └── generated.ts           ← TypeScript types (generated)
+│   ├── theme/
+│   │   └── index.ts               ← createAppTheme()
+│   └── styles/
+│       └── globals.css            ← Global styles
+├── .env                           ← VITE_DATABASE_API_URL
+├── package.json                   ← Dependencies
+├── vite.config.ts                 ← Vite configuration
+└── tsconfig.json                  ← TypeScript configuration
+
+KEY PATTERNS:
+- All CRUD via getApi() from datablokApi
+- All auth via useClientAuth() from datablokApi
+- Views in src/components/views/
+- Routes in App.tsx
+- Navbar config in src/config/Navbar.tsx
+"""
+        
         return {
-            "template": "rationalbloksfront",
-            "version": "Uses @rationalbloks/frontblok-auth npm package",
-            "structure": {
-                "src/": {
-                    "components/": {"shared/": "Navbar, ErrorBoundary", "views/": "Page components"},
-                    "config/": "App configuration",
-                    "contexts/": "React contexts",
-                    "services/": "API client",
-                    "styles/": "Global CSS",
-                    "theme/": "MUI theme",
-                    "types/": "TypeScript types",
-                    "App.tsx": "Main routes",
-                    "main.tsx": "Entry point",
-                },
-                "public/": "Static assets",
-                "package.json": "Dependencies",
-                "vite.config.ts": "Vite config",
-                ".env.example": "Environment template",
-            },
-            "key_dependency": "@rationalbloks/frontblok-auth (auth, API client, utilities)",
+            "structure": structure.strip(),
+            "key_files": [
+                "src/App.tsx - Provider hierarchy and routes",
+                "src/main.tsx - App bootstrap with createAppRoot",
+                "src/services/datablokApi.ts - THE ONE WAY glue",
+                "src/types/generated.ts - TypeScript interfaces",
+                "src/config/Navbar.tsx - Navigation configuration",
+                "src/components/views/ - Your custom view components",
+            ],
         }

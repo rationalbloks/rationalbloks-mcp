@@ -5,8 +5,13 @@
 #
 # Unified MCP server supporting 3 modes:
 #   - backend:  18 API/database tools (projects, schemas, deployments)
-#   - frontend: 14 frontend generation tools (types, views, forms, scaffold)
-#   - full:     All 32 tools combined (DEFAULT)
+#   - frontend: 6 bootstrap tools (thin layer - AI writes the views)
+#   - full:     All 24 tools combined (DEFAULT)
+#
+# FRONTEND PHILOSOPHY (v0.5.0):
+# The frontend MCP is a THIN LAYER that provides guardrails, not generation.
+# The AI agent writes all views, forms, and custom UI.
+# The MCP ensures the AI follows THE ONE WAY architecture.
 #
 # Usage:
 #   export RATIONALBLOKS_API_KEY=rb_sk_your_key_here
@@ -111,41 +116,43 @@ def _run_server(mode: Mode) -> None:
 
 
 def _create_full_server(api_key: str | None, http_mode: bool):
-    # Create a full server with all 32 tools
-    # Combines backend (18 tools) + frontend (14 tools)
+    # Create a full server with all 24 tools
+    # Combines backend (18 tools) + frontend (6 tools)
     from .core import BaseMCPServer
     from .backend.tools import BACKEND_TOOLS, BACKEND_PROMPTS
     from .backend.client import LogicBlokClient
     from .frontend.tools import FRONTEND_TOOLS, FRONTEND_PROMPTS
     from .frontend.client import FrontendClient
-    from .frontend.app_generator import AppGenerator
     
     FULL_INSTRUCTIONS = """RationalBloks MCP Server - Full Mode
 
-🚀 BUILD COMPLETE FULLSTACK APPS IN MINUTES
+🚀 BUILD COMPLETE FULLSTACK APPS WITH AI CREATIVITY
 
-RECOMMENDED WORKFLOW:
-1. Already have a project? Use scaffold_frontend (generates all code from schema)
-2. Need to clone first? Use clone_template, then scaffold_frontend
-3. Starting from zero? Use create_app (clones + creates backend + scaffolds)
+THE PHILOSOPHY:
+- Backend MCP: 18 deterministic tools for API/database/deployment
+- Frontend MCP: 6 bootstrap tools (THIN LAYER)
+- YOU (the AI): Write all views, forms, and custom UI!
 
-FRONTEND GENERATION TOOLS (14 tools):
-🔧 Granular Tools (work on YOUR existing project):
+WORKFLOW:
+1. Use backend MCP to create_project (API deployed in minutes)
+2. Use frontend MCP to bootstrap:
+   - clone_template: Fresh React project
+   - generate_types: TypeScript from schema
+   - generate_api_service: datablokApi.ts (THE ONE WAY glue)
+   - configure_api_url: Set backend URL
+3. Read get_frontend_guidelines to understand the patterns
+4. YOU WRITE the custom views (kanban, calendar, cards - not boring tables!)
+
+FRONTEND TOOLS (6 tools - THIN LAYER):
+📖 TEACH:
+- get_frontend_guidelines: THE ONE WAY architecture docs
+- get_template_structure: Explore template files
+
+🔧 BOOTSTRAP:
+- clone_template: Fresh project from GitHub
 - generate_types: TypeScript interfaces from schema
-- generate_api_service: API client with CRUD operations  
-- generate_entity_view: List view for ONE entity
-- generate_entity_form: Create/edit form for ONE entity
-- generate_all_views: All views for all entities
-- generate_dashboard: Dashboard with stats
-- update_routes: Wire up routes in App.tsx
-- update_navbar: Update navigation links
-
-🚀 Scaffold Tools:
-- scaffold_frontend: Apply ALL generators to existing project
-- create_app: Full automation (clone + backend + scaffold)
-
-🔌 Utility Tools:
-- clone_template, configure_api_url, create_backend, get_template_structure
+- generate_api_service: datablokApi.ts (THE ONE WAY glue)
+- configure_api_url: Set .env API URL
 
 BACKEND TOOLS (18 tools):
 - Project management: list_projects, get_project, create_project, etc.
@@ -156,7 +163,7 @@ SCHEMA FORMAT (FLAT - CRITICAL):
 ✅ {tasks: {title: {type: "string", max_length: 200}}} 
 ❌ {tasks: {fields: {title: {type: "string"}}}}
 
-AVAILABLE: 32 tools (18 backend + 14 frontend)"""
+AVAILABLE: 24 tools (18 backend + 6 frontend)"""
     
     class FullMCPServer(BaseMCPServer):
         # Full MCP server with all 24 tools
@@ -194,12 +201,6 @@ AVAILABLE: 32 tools (18 backend + 14 frontend)"""
             api_key = self.get_api_key_for_request()
             return FrontendClient(api_key)
         
-        def _get_app_generator(self) -> AppGenerator:
-            api_key = self.get_api_key_for_request()
-            if not api_key:
-                raise ValueError("API key required for create_app")
-            return AppGenerator(api_key)
-        
         async def _handle_tool(self, name: str, arguments: dict):
             # Route tool calls to appropriate client
             # Backend tools
@@ -208,27 +209,23 @@ AVAILABLE: 32 tools (18 backend + 14 frontend)"""
                 async with self._get_backend_client() as client:
                     return await self._call_backend_tool(client, name, arguments)
             
-            # Frontend tools - special handling for create_app
+            # Frontend tools
             frontend_tool_names = [t["name"] for t in FRONTEND_TOOLS]
             if name in frontend_tool_names:
-                if name == "create_app":
-                    return await self._call_create_app(arguments)
+                # get_frontend_guidelines is handled inline (returns docs)
+                if name == "get_frontend_guidelines":
+                    from .frontend.tools import THE_ONE_WAY_ARCHITECTURE, COMPONENT_GUIDELINES
+                    section = arguments.get("section", "all")
+                    if section == "architecture":
+                        return {"guidelines": THE_ONE_WAY_ARCHITECTURE}
+                    elif section == "components":
+                        return {"guidelines": COMPONENT_GUIDELINES}
+                    else:
+                        return {"guidelines": THE_ONE_WAY_ARCHITECTURE + "\n\n---\n\n" + COMPONENT_GUIDELINES}
                 async with self._get_frontend_client() as client:
                     return await self._call_frontend_tool(client, name, arguments)
             
             raise ValueError(f"Unknown tool: {name}")
-        
-        async def _call_create_app(self, args: dict):
-            # Handle create_app with AppGenerator
-            generator = self._get_app_generator()
-            return await generator.create_app(
-                name=args["name"],
-                description=args["description"],
-                destination=args["destination"],
-                schema=args["schema"],
-                wait_for_deployment=args.get("wait_for_deployment", True),
-                run_npm_install=args.get("run_npm_install", True),
-            )
         
         async def _call_backend_tool(self, client: LogicBlokClient, name: str, args: dict):
             # Call a backend tool
@@ -280,8 +277,7 @@ AVAILABLE: 32 tools (18 backend + 14 frontend)"""
                 raise ValueError(f"Unknown backend tool: {name}")
         
         async def _call_frontend_tool(self, client: FrontendClient, name: str, args: dict):
-            # Call a frontend tool
-            # Generation tools
+            # Call a frontend tool (thin layer - 5 tools only)
             if name == "generate_types":
                 return await client.generate_types(
                     project_path=args["project_path"],
@@ -293,49 +289,6 @@ AVAILABLE: 32 tools (18 backend + 14 frontend)"""
                     schema=args["schema"],
                     api_url=args.get("api_url"),
                 )
-            elif name == "generate_entity_view":
-                return await client.generate_entity_view(
-                    project_path=args["project_path"],
-                    table_name=args["table_name"],
-                    fields=args["fields"],
-                )
-            elif name == "generate_entity_form":
-                return await client.generate_entity_form(
-                    project_path=args["project_path"],
-                    table_name=args["table_name"],
-                    fields=args["fields"],
-                )
-            elif name == "generate_all_views":
-                return await client.generate_all_views(
-                    project_path=args["project_path"],
-                    schema=args["schema"],
-                )
-            elif name == "generate_dashboard":
-                return await client.generate_dashboard(
-                    project_path=args["project_path"],
-                    app_name=args["app_name"],
-                    schema=args["schema"],
-                )
-            elif name == "update_routes":
-                return await client.update_routes(
-                    project_path=args["project_path"],
-                    schema=args["schema"],
-                )
-            elif name == "update_navbar":
-                return await client.update_navbar(
-                    project_path=args["project_path"],
-                    app_name=args["app_name"],
-                    schema=args["schema"],
-                )
-            # Scaffold tool
-            elif name == "scaffold_frontend":
-                return await client.scaffold_frontend(
-                    project_path=args["project_path"],
-                    app_name=args["app_name"],
-                    schema=args["schema"],
-                    api_url=args.get("api_url"),
-                )
-            # Utility tools
             elif name == "clone_template":
                 return await client.clone_template(
                     destination=args["destination"],
@@ -345,12 +298,6 @@ AVAILABLE: 32 tools (18 backend + 14 frontend)"""
                 return await client.get_template_structure(
                     path=args.get("path", ""),
                     max_depth=args.get("max_depth", 3),
-                )
-            elif name == "create_backend":
-                return await client.create_backend(
-                    name=args["name"],
-                    schema=args["schema"],
-                    description=args.get("description"),
                 )
             elif name == "configure_api_url":
                 return await client.configure_api_url(
@@ -369,7 +316,7 @@ AVAILABLE: 32 tools (18 backend + 14 frontend)"""
 
 def main() -> None:
     # Main entry point - uses RATIONALBLOKS_MODE environment variable
-    # Default mode is 'full' (all 32 tools: 18 backend + 14 frontend)
+    # Default mode is 'full' (all 24 tools: 18 backend + 6 frontend)
     mode = _get_mode()
     print(f"[rationalbloks-mcp] Starting in {mode} mode...", file=sys.stderr)
     _run_server(mode)
@@ -382,7 +329,7 @@ def main_backend() -> None:
 
 
 def main_frontend() -> None:
-    # Frontend-only entry point (14 tools)
+    # Frontend-only entry point (6 tools - thin layer)
     print("[rationalbloks-mcp] Starting in frontend mode...", file=sys.stderr)
     _run_server("frontend")
 
