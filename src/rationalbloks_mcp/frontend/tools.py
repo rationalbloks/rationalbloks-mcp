@@ -140,7 +140,7 @@ export { authApi, getApi };
 
 USAGE IN COMPONENTS:
 ```typescript
-import { getApi, ENTITIES } from "../../services/appApi";
+import { getApi, ENTITIES } from "../../services/datablokApi";
 const tasks = await getApi().getAll<Task>(ENTITIES.TASKS);
 await getApi().create<Task>(ENTITIES.TASKS, data);
 ```
@@ -180,7 +180,7 @@ Creates src/components/views/{Entity}View.tsx with:
 
 USES THE ONE WAY PATTERN:
 ```typescript
-import { getApi, ENTITIES } from "../../services/appApi";
+import { getApi, ENTITIES } from "../../services/datablokApi";
 const data = await getApi().getAll<Task>(ENTITIES.TASKS);
 await getApi().remove(ENTITIES.TASKS, id);
 ```
@@ -225,7 +225,7 @@ Creates src/components/views/{Entity}FormView.tsx with:
 
 USES THE ONE WAY PATTERN:
 ```typescript
-import { getApi, ENTITIES } from "../../services/appApi";
+import { getApi, ENTITIES } from "../../services/datablokApi";
 const data = await getApi().getOne<Task>(ENTITIES.TASKS, id);
 await getApi().create<Task>(ENTITIES.TASKS, formData);
 await getApi().update<Task>(ENTITIES.TASKS, id, formData);

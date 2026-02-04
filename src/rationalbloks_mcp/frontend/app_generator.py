@@ -463,7 +463,7 @@ import {{
   Chip,
 }} from "@mui/material";
 import {{ Add, Edit, Delete }} from "@mui/icons-material";
-import {{ getApi, ENTITIES }} from "../../services/appApi";
+import {{ getApi, ENTITIES }} from "../../services/datablokApi";
 import type {{ {singular} }} from "../../types/generated";
 
 export default function {type_name}View() {{
@@ -616,7 +616,7 @@ import {{
   Alert,
 }} from "@mui/material";
 import {{ Save, ArrowBack }} from "@mui/icons-material";
-import {{ getApi, ENTITIES }} from "../../services/appApi";
+import {{ getApi, ENTITIES }} from "../../services/datablokApi";
 import type {{ {singular}, Create{singular}Input }} from "../../types/generated";
 
 export default function {singular}FormView() {{
@@ -847,7 +847,7 @@ import {{
   Paper,
   CircularProgress,
 }} from "@mui/material";
-import {{ getApi, ENTITIES }} from "../../services/appApi";
+import {{ getApi, ENTITIES }} from "../../services/datablokApi";
 
 interface Stats {{
 '''
