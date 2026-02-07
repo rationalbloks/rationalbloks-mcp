@@ -7,12 +7,12 @@
     "url": "https://github.com/rationalbloks/rationalbloks-mcp",
     "source": "github"
   },
-  "version": "0.6.0",
+  "version": "0.6.1",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "rationalbloks-mcp",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "transport": {
         "type": "stdio"
       },
@@ -29,16 +29,8 @@
   ],
   "remotes": [
     {
-      "type": "sse",
-      "url": "https://infra.rationalbloks.com/sse",
-      "headers": [
-        {
-          "name": "X-API-Key",
-          "description": "Your RationalBloks API key",
-          "isRequired": true,
-          "isSecret": true
-        }
-      ]
+      "transportType": "streamable-http",
+      "url": "https://mcp.rationalbloks.com/mcp"
     }
   ]
 }
