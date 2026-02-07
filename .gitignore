@@ -41,3 +41,8 @@ htmlcov/
 
 # UV
 uv.lock
+
+# MCP Publisher
+mcp-publisher.exe
+mcp-publisher
+.mcpregistry_*
