@@ -13,6 +13,7 @@ authors = [
     { name = "RationalBloks", email = "support@rationalbloks.com" }
 ]
 keywords = ["mcp", "ai", "backend", "database", "api", "claude", "cursor", "smithery"]
+mcpName = "io.github.rationalbloks/rationalbloks-mcp"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
