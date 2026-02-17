@@ -4,15 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rationalbloks-mcp"
-version = "0.6.1"
-description = "RationalBloks MCP Server - Deploy production APIs in minutes. 18 tools for projects, schemas, and deployments."
+version = "0.7.0"
+description = "RationalBloks MCP Server - Deploy production REST APIs and Neo4j Graph APIs in minutes. 29 tools for projects, schemas, and deployments."
 readme = "README.md"
 license = {text = "Proprietary"}
 requires-python = ">=3.10"
 authors = [
     { name = "RationalBloks", email = "support@rationalbloks.com" }
 ]
-keywords = ["mcp", "ai", "backend", "database", "api", "claude", "cursor", "smithery"]
+keywords = ["mcp", "ai", "backend", "database", "api", "graph", "neo4j", "claude", "cursor", "smithery"]
 mcpName = "io.github.rationalbloks/rationalbloks-mcp"
 classifiers = [
     "Development Status :: 5 - Production/Stable",

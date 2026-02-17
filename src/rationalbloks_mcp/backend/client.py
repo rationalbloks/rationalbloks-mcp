@@ -172,3 +172,84 @@ class LogicBlokClient:
             "project_id": project_id,
             "name": name
         })
+    
+    # ========================================================================
+    # GRAPH READ OPERATIONS
+    # ========================================================================
+    
+    async def get_graph_schema(self, project_id: str) -> dict:
+        # Get the graph schema (nodes and relationships) for a project
+        return await self._execute("get_graph_schema", {"project_id": project_id})
+    
+    async def get_graph_template_schemas(self) -> dict:
+        # Get pre-built graph template schemas for common use cases
+        return await self._execute("get_graph_template_schemas")
+    
+    async def get_graph_version_history(self, project_id: str) -> dict:
+        # Get deployment/version history for a graph project
+        return await self._execute("get_graph_version_history", {"project_id": project_id})
+    
+    async def get_graph_schema_at_version(self, project_id: str, version: str) -> dict:
+        # Get graph schema at a specific version/commit
+        return await self._execute("get_graph_schema_at_version", {
+            "project_id": project_id,
+            "version": version
+        })
+    
+    async def get_graph_project_info(self, project_id: str) -> dict:
+        # Get detailed graph project info including K8s and Neo4j status
+        return await self._execute("get_graph_project_info", {"project_id": project_id})
+    
+    # ========================================================================
+    # GRAPH WRITE OPERATIONS
+    # ========================================================================
+    
+    async def create_graph_project(
+        self,
+        name: str,
+        schema: dict,
+        description: str | None = None,
+    ) -> dict:
+        # Create a new Neo4j graph project from a hierarchical schema
+        # Returns: Project details with job_id for deployment tracking
+        args = {"name": name, "schema": schema}
+        if description:
+            args["description"] = description
+        return await self._execute("create_graph_project", args)
+    
+    async def update_graph_schema(self, project_id: str, schema: dict) -> dict:
+        # Update a graph project's schema (does NOT deploy)
+        # Returns: Updated project details
+        return await self._execute("update_graph_schema", {
+            "project_id": project_id,
+            "schema": schema
+        })
+    
+    async def deploy_graph_staging(self, project_id: str) -> dict:
+        # Deploy a graph project to staging environment
+        # Returns: Deployment job details
+        return await self._execute("deploy_graph_staging", {"project_id": project_id})
+    
+    async def deploy_graph_production(self, project_id: str) -> dict:
+        # Promote graph staging to production (requires paid plan)
+        # Returns: Deployment job details
+        return await self._execute("deploy_graph_production", {"project_id": project_id})
+    
+    async def delete_graph_project(self, project_id: str) -> dict:
+        # Delete a graph project and all associated resources
+        # Returns: Deletion confirmation
+        return await self._execute("delete_graph_project", {"project_id": project_id})
+    
+    async def rollback_graph_project(
+        self,
+        project_id: str,
+        version: str,
+        environment: str = "staging",
+    ) -> dict:
+        # Rollback a graph project to a previous version
+        # Returns: Rollback result
+        return await self._execute("rollback_graph_project", {
+            "project_id": project_id,
+            "version": version,
+            "environment": environment
+        })

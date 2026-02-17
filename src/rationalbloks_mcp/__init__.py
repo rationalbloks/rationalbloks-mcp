@@ -3,11 +3,10 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# Deploy production APIs in minutes. 18 tools for:
-#   - Project management (create, list, delete, rename)
-#   - Schema operations (get, update, templates)
-#   - Deployments (staging, production, rollback)
-#   - Monitoring (job status, usage, version history)
+# Deploy production REST APIs and Neo4j Graph APIs in minutes. 29 tools for:
+#   - Relational: 18 tools (create, list, deploy, rollback, templates, etc.)
+#   - Graph: 11 tools (create, deploy, rollback, templates, etc.)
+#   - Shared: list_projects, get_project, get_job_status, rename, etc.
 #
 # Usage:
 #   export RATIONALBLOKS_API_KEY=rb_sk_your_key_here
@@ -33,10 +32,11 @@ __all__ = [
     "__version__",
     "main",
     "BACKEND_TOOLS",
+    "GRAPH_TOOLS",
 ]
 
 # Re-export for convenience
-from .backend.tools import BACKEND_TOOLS
+from .backend.tools import BACKEND_TOOLS, GRAPH_TOOLS
 
 
 def _validate_api_key(api_key: str | None, transport: str) -> str | None:
@@ -74,7 +74,7 @@ def main() -> None:
     # Validate API key
     validated_key = _validate_api_key(api_key, transport)
     
-    print(f"[rationalbloks-mcp] Starting server (18 tools)...", file=sys.stderr)
+    print(f"[rationalbloks-mcp] Starting server (29 tools: 18 relational + 11 graph)...", file=sys.stderr)
     
     try:
         from .backend import create_backend_server

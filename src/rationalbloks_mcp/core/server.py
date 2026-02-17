@@ -59,9 +59,9 @@ DOCS_GETTING_STARTED = """# Getting Started with RationalBloks MCP
 
 RationalBloks MCP supports three modes:
 
-- **backend**: API/database tools only (18 tools)
+- **backend**: API/database tools only (29 tools — 18 relational + 11 graph)
 - **frontend**: Frontend generation tools only (6 tools)
-- **full**: All tools combined (24 tools) - DEFAULT
+- **full**: All tools combined (35 tools) - DEFAULT
 
 Set mode via environment: RATIONALBLOKS_MODE=backend|frontend|full
 
@@ -154,13 +154,20 @@ Full docs: https://infra.rationalbloks.com/documentation
 
 DOCS_API_REFERENCE = """# RationalBloks MCP API Reference
 
-## Backend Tools (18)
+## Relational Backend Tools (18)
 - list_projects, get_project, get_schema, get_user_info
 - get_job_status, get_project_info, get_version_history
 - get_template_schemas, get_subscription_status, get_project_usage
 - get_schema_at_version, create_project, update_schema
 - deploy_staging, deploy_production, delete_project
 - rollback_project, rename_project
+
+## Graph Backend Tools (11)
+- get_graph_schema, get_graph_template_schemas
+- get_graph_version_history, get_graph_schema_at_version
+- get_graph_project_info, create_graph_project
+- update_graph_schema, deploy_graph_staging, deploy_graph_production
+- delete_graph_project, rollback_graph_project
 
 ## Frontend Tools (5)
 - clone_template: Clone rationalbloksfront template
