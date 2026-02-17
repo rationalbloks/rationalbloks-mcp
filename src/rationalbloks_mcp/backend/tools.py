@@ -429,6 +429,7 @@ GRAPH_TOOLS = [
 ⚠️ GRAPH SCHEMA FORMAT — READ BEFORE CREATING:
 
 Graph schemas define nodes (entities) and relationships, NOT flat database tables.
+Each field is a dict with "type" and optional "required": true (defaults to false).
 
 SCHEMA STRUCTURE:
 {
@@ -437,8 +438,8 @@ SCHEMA STRUCTURE:
       "description": "What this entity represents",
       "flat_labels": ["AdditionalLabel"],
       "schema": {
-        "required_fields": {"field_name": "type"},
-        "optional_fields": {"field_name": "type"}
+        "field_name": {"type": "string", "required": true},
+        "other_field": {"type": "integer"}
       }
     }
   },
@@ -448,8 +449,7 @@ SCHEMA STRUCTURE:
       "to": "OtherEntity",
       "cardinality": "MANY_TO_MANY",
       "data_schema": {
-        "required_fields": {"field_name": "type"},
-        "optional_fields": {"field_name": "type"}
+        "field_name": {"type": "date"}
       }
     }
   }
@@ -470,15 +470,15 @@ Example:
       "description": "Base animal entity",
       "flat_labels": ["LivingThing"],
       "schema": {
-        "required_fields": {"name": "string"},
-        "optional_fields": {"habitat": "string"}
+        "name": {"type": "string", "required": true},
+        "habitat": {"type": "string"}
       },
       "Dog": {
         "description": "A dog (inherits Animal labels)",
         "flat_labels": ["Pet"],
         "schema": {
-          "required_fields": {"breed": "string"},
-          "optional_fields": {"trained": "boolean"}
+          "breed": {"type": "string", "required": true},
+          "trained": {"type": "boolean"}
         }
       }
     }
@@ -494,10 +494,11 @@ Example:
 
 RULES:
 1. "nodes" key is REQUIRED — must contain at least one entity
-2. Each entity needs "description" and "schema" with required/optional fields
-3. Relationship "from"/"to" must reference defined node names
-4. Relationship types should be UPPER_SNAKE_CASE
-5. Entity names should be PascalCase
+2. Each entity needs "description" and "schema" with field definitions
+3. Each field is {"type": "...", "required": true/false} — required defaults to false
+4. Relationship "from"/"to" must reference defined node names
+5. Relationship types should be UPPER_SNAKE_CASE
+6. Entity names should be PascalCase
 6. Automatic fields (id, created_at, updated_at) are NOT needed
 7. Use get_graph_template_schemas FIRST to see valid examples
 
@@ -526,7 +527,8 @@ After creation, use get_job_status with returned job_id to monitor deployment.""
 
 ⚠️ Follow ALL rules from create_graph_project:
 • Must have "nodes" key with at least one entity
-• Each entity needs "description" and "schema" with required/optional fields
+• Each entity needs "description" and "schema" with field definitions
+• Each field is {"type": "...", "required": true/false} — required defaults to false
 • Relationships need "from", "to", and "cardinality"
 • Field types: string, integer, float, boolean, date, json
 • Relationship types should be UPPER_SNAKE_CASE
@@ -1031,6 +1033,7 @@ GRAPH SCHEMA FORMAT — FOLLOW EXACTLY:
 ═══════════════════════════════════════════════════════════════════════════
 
 Graph schemas define nodes (entities) and relationships — NOT flat database tables.
+Each field is a dict with "type" and optional "required": true (defaults to false).
 
 STRUCTURE:
 {{
@@ -1039,8 +1042,8 @@ STRUCTURE:
       "description": "What this entity represents",
       "flat_labels": ["AdditionalLabel"],
       "schema": {{
-        "required_fields": {{"field_name": "type"}},
-        "optional_fields": {{"field_name": "type"}}
+        "field_name": {{"type": "string", "required": true}},
+        "other_field": {{"type": "integer"}}
       }}
     }}
   }},
@@ -1050,7 +1053,7 @@ STRUCTURE:
       "to": "OtherEntity",
       "cardinality": "MANY_TO_MANY",
       "data_schema": {{
-        "optional_fields": {{"field_name": "type"}}
+        "field_name": {{"type": "date"}}
       }}
     }}
   }}
@@ -1062,12 +1065,13 @@ CARDINALITY: ONE_TO_ONE, ONE_TO_MANY, MANY_TO_ONE, MANY_TO_MANY
 
 RULES:
 1. "nodes" key is REQUIRED — must contain at least one entity
-2. Each entity needs "description" and "schema" with required/optional fields
-3. Relationship "from"/"to" must reference defined node names
-4. Relationship types: UPPER_SNAKE_CASE (e.g., FOLLOWS, CREATED_BY)
-5. Entity names: PascalCase (e.g., Person, Product)
-6. Nest entities inside parents to create type hierarchies
-7. Automatic fields (id, created_at, updated_at) are NOT needed
+2. Each entity needs "description" and "schema" with field definitions
+3. Each field is {{"type": "...", "required": true/false}} — required defaults to false
+4. Relationship "from"/"to" must reference defined node names
+5. Relationship types: UPPER_SNAKE_CASE (e.g., FOLLOWS, CREATED_BY)
+6. Entity names: PascalCase (e.g., Person, Product)
+7. Nest entities inside parents to create type hierarchies
+8. Automatic fields (id, created_at, updated_at) are NOT needed
 
 HIERARCHICAL EXAMPLE:
 {{
@@ -1076,15 +1080,16 @@ HIERARCHICAL EXAMPLE:
       "description": "A vehicle",
       "flat_labels": ["Transport"],
       "schema": {{
-        "required_fields": {{"make": "string", "model": "string"}},
-        "optional_fields": {{"year": "integer"}}
+        "make": {{"type": "string", "required": true}},
+        "model": {{"type": "string", "required": true}},
+        "year": {{"type": "integer"}}
       }},
       "Car": {{
         "description": "A car (inherits Vehicle labels)",
         "flat_labels": ["Automobile"],
         "schema": {{
-          "required_fields": {{"doors": "integer"}},
-          "optional_fields": {{"electric": "boolean"}}
+          "doors": {{"type": "integer", "required": true}},
+          "electric": {{"type": "boolean"}}
         }}
       }}
     }}
