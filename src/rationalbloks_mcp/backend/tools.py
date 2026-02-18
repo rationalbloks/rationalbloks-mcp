@@ -370,7 +370,7 @@ GRAPH_TOOLS = [
     {
         "name": "get_graph_template_schemas",
         "title": "Get Graph Template Schemas",
-        "description": """Get pre-built graph template schemas for common use cases. ⭐ USE THIS FIRST when creating a new graph project! Templates show the CORRECT graph schema format with: proper node definitions (description, flat_labels, schema with required/optional fields), relationship configurations (from, to, cardinality, data_schema), and hierarchical entity nesting. Available templates: Social Network (users, posts, follows), Knowledge Graph (topics, articles, authors), Product Catalog (products, categories, suppliers). You can use these templates directly with create_graph_project or modify them for your needs. TIP: Study these templates to understand the correct graph schema format before creating custom schemas.""",
+        "description": """Get pre-built graph template schemas for common use cases. ⭐ USE THIS FIRST when creating a new graph project! Templates show the CORRECT graph schema format with: proper node definitions (description, flat_labels, schema with flat field definitions), relationship configurations (from, to, cardinality, data_schema), and hierarchical entity nesting. Available templates: Social Network (users, posts, follows), Knowledge Graph (topics, articles, authors), Product Catalog (products, categories, suppliers). You can use these templates directly with create_graph_project or modify them for your needs. TIP: Study these templates to understand the correct graph schema format before creating custom schemas.""",
         "inputSchema": {
             "type": "object",
             "properties": {},
@@ -499,8 +499,8 @@ RULES:
 4. Relationship "from"/"to" must reference defined node names
 5. Relationship types should be UPPER_SNAKE_CASE
 6. Entity names should be PascalCase
-6. Automatic fields (id, created_at, updated_at) are NOT needed
-7. Use get_graph_template_schemas FIRST to see valid examples
+7. Automatic fields (id, created_at, updated_at) are NOT needed
+8. Use get_graph_template_schemas FIRST to see valid examples
 
 WORKFLOW:
 1. Use get_graph_template_schemas to see valid examples
@@ -704,11 +704,13 @@ GRAPH SCHEMA RULES:
 ═══════════════════════════════════════════════════════════════════════════
 
 1. HIERARCHICAL FORMAT with "nodes" and "relationships" keys
-2. Field types: string, integer, float, boolean, date, json
-3. Cardinality: ONE_TO_ONE, ONE_TO_MANY, MANY_TO_ONE, MANY_TO_MANY
-4. Entity names: PascalCase | Relationship types: UPPER_SNAKE_CASE
-5. Nest entities inside parents to create type hierarchies
-6. Use get_graph_template_schemas FIRST to see valid examples
+2. FLAT FIELD FORMAT (same as relational): {"field": {"type": "string", "required": true}}
+3. Field types: string, integer, float, boolean, date, json
+4. Cardinality: ONE_TO_ONE, ONE_TO_MANY, MANY_TO_ONE, MANY_TO_MANY
+5. Entity names: PascalCase | Relationship types: UPPER_SNAKE_CASE
+6. Nest entities inside parents to create type hierarchies
+7. DON'T define: id, created_at, updated_at (automatic)
+8. Use get_graph_template_schemas FIRST to see valid examples
 
 ═══════════════════════════════════════════════════════════════════════════
 SHARED TOOLS (work for both project types):
