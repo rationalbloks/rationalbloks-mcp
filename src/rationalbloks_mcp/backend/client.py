@@ -253,3 +253,243 @@ class LogicBlokClient:
             "version": version,
             "environment": environment
         })
+
+    # ========================================================================
+    # GRAPH DATA OPERATIONS
+    # ========================================================================
+
+    async def create_graph_node(
+        self,
+        project_id: str,
+        entity_type: str,
+        entity_id: str,
+        data: dict,
+        environment: str = "staging",
+    ) -> dict:
+        # Create a single node in a deployed graph project
+        return await self._execute("create_graph_node", {
+            "project_id": project_id,
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "data": data,
+            "environment": environment,
+        })
+
+    async def get_graph_node(
+        self,
+        project_id: str,
+        entity_type: str,
+        entity_id: str,
+        environment: str = "staging",
+    ) -> dict:
+        # Get a specific node by entity_id
+        return await self._execute("get_graph_node", {
+            "project_id": project_id,
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "environment": environment,
+        })
+
+    async def list_graph_nodes(
+        self,
+        project_id: str,
+        entity_type: str,
+        limit: int = 100,
+        offset: int = 0,
+        environment: str = "staging",
+    ) -> dict:
+        # List nodes of a specific entity type
+        return await self._execute("list_graph_nodes", {
+            "project_id": project_id,
+            "entity_type": entity_type,
+            "limit": limit,
+            "offset": offset,
+            "environment": environment,
+        })
+
+    async def update_graph_node(
+        self,
+        project_id: str,
+        entity_type: str,
+        entity_id: str,
+        data: dict,
+        environment: str = "staging",
+    ) -> dict:
+        # Update properties of an existing node
+        return await self._execute("update_graph_node", {
+            "project_id": project_id,
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "data": data,
+            "environment": environment,
+        })
+
+    async def delete_graph_node(
+        self,
+        project_id: str,
+        entity_type: str,
+        entity_id: str,
+        environment: str = "staging",
+    ) -> dict:
+        # Delete a node and all its relationships
+        return await self._execute("delete_graph_node", {
+            "project_id": project_id,
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "environment": environment,
+        })
+
+    async def create_graph_relationship(
+        self,
+        project_id: str,
+        rel_type: str,
+        from_id: str,
+        to_id: str,
+        data: dict | None = None,
+        environment: str = "staging",
+    ) -> dict:
+        # Create a relationship between two nodes
+        args = {
+            "project_id": project_id,
+            "rel_type": rel_type,
+            "from_id": from_id,
+            "to_id": to_id,
+            "environment": environment,
+        }
+        if data:
+            args["data"] = data
+        return await self._execute("create_graph_relationship", args)
+
+    async def get_node_relationships(
+        self,
+        project_id: str,
+        entity_type: str,
+        entity_id: str,
+        direction: str = "both",
+        rel_type_filter: str | None = None,
+        environment: str = "staging",
+    ) -> dict:
+        # Get all relationships connected to a node
+        args = {
+            "project_id": project_id,
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "direction": direction,
+            "environment": environment,
+        }
+        if rel_type_filter:
+            args["rel_type_filter"] = rel_type_filter
+        return await self._execute("get_node_relationships", args)
+
+    async def delete_graph_relationship(
+        self,
+        project_id: str,
+        rel_type: str,
+        rel_id: int,
+        environment: str = "staging",
+    ) -> dict:
+        # Delete a specific relationship by ID
+        return await self._execute("delete_graph_relationship", {
+            "project_id": project_id,
+            "rel_type": rel_type,
+            "rel_id": rel_id,
+            "environment": environment,
+        })
+
+    async def bulk_create_graph_nodes(
+        self,
+        project_id: str,
+        entity_type: str,
+        nodes: list,
+        environment: str = "staging",
+    ) -> dict:
+        # Bulk create up to 500 nodes at once
+        return await self._execute("bulk_create_graph_nodes", {
+            "project_id": project_id,
+            "entity_type": entity_type,
+            "nodes": nodes,
+            "environment": environment,
+        })
+
+    async def bulk_create_graph_relationships(
+        self,
+        project_id: str,
+        rel_type: str,
+        relationships: list,
+        environment: str = "staging",
+    ) -> dict:
+        # Bulk create up to 500 relationships at once
+        return await self._execute("bulk_create_graph_relationships", {
+            "project_id": project_id,
+            "rel_type": rel_type,
+            "relationships": relationships,
+            "environment": environment,
+        })
+
+    async def search_graph_nodes(
+        self,
+        project_id: str,
+        filters: dict,
+        entity_type: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+        environment: str = "staging",
+    ) -> dict:
+        # Search nodes by property values
+        args = {
+            "project_id": project_id,
+            "filters": filters,
+            "limit": limit,
+            "offset": offset,
+            "environment": environment,
+        }
+        if entity_type:
+            args["entity_type"] = entity_type
+        return await self._execute("search_graph_nodes", args)
+
+    async def traverse_graph(
+        self,
+        project_id: str,
+        start_entity_type: str,
+        start_entity_id: str,
+        max_depth: int = 3,
+        relationship_types: list | None = None,
+        direction: str = "both",
+        limit: int = 100,
+        environment: str = "staging",
+    ) -> dict:
+        # Traverse the graph from a starting node
+        args = {
+            "project_id": project_id,
+            "start_entity_type": start_entity_type,
+            "start_entity_id": start_entity_id,
+            "max_depth": max_depth,
+            "direction": direction,
+            "limit": limit,
+            "environment": environment,
+        }
+        if relationship_types:
+            args["relationship_types"] = relationship_types
+        return await self._execute("traverse_graph", args)
+
+    async def get_graph_statistics(
+        self,
+        project_id: str,
+        environment: str = "staging",
+    ) -> dict:
+        # Get graph database statistics (node/relationship counts)
+        return await self._execute("get_graph_statistics", {
+            "project_id": project_id,
+            "environment": environment,
+        })
+
+    async def get_graph_data_schema(
+        self,
+        project_id: str,
+        environment: str = "staging",
+    ) -> dict:
+        # Get the runtime schema (entity types and relationship types) from deployed API
+        return await self._execute("get_graph_data_schema", {
+            "project_id": project_id,
+            "environment": environment,
+        })

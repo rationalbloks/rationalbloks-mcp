@@ -3,7 +3,7 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# 29 Backend tools (18 relational + 11 graph):
+# 43 Backend tools (18 relational + 11 graph schema + 14 graph data):
 #
 # RELATIONAL (18):
 #   READ (11): list_projects, get_project, get_schema, get_user_info,
@@ -13,13 +13,21 @@
 #   WRITE (7): create_project, update_schema, deploy_staging, deploy_production,
 #              delete_project, rollback_project, rename_project
 #
-# GRAPH (11):
+# GRAPH SCHEMA (11):
 #   READ (5):  get_graph_schema, get_graph_template_schemas,
 #              get_graph_version_history, get_graph_schema_at_version,
 #              get_graph_project_info
 #   WRITE (6): create_graph_project, update_graph_schema,
 #              deploy_graph_staging, deploy_graph_production,
 #              delete_graph_project, rollback_graph_project
+#
+# GRAPH DATA (14):
+#   READ (7):  get_graph_node, list_graph_nodes, get_node_relationships,
+#              search_graph_nodes, traverse_graph, get_graph_statistics,
+#              get_graph_data_schema
+#   WRITE (7): create_graph_node, update_graph_node, delete_graph_node,
+#              create_graph_relationship, delete_graph_relationship,
+#              bulk_create_graph_nodes, bulk_create_graph_relationships
 # ============================================================================
 
 import os
@@ -610,6 +618,359 @@ NOTE: This only saves the schema. You MUST call deploy_graph_staging afterwards 
 
 
 # ============================================================================
+# GRAPH DATA TOOLS (14 tools for operating on graph data via deployed APIs)
+# ============================================================================
+
+GRAPH_DATA_TOOLS = [
+    # ========================================================================
+    # NODE CRUD
+    # ========================================================================
+    {
+        "name": "create_graph_node",
+        "title": "Create Graph Node",
+        "description": """Create a single node in a deployed graph project.
+
+REQUIRES: Project must be deployed (use deploy_graph_staging first).
+
+The entity_type must match an entity key from the project schema.
+Use get_graph_data_schema to see available entity types and their fields.
+
+Example:
+  entity_type: "person"
+  entity_id: "alan-turing-001"
+  data: {"name": "Alan Turing", "birth_year": 1912, "field": "Computer Science"}
+
+The entity_id is your unique identifier — use meaningful IDs for knowledge graphs.""",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "entity_type": {"type": "string", "description": "Entity key (e.g., 'person', 'concept')"},
+                "entity_id": {"type": "string", "description": "Unique identifier for the node"},
+                "data": {"type": "object", "description": "Node properties matching the entity schema"},
+                "environment": {"type": "string", "description": "Environment: staging or production (default: staging)"}
+            },
+            "required": ["project_id", "entity_type", "entity_id", "data"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+    },
+    {
+        "name": "get_graph_node",
+        "title": "Get Graph Node",
+        "description": "Get a specific node by its entity_id from a deployed graph project. Returns all node properties including created_at and updated_at timestamps.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "entity_type": {"type": "string", "description": "Entity key (e.g., 'person', 'concept')"},
+                "entity_id": {"type": "string", "description": "The node's entity_id"},
+                "environment": {"type": "string", "description": "Environment: staging or production (default: staging)"}
+            },
+            "required": ["project_id", "entity_type", "entity_id"]
+        },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    {
+        "name": "list_graph_nodes",
+        "title": "List Graph Nodes",
+        "description": "List nodes of a specific entity type from a deployed graph project. Supports pagination with limit/offset. Returns nodes ordered by creation date (newest first).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "entity_type": {"type": "string", "description": "Entity key (e.g., 'person', 'concept')"},
+                "limit": {"type": "integer", "description": "Max results (default: 100, max: 1000)"},
+                "offset": {"type": "integer", "description": "Pagination offset (default: 0)"},
+                "environment": {"type": "string", "description": "Environment: staging or production (default: staging)"}
+            },
+            "required": ["project_id", "entity_type"]
+        },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    {
+        "name": "update_graph_node",
+        "title": "Update Graph Node",
+        "description": "Update properties of an existing node in a deployed graph project. Only send the fields you want to change — unspecified fields remain unchanged.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "entity_type": {"type": "string", "description": "Entity key (e.g., 'person', 'concept')"},
+                "entity_id": {"type": "string", "description": "The node's entity_id"},
+                "data": {"type": "object", "description": "Properties to update (partial update)"},
+                "environment": {"type": "string", "description": "Environment: staging or production (default: staging)"}
+            },
+            "required": ["project_id", "entity_type", "entity_id", "data"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
+    },
+    {
+        "name": "delete_graph_node",
+        "title": "Delete Graph Node",
+        "description": "Delete a node and all its relationships from a deployed graph project. ⚠️ This also removes all relationships connected to this node (DETACH DELETE).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "entity_type": {"type": "string", "description": "Entity key (e.g., 'person', 'concept')"},
+                "entity_id": {"type": "string", "description": "The node's entity_id"},
+                "environment": {"type": "string", "description": "Environment: staging or production (default: staging)"}
+            },
+            "required": ["project_id", "entity_type", "entity_id"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}
+    },
+    # ========================================================================
+    # RELATIONSHIP OPERATIONS
+    # ========================================================================
+    {
+        "name": "create_graph_relationship",
+        "title": "Create Graph Relationship",
+        "description": """Create a relationship between two nodes in a deployed graph project.
+
+The rel_type must match a relationship key from the project schema.
+Use get_graph_data_schema to see available relationship types.
+
+Example:
+  rel_type: "authored"
+  from_id: "alan-turing-001"
+  to_id: "on-computable-numbers-001"
+  data: {"year": 1936}
+
+The from_id and to_id must be entity_ids of existing nodes.""",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "rel_type": {"type": "string", "description": "Relationship key (e.g., 'authored', 'related_to')"},
+                "from_id": {"type": "string", "description": "Source node entity_id"},
+                "to_id": {"type": "string", "description": "Target node entity_id"},
+                "data": {"type": "object", "description": "Relationship properties (optional)"},
+                "environment": {"type": "string", "description": "Environment: staging or production (default: staging)"}
+            },
+            "required": ["project_id", "rel_type", "from_id", "to_id"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+    },
+    {
+        "name": "get_node_relationships",
+        "title": "Get Node Relationships",
+        "description": "Get all relationships connected to a specific node. Supports direction filtering (incoming, outgoing, both) and relationship type filtering.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "entity_type": {"type": "string", "description": "Entity key of the node"},
+                "entity_id": {"type": "string", "description": "The node's entity_id"},
+                "direction": {"type": "string", "description": "Filter: incoming, outgoing, or both (default: both)"},
+                "rel_type_filter": {"type": "string", "description": "Filter by relationship type (UPPER_SNAKE_CASE)"},
+                "environment": {"type": "string", "description": "Environment: staging or production (default: staging)"}
+            },
+            "required": ["project_id", "entity_type", "entity_id"]
+        },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    {
+        "name": "delete_graph_relationship",
+        "title": "Delete Graph Relationship",
+        "description": "Delete a specific relationship by its internal ID. Use get_node_relationships to find relationship IDs.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "rel_type": {"type": "string", "description": "Relationship key"},
+                "rel_id": {"type": "integer", "description": "Internal relationship ID (from get_node_relationships)"},
+                "environment": {"type": "string", "description": "Environment: staging or production (default: staging)"}
+            },
+            "required": ["project_id", "rel_type", "rel_id"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}
+    },
+    # ========================================================================
+    # BULK OPERATIONS
+    # ========================================================================
+    {
+        "name": "bulk_create_graph_nodes",
+        "title": "Bulk Create Graph Nodes",
+        "description": """Create multiple nodes at once (up to 500 per call). Uses Neo4j UNWIND for high performance.
+
+Essential for knowledge graph population — create hundreds of entities from a single book chapter or article.
+
+Each node needs: entity_id (unique string) and data (properties dict).
+
+Example:
+  entity_type: "concept"
+  nodes: [
+    {"entity_id": "quantum-mechanics-001", "data": {"name": "Quantum Mechanics", "field": "Physics"}},
+    {"entity_id": "wave-function-001", "data": {"name": "Wave Function", "field": "Physics"}},
+    {"entity_id": "superposition-001", "data": {"name": "Superposition", "field": "Physics"}}
+  ]""",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "entity_type": {"type": "string", "description": "Entity key for all nodes"},
+                "nodes": {
+                    "type": "array",
+                    "description": "List of nodes. Each: {entity_id: string, data: {properties}}",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "entity_id": {"type": "string"},
+                            "data": {"type": "object"}
+                        },
+                        "required": ["entity_id", "data"]
+                    }
+                },
+                "environment": {"type": "string", "description": "Environment: staging or production (default: staging)"}
+            },
+            "required": ["project_id", "entity_type", "nodes"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+    },
+    {
+        "name": "bulk_create_graph_relationships",
+        "title": "Bulk Create Graph Relationships",
+        "description": """Create multiple relationships at once (up to 500 per call). Uses Neo4j UNWIND for high performance.
+
+Essential for connecting knowledge — link hundreds of concepts, people, and events in one operation.
+
+Each relationship needs: from_id, to_id, and optional data (properties).
+
+Example:
+  rel_type: "related_to"
+  relationships: [
+    {"from_id": "quantum-mechanics-001", "to_id": "wave-function-001", "data": {"strength": "strong"}},
+    {"from_id": "quantum-mechanics-001", "to_id": "superposition-001", "data": {"strength": "strong"}}
+  ]""",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "rel_type": {"type": "string", "description": "Relationship key for all relationships"},
+                "relationships": {
+                    "type": "array",
+                    "description": "List of relationships. Each: {from_id, to_id, data?}",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "from_id": {"type": "string"},
+                            "to_id": {"type": "string"},
+                            "data": {"type": "object"}
+                        },
+                        "required": ["from_id", "to_id"]
+                    }
+                },
+                "environment": {"type": "string", "description": "Environment: staging or production (default: staging)"}
+            },
+            "required": ["project_id", "rel_type", "relationships"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+    },
+    # ========================================================================
+    # SEARCH & QUERY
+    # ========================================================================
+    {
+        "name": "search_graph_nodes",
+        "title": "Search Graph Nodes",
+        "description": """Search for nodes by property values in a deployed graph project.
+
+Supports exact match and contains search (prefix value with ~ for contains).
+
+Examples:
+  Exact: filters: {"name": "Alan Turing"}
+  Contains: filters: {"name": "~turing"} (case-insensitive)
+  Combined: entity_type: "person", filters: {"field": "~physics"}
+
+Without entity_type, searches ALL node types.""",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "entity_type": {"type": "string", "description": "Entity key to filter by (optional — omit to search all types)"},
+                "filters": {"type": "object", "description": "Property filters. Prefix value with ~ for contains search."},
+                "limit": {"type": "integer", "description": "Max results (default: 100, max: 1000)"},
+                "offset": {"type": "integer", "description": "Pagination offset (default: 0)"},
+                "environment": {"type": "string", "description": "Environment: staging or production (default: staging)"}
+            },
+            "required": ["project_id", "filters"]
+        },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    {
+        "name": "traverse_graph",
+        "title": "Traverse Graph",
+        "description": """Walk the graph from a starting node, discovering connected knowledge.
+
+Returns all nodes reachable within max_depth hops, with their distance from the start.
+Essential for exploring knowledge graphs — find related concepts, trace connections, discover clusters.
+
+Example: Start from "Alan Turing", traverse outgoing relationships up to 3 hops deep:
+  start_entity_type: "person"
+  start_entity_id: "alan-turing-001"
+  max_depth: 3
+  direction: "outgoing"
+
+Supports filtering by relationship types and direction.""",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "start_entity_type": {"type": "string", "description": "Entity key of the starting node"},
+                "start_entity_id": {"type": "string", "description": "Entity ID of the starting node"},
+                "max_depth": {"type": "integer", "description": "Maximum traversal depth (default: 3, max: 10)"},
+                "relationship_types": {
+                    "type": "array",
+                    "description": "Filter by relationship types (UPPER_SNAKE_CASE). Omit for all types.",
+                    "items": {"type": "string"}
+                },
+                "direction": {"type": "string", "description": "Direction: outgoing, incoming, or both (default: both)"},
+                "limit": {"type": "integer", "description": "Max results (default: 100, max: 1000)"},
+                "environment": {"type": "string", "description": "Environment: staging or production (default: staging)"}
+            },
+            "required": ["project_id", "start_entity_type", "start_entity_id"]
+        },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    # ========================================================================
+    # STATISTICS & INTROSPECTION
+    # ========================================================================
+    {
+        "name": "get_graph_statistics",
+        "title": "Get Graph Statistics",
+        "description": "Get statistics about a deployed graph: total node count, total relationship count, counts per entity type, counts per relationship type. Essential for understanding the current state of a knowledge graph before adding more data.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "environment": {"type": "string", "description": "Environment: staging or production (default: staging)"}
+            },
+            "required": ["project_id"]
+        },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    {
+        "name": "get_graph_data_schema",
+        "title": "Get Graph Data Schema",
+        "description": """Get the runtime schema of a DEPLOYED graph project — shows the actual entity types and relationship types available for data operations.
+
+Returns: Available entity keys (for create_graph_node, list_graph_nodes, etc.) and relationship keys (for create_graph_relationship, etc.).
+
+⭐ USE THIS FIRST before creating nodes/relationships to know what entity_type and rel_type values are valid.""",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "environment": {"type": "string", "description": "Environment: staging or production (default: staging)"}
+            },
+            "required": ["project_id"]
+        },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+]
+
+
+# ============================================================================
 # BACKEND PROMPTS
 # ============================================================================
 
@@ -663,6 +1024,28 @@ GRAPH_PROMPTS = [
             )
         ],
     ),
+    Prompt(
+        name="process-content-to-knowledge-graph",
+        title="Process Content to Knowledge Graph",
+        description="Extract entities and relationships from text content and populate a knowledge graph using MCP tools. Provide the content and the project ID of an existing graph project.",
+        arguments=[
+            PromptArgument(
+                name="content",
+                description="The text content to extract knowledge from (article, book chapter, document, etc.)",
+                required=True,
+            ),
+            PromptArgument(
+                name="project_id",
+                description="The project ID (UUID) of the target graph project that already has a deployed schema",
+                required=True,
+            ),
+            PromptArgument(
+                name="environment",
+                description="Target environment: staging or production (default: staging)",
+                required=False,
+            ),
+        ],
+    ),
 ]
 
 
@@ -671,7 +1054,7 @@ GRAPH_PROMPTS = [
 # ============================================================================
 
 class BackendMCPServer(BaseMCPServer):
-    # Backend MCP server with 29 tools (18 relational + 11 graph)
+    # Backend MCP server with 43 tools (18 relational + 11 graph schema + 14 graph data)
     # Extends BaseMCPServer with: LogicBlok client integration, backend + graph tools, prompts
     
     INSTRUCTIONS = """RationalBloks MCP Server — Backend Mode
@@ -686,7 +1069,30 @@ TWO PROJECT TYPES:
    Tools: create_project, get_schema, deploy_staging, etc. (18 tools)
 
 2. GRAPH (Neo4j) — Hierarchical node/relationship schemas, graph databases
-   Tools: create_graph_project, get_graph_schema, deploy_graph_staging, etc. (11 tools)
+   Schema tools: create_graph_project, get_graph_schema, deploy_graph_staging, etc. (11 tools)
+   Data tools: create_graph_node, bulk_create_graph_nodes, search_graph_nodes, etc. (14 tools)
+
+═══════════════════════════════════════════════════════════════════════════
+GRAPH DATA OPERATIONS (Knowledge Graph Population):
+═══════════════════════════════════════════════════════════════════════════
+
+After deploying a graph project, use these tools to populate and query data:
+
+1. get_graph_data_schema — See available entity types and relationship types
+2. create_graph_node / bulk_create_graph_nodes — Add knowledge nodes
+3. create_graph_relationship / bulk_create_graph_relationships — Connect knowledge
+4. search_graph_nodes — Find nodes by properties
+5. traverse_graph — Walk connections from any node
+6. get_graph_statistics — Get counts and overview
+
+KNOWLEDGE GRAPH WORKFLOW:
+1. create_graph_project → Design schema for your knowledge domain
+2. deploy_graph_staging → Infrastructure spins up
+3. get_graph_data_schema → See entity types & relationships
+4. bulk_create_graph_nodes → Populate entities from content
+5. bulk_create_graph_relationships → Connect the knowledge
+6. search_graph_nodes → Query the knowledge
+7. traverse_graph → Explore connections
 
 ═══════════════════════════════════════════════════════════════════════════
 RELATIONAL SCHEMA RULES:
@@ -712,24 +1118,7 @@ GRAPH SCHEMA RULES:
 7. DON'T define: id, created_at, updated_at (automatic)
 8. Use get_graph_template_schemas FIRST to see valid examples
 
-═══════════════════════════════════════════════════════════════════════════
-SHARED TOOLS (work for both project types):
-═══════════════════════════════════════════════════════════════════════════
-
-list_projects, get_project, get_job_status, get_user_info,
-get_subscription_status, rename_project
-
-═══════════════════════════════════════════════════════════════════════════
-WORKFLOW:
-═══════════════════════════════════════════════════════════════════════════
-
-1. Use get_template_schemas or get_graph_template_schemas for examples
-2. Create schema following the appropriate rules
-3. Call create_project or create_graph_project
-4. Monitor with get_job_status (deployment takes 2-5 minutes)
-5. Use get_project_info or get_graph_project_info to verify
-
-Available: 29 tools (18 relational + 11 graph) for projects, schemas, and deployments.
+Available: 43 tools (18 relational + 11 graph schema + 14 graph data).
 Full documentation: https://infra.rationalbloks.com/documentation"""
     
     def __init__(
@@ -749,6 +1138,7 @@ Full documentation: https://infra.rationalbloks.com/documentation"""
         # Register backend tools and prompts
         self.register_tools(BACKEND_TOOLS)
         self.register_tools(GRAPH_TOOLS)
+        self.register_tools(GRAPH_DATA_TOOLS)
         self.register_prompts(BACKEND_PROMPTS)
         self.register_prompts(GRAPH_PROMPTS)
         
@@ -767,6 +1157,10 @@ Full documentation: https://infra.rationalbloks.com/documentation"""
         self.register_prompt_handler(
             "create-graph-project-from-description",
             self._handle_create_graph_project_prompt,
+        )
+        self.register_prompt_handler(
+            "process-content-to-knowledge-graph",
+            self._handle_process_content_prompt,
         )
         
         # Set up MCP handlers
@@ -873,6 +1267,116 @@ Full documentation: https://infra.rationalbloks.com/documentation"""
                 return await client.rollback_graph_project(
                     project_id=arguments["project_id"],
                     version=arguments["version"],
+                    environment=arguments.get("environment", "staging"),
+                )
+            # ============================================================
+            # Graph data tool routing
+            # ============================================================
+            elif name == "create_graph_node":
+                return await client.create_graph_node(
+                    project_id=arguments["project_id"],
+                    entity_type=arguments["entity_type"],
+                    entity_id=arguments["entity_id"],
+                    data=arguments["data"],
+                    environment=arguments.get("environment", "staging"),
+                )
+            elif name == "get_graph_node":
+                return await client.get_graph_node(
+                    project_id=arguments["project_id"],
+                    entity_type=arguments["entity_type"],
+                    entity_id=arguments["entity_id"],
+                    environment=arguments.get("environment", "staging"),
+                )
+            elif name == "list_graph_nodes":
+                return await client.list_graph_nodes(
+                    project_id=arguments["project_id"],
+                    entity_type=arguments["entity_type"],
+                    limit=arguments.get("limit", 100),
+                    offset=arguments.get("offset", 0),
+                    environment=arguments.get("environment", "staging"),
+                )
+            elif name == "update_graph_node":
+                return await client.update_graph_node(
+                    project_id=arguments["project_id"],
+                    entity_type=arguments["entity_type"],
+                    entity_id=arguments["entity_id"],
+                    data=arguments["data"],
+                    environment=arguments.get("environment", "staging"),
+                )
+            elif name == "delete_graph_node":
+                return await client.delete_graph_node(
+                    project_id=arguments["project_id"],
+                    entity_type=arguments["entity_type"],
+                    entity_id=arguments["entity_id"],
+                    environment=arguments.get("environment", "staging"),
+                )
+            elif name == "create_graph_relationship":
+                return await client.create_graph_relationship(
+                    project_id=arguments["project_id"],
+                    rel_type=arguments["rel_type"],
+                    from_id=arguments["from_id"],
+                    to_id=arguments["to_id"],
+                    data=arguments.get("data", {}),
+                    environment=arguments.get("environment", "staging"),
+                )
+            elif name == "get_node_relationships":
+                return await client.get_node_relationships(
+                    project_id=arguments["project_id"],
+                    entity_type=arguments["entity_type"],
+                    entity_id=arguments["entity_id"],
+                    direction=arguments.get("direction", "both"),
+                    rel_type_filter=arguments.get("rel_type_filter"),
+                    environment=arguments.get("environment", "staging"),
+                )
+            elif name == "delete_graph_relationship":
+                return await client.delete_graph_relationship(
+                    project_id=arguments["project_id"],
+                    rel_type=arguments["rel_type"],
+                    rel_id=arguments["rel_id"],
+                    environment=arguments.get("environment", "staging"),
+                )
+            elif name == "bulk_create_graph_nodes":
+                return await client.bulk_create_graph_nodes(
+                    project_id=arguments["project_id"],
+                    entity_type=arguments["entity_type"],
+                    nodes=arguments["nodes"],
+                    environment=arguments.get("environment", "staging"),
+                )
+            elif name == "bulk_create_graph_relationships":
+                return await client.bulk_create_graph_relationships(
+                    project_id=arguments["project_id"],
+                    rel_type=arguments["rel_type"],
+                    relationships=arguments["relationships"],
+                    environment=arguments.get("environment", "staging"),
+                )
+            elif name == "search_graph_nodes":
+                return await client.search_graph_nodes(
+                    project_id=arguments["project_id"],
+                    filters=arguments["filters"],
+                    entity_type=arguments.get("entity_type"),
+                    limit=arguments.get("limit", 100),
+                    offset=arguments.get("offset", 0),
+                    environment=arguments.get("environment", "staging"),
+                )
+            elif name == "traverse_graph":
+                return await client.traverse_graph(
+                    project_id=arguments["project_id"],
+                    start_entity_type=arguments["start_entity_type"],
+                    start_entity_id=arguments["start_entity_id"],
+                    max_depth=arguments.get("max_depth", 3),
+                    relationship_types=arguments.get("relationship_types"),
+                    direction=arguments.get("direction", "both"),
+                    limit=arguments.get("limit", 100),
+                    environment=arguments.get("environment", "staging"),
+                )
+            elif name == "get_graph_statistics":
+                return await client.get_graph_statistics(
+                    project_id=arguments["project_id"],
+                    environment=arguments.get("environment", "staging"),
+                )
+            elif name == "get_graph_data_schema":
+                return await client.get_graph_data_schema(
+                    project_id=arguments["project_id"],
                     environment=arguments.get("environment", "staging"),
                 )
             else:
@@ -1099,6 +1603,119 @@ HIERARCHICAL EXAMPLE:
 }}
 
 Generate the graph schema now following ALL rules above:""",
+                    ),
+                )
+            ]
+        )
+
+    def _handle_process_content_prompt(
+        self,
+        name: str,
+        arguments: dict[str, str] | None,
+    ) -> GetPromptResult:
+        # Handle process-content-to-knowledge-graph prompt
+        content = arguments.get("content", "") if arguments else ""
+        project_id = arguments.get("project_id", "") if arguments else ""
+        environment = arguments.get("environment", "staging") if arguments else "staging"
+        
+        return GetPromptResult(
+            messages=[
+                PromptMessage(
+                    role="user",
+                    content=TextContent(
+                        type="text",
+                        text=f"""Extract knowledge from the following content and populate the knowledge graph.
+
+═══════════════════════════════════════════════════════════════════════════
+TARGET GRAPH PROJECT
+═══════════════════════════════════════════════════════════════════════════
+Project ID: {project_id}
+Environment: {environment}
+
+═══════════════════════════════════════════════════════════════════════════
+WORKFLOW — FOLLOW THESE STEPS IN ORDER:
+═══════════════════════════════════════════════════════════════════════════
+
+STEP 1: DISCOVER THE SCHEMA
+   Call get_graph_data_schema with project_id="{project_id}" and environment="{environment}"
+   This tells you the available entity types (nodes) and relationship types.
+   Study the schema carefully — you can ONLY create nodes and relationships
+   that match the defined schema.
+
+STEP 2: ANALYZE THE CONTENT
+   Read the content below and identify:
+   • Entities (people, concepts, places, organizations, events, etc.)
+   • Relationships between entities (who relates to whom, how)
+   • Properties of each entity (names, descriptions, dates, attributes)
+   • Properties of relationships (dates, weights, descriptions)
+   
+   Map each discovered entity to the closest matching entity type in the schema.
+   Map each discovered relationship to the closest matching relationship type.
+   Skip any entities or relationships that don't fit the schema.
+
+STEP 3: CREATE ENTITIES WITH BULK OPERATIONS
+   Use bulk_create_graph_nodes to efficiently create entities in batches.
+   For each entity type found in the content:
+   • Gather all entities of that type
+   • Create unique entity_id values (use slugified names: "albert-einstein", "theory-of-relativity")
+   • Batch them in groups of up to 500
+   • Call bulk_create_graph_nodes for each entity type
+
+   ENTITY ID RULES:
+   • Use lowercase-kebab-case: "quantum-mechanics", "isaac-newton"
+   • Must be unique within an entity type
+   • Should be human-readable and deterministic (same content → same IDs)
+   • Avoid generic IDs like "entity-1" — use meaningful names
+
+STEP 4: CREATE RELATIONSHIPS WITH BULK OPERATIONS
+   Use bulk_create_graph_relationships to connect entities.
+   For each relationship type found:
+   • Gather all relationships of that type
+   • Use the entity_id values from Step 3 as from_id and to_id
+   • Include any relationship properties from the content
+   • Batch them in groups of up to 500
+   • Call bulk_create_graph_relationships for each type
+
+STEP 5: VERIFY THE GRAPH
+   Call get_graph_statistics to confirm the data was created.
+   Report a summary: how many nodes and relationships were created,
+   organized by type.
+
+═══════════════════════════════════════════════════════════════════════════
+KNOWLEDGE EXTRACTION GUIDELINES
+═══════════════════════════════════════════════════════════════════════════
+
+ENTITY EXTRACTION:
+• Extract ALL meaningful entities — be comprehensive, not selective
+• Prefer specific entities over vague ones ("Albert Einstein" > "a scientist")
+• Include both major and supporting entities
+• Preserve original names and terminology from the content
+• Add descriptive properties: summaries, categories, dates, quotes
+
+RELATIONSHIP EXTRACTION:
+• Extract explicit relationships stated in the text
+• Infer implicit relationships when strongly supported by context
+• Include temporal relationships (before, after, during)
+• Include causal relationships (caused, influenced, led to)
+• Include hierarchical relationships (part of, type of, belongs to)
+• Add relationship properties when available (date, strength, context)
+
+QUALITY RULES:
+• Never invent facts not present or strongly implied in the content
+• When uncertain about a relationship, skip it rather than guess
+• Deduplicate: same real-world entity → same entity_id
+• Cross-reference: if "Einstein" and "Albert Einstein" refer to the same
+  person, use the same entity_id
+
+═══════════════════════════════════════════════════════════════════════════
+CONTENT TO PROCESS
+═══════════════════════════════════════════════════════════════════════════
+
+{content}
+
+═══════════════════════════════════════════════════════════════════════════
+
+Begin by calling get_graph_data_schema, then extract and populate the knowledge graph:""",
                     ),
                 )
             ]
