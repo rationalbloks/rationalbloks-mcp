@@ -1007,7 +1007,7 @@ Returns: Available entity keys (for create_graph_node, list_graph_nodes, etc.) a
 # KNOWLEDGE PROCESSING TOOLS (4 tools)
 # ============================================================================
 # Tools for automated AI content processing into Knowledge Graphs.
-# These connect to the GraphBloks service for server-side AI extraction.
+# These connect to the Graforest service for server-side AI extraction.
 # ============================================================================
 
 KNOWLEDGE_TOOLS = [
