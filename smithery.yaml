@@ -4,8 +4,8 @@
 
 name: rationalbloks
 displayName: RationalBloks
-version: 0.6.1
-description: Deploy production APIs in minutes. 18 tools for projects, schemas, and deployments.
+version: 0.8.0
+description: Deploy production REST APIs and Neo4j Graph APIs in minutes. 48 tools for projects, schemas, graph data, and AI knowledge processing.
 author: RationalBloks
 homepage: https://rationalbloks.com
 repository: https://github.com/rationalbloks/rationalbloks-mcp
@@ -23,21 +23,6 @@ configSchema:
       title: API Key
       description: Your RationalBloks API key (get it from rationalbloks.com/settings)
       default: ""
-    timeout:
-      type: number
-      title: Timeout
-      description: Request timeout in seconds
-      default: 30
-    logLevel:
-      type: string
-      title: Log Level
-      description: Logging level
-      default: INFO
-      enum:
-        - DEBUG
-        - INFO
-        - WARNING
-        - ERROR
 
 startCommand:
   type: stdio
@@ -49,11 +34,3 @@ startCommand:
       description: "Your RationalBloks API Key (get it from rationalbloks.com/settings)"
       required: false
       default: ""
-    RATIONALBLOKS_TIMEOUT:
-      description: "Request timeout in seconds"
-      required: false
-      default: "30"
-    RATIONALBLOKS_LOG_LEVEL:
-      description: "Logging level (DEBUG, INFO, WARNING, ERROR)"
-      required: false
-      default: "INFO"

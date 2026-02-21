@@ -3,7 +3,7 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# Shared authentication logic for Backend and Frontend MCP modes.
+# Shared authentication logic for the MCP server.
 # Follows OAuth2 Bearer Token pattern (RFC 6750).
 #
 # CHAIN MANTRA ENFORCEMENT:

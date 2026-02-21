@@ -3,14 +3,14 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# Shared core components for Backend and Frontend MCP modes.
+# Shared core components for the MCP server.
 # This module contains:
 #   - Base MCP server class
 #   - Transport layer (STDIO + HTTP)
 #   - Authentication utilities
 #
 # ARCHITECTURE:
-# Both Backend and Frontend modes extend this core.
+# BackendMCPServer extends this core with 48 tools.
 # No duplication of server, transport, or auth logic.
 # ============================================================================
 

@@ -4,7 +4,7 @@
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
 # Shared transport implementations for STDIO and HTTP modes.
-# Both Backend and Frontend MCP use these exact same transport functions.
+# Backend MCP uses these transport functions for both local and cloud deployment.
 #
 # DUAL TRANSPORT ARCHITECTURE:
 # - STDIO:  Local development (Cursor, VS Code, Claude Desktop)
@@ -192,13 +192,6 @@ def _build_default_server_card(name: str, version: str, description: str) -> dic
                     "description": "Your RationalBloks API key (get from https://rationalbloks.com/settings)",
                     "default": "",
                     "x-from": {"header": "authorization"}
-                },
-                "mode": {
-                    "type": "string",
-                    "title": "Mode",
-                    "description": "MCP mode: backend, frontend, or full (default: full)",
-                    "default": "full",
-                    "enum": ["backend", "frontend", "full"]
                 }
             }
         }

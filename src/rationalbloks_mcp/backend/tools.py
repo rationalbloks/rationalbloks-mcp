@@ -34,8 +34,6 @@
 #   WRITE (2): process_content, process_url
 # ============================================================================
 
-import os
-import sys
 from typing import Any
 
 from mcp.types import Prompt, PromptArgument, PromptMessage, GetPromptResult, TextContent
@@ -47,6 +45,11 @@ from .client import LogicBlokClient
 # Public API
 __all__ = [
     "BACKEND_TOOLS",
+    "GRAPH_TOOLS",
+    "GRAPH_DATA_TOOLS",
+    "KNOWLEDGE_TOOLS",
+    "BACKEND_PROMPTS",
+    "GRAPH_PROMPTS",
     "BackendMCPServer",
     "create_backend_server",
 ]

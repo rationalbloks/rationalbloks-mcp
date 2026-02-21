@@ -3,17 +3,15 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# Base MCP server class that Backend and Frontend modes extend.
+# Base MCP server class for the Backend mode.
 # Contains shared server initialization and handler registration.
 #
 # ARCHITECTURE:
 # - BaseMCPServer provides common MCP infrastructure
-# - Backend/Frontend modes add their specific tools and handlers
-# - No duplication of server setup logic
+# - BackendMCPServer adds 48 tools and handlers
 # ============================================================================
 
 import json
-import os
 import sys
 from typing import Any, Callable
 
@@ -55,15 +53,14 @@ DOCS_GETTING_STARTED = """# Getting Started with RationalBloks MCP
 2. Set environment variable: export RATIONALBLOKS_API_KEY=rb_sk_...
 3. Run the server: uvx rationalbloks-mcp
 
-## Modes
+## Tools (48 total)
 
-RationalBloks MCP supports three modes:
+RationalBloks MCP provides 48 tools across 4 categories:
 
-- **backend**: API/database tools only (29 tools — 18 relational + 11 graph)
-- **frontend**: Frontend generation tools only (6 tools)
-- **full**: All tools combined (35 tools) - DEFAULT
-
-Set mode via environment: RATIONALBLOKS_MODE=backend|frontend|full
+- **Relational** (18 tools): Create, deploy, and manage PostgreSQL REST APIs
+- **Graph Schema** (11 tools): Create, deploy, and manage Neo4j Graph APIs
+- **Graph Data** (15 tools): CRUD, search, traverse, and bulk operations on graph data
+- **Knowledge** (4 tools): AI-powered content processing into Knowledge Graphs
 
 ## Need Help?
 
@@ -154,7 +151,7 @@ Full docs: https://infra.rationalbloks.com/documentation
 
 DOCS_API_REFERENCE = """# RationalBloks MCP API Reference
 
-## Relational Backend Tools (18)
+## Relational Tools (18)
 - list_projects, get_project, get_schema, get_user_info
 - get_job_status, get_project_info, get_version_history
 - get_template_schemas, get_subscription_status, get_project_usage
@@ -162,19 +159,24 @@ DOCS_API_REFERENCE = """# RationalBloks MCP API Reference
 - deploy_staging, deploy_production, delete_project
 - rollback_project, rename_project
 
-## Graph Backend Tools (11)
+## Graph Schema Tools (11)
 - get_graph_schema, get_graph_template_schemas
 - get_graph_version_history, get_graph_schema_at_version
 - get_graph_project_info, create_graph_project
 - update_graph_schema, deploy_graph_staging, deploy_graph_production
 - delete_graph_project, rollback_graph_project
 
-## Frontend Tools (5)
-- clone_template: Clone rationalbloksfront template
-- get_template_structure: Explore template structure
-- read_template_file: Read file from template
-- create_backend: Call Backend MCP to create API
-- configure_api_url: Set API URL in frontend .env
+## Graph Data Tools (15)
+- create_graph_node, get_graph_node, list_graph_nodes
+- update_graph_node, delete_graph_node
+- create_graph_relationship, get_node_relationships, delete_graph_relationship
+- bulk_create_graph_nodes, bulk_create_graph_relationships
+- search_graph_nodes, fulltext_search_graph, traverse_graph
+- get_graph_statistics, get_graph_data_schema
+
+## Knowledge Tools (4)
+- process_content, process_url
+- get_processing_job, list_processing_jobs
 
 For full documentation, visit https://rationalbloks.com/docs
 """
