@@ -3,7 +3,7 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# 43 Backend tools (18 relational + 11 graph schema + 14 graph data):
+# 48 Backend tools (18 relational + 11 graph schema + 15 graph data + 4 knowledge):
 #
 # RELATIONAL (18):
 #   READ (11): list_projects, get_project, get_schema, get_user_info,
@@ -21,13 +21,17 @@
 #              deploy_graph_staging, deploy_graph_production,
 #              delete_graph_project, rollback_graph_project
 #
-# GRAPH DATA (14):
-#   READ (7):  get_graph_node, list_graph_nodes, get_node_relationships,
-#              search_graph_nodes, traverse_graph, get_graph_statistics,
-#              get_graph_data_schema
+# GRAPH DATA (15):
+#   READ (8):  get_graph_node, list_graph_nodes, get_node_relationships,
+#              search_graph_nodes, fulltext_search_graph, traverse_graph,
+#              get_graph_statistics, get_graph_data_schema
 #   WRITE (7): create_graph_node, update_graph_node, delete_graph_node,
 #              create_graph_relationship, delete_graph_relationship,
 #              bulk_create_graph_nodes, bulk_create_graph_relationships
+#
+# KNOWLEDGE (4):
+#   READ (2):  get_processing_job, list_processing_jobs
+#   WRITE (2): process_content, process_url
 # ============================================================================
 
 import os
@@ -618,7 +622,7 @@ NOTE: This only saves the schema. You MUST call deploy_graph_staging afterwards 
 
 
 # ============================================================================
-# GRAPH DATA TOOLS (14 tools for operating on graph data via deployed APIs)
+# GRAPH DATA TOOLS (15 tools for operating on graph data via deployed APIs)
 # ============================================================================
 
 GRAPH_DATA_TOOLS = [
@@ -898,6 +902,32 @@ Without entity_type, searches ALL node types.""",
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
     {
+        "name": "fulltext_search_graph",
+        "title": "Full-Text Search Graph",
+        "description": """Search across ALL string properties of ALL nodes in a deployed graph using free-text queries.
+
+Unlike search_graph_nodes (which filters by specific property), this searches every text field at once.
+Perfect for finding knowledge when you don't know which property contains the answer.
+
+Example: query "quantum" searches name, description, summary, notes, and all other string fields.
+Returns nodes with _match_fields showing which properties matched.
+
+Optionally filter by entity_type to narrow results.""",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "query": {"type": "string", "description": "Search text (case-insensitive, min 2 chars)"},
+                "entity_type": {"type": "string", "description": "Entity key to filter by (optional — omit to search all types)"},
+                "limit": {"type": "integer", "description": "Max results (default: 50, max: 500)"},
+                "offset": {"type": "integer", "description": "Pagination offset (default: 0)"},
+                "environment": {"type": "string", "description": "Environment: staging or production (default: staging)"}
+            },
+            "required": ["project_id", "query"]
+        },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    {
         "name": "traverse_graph",
         "title": "Traverse Graph",
         "description": """Walk the graph from a starting node, discovering connected knowledge.
@@ -964,6 +994,78 @@ Returns: Available entity keys (for create_graph_node, list_graph_nodes, etc.) a
                 "environment": {"type": "string", "description": "Environment: staging or production (default: staging)"}
             },
             "required": ["project_id"]
+        },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+]
+
+
+# ============================================================================
+# KNOWLEDGE PROCESSING TOOLS (4 tools)
+# ============================================================================
+# Tools for automated AI content processing into Knowledge Graphs.
+# These connect to the KnowledgeBlok service for server-side AI extraction.
+# ============================================================================
+
+KNOWLEDGE_TOOLS = [
+    {
+        "name": "process_content",
+        "title": "Process Content to Knowledge Graph",
+        "description": "Submit text content for AI-powered extraction into a Knowledge Graph. The server chunks the content, sends it to the best AI model for entity/relationship extraction, and populates the graph automatically. Returns a job ID for tracking progress. Supports quality levels: fast (GPT-4o-mini), balanced (Claude Sonnet), thorough (Claude Opus).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Target graph project ID (UUID)"},
+                "content": {"type": "string", "description": "Text content to process (max 500K characters)"},
+                "environment": {"type": "string", "description": "staging or production (default: staging)"},
+                "quality": {"type": "string", "enum": ["fast", "balanced", "thorough"], "description": "Extraction quality level (default: balanced)"},
+                "source_name": {"type": "string", "description": "Source identifier (e.g., book title, article name)"},
+            },
+            "required": ["project_id", "content"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+    },
+    {
+        "name": "process_url",
+        "title": "Process URL to Knowledge Graph",
+        "description": "Scrape a URL, extract its content, and process it into a Knowledge Graph using AI. The server fetches the page, extracts clean text, chunks it, runs AI extraction, and populates the graph. Returns a job ID for tracking.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Target graph project ID (UUID)"},
+                "url": {"type": "string", "description": "URL to scrape and process"},
+                "environment": {"type": "string", "description": "staging or production (default: staging)"},
+                "quality": {"type": "string", "enum": ["fast", "balanced", "thorough"], "description": "Extraction quality level (default: balanced)"},
+            },
+            "required": ["project_id", "url"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+    },
+    {
+        "name": "get_processing_job",
+        "title": "Get Processing Job Status",
+        "description": "Check the status of an AI content processing job. Returns progress (chunks processed, entities created, relationships created), timing, AI model used, and token usage.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "job_id": {"type": "string", "description": "Processing job ID (UUID)"},
+            },
+            "required": ["job_id"]
+        },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    {
+        "name": "list_processing_jobs",
+        "title": "List Processing Jobs",
+        "description": "List all AI content processing jobs. Optionally filter by project. Shows status, progress, and results for each job.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Filter by project ID (optional)"},
+                "limit": {"type": "integer", "description": "Max results (default: 50)"},
+                "offset": {"type": "integer", "description": "Pagination offset (default: 0)"},
+            },
+            "required": []
         },
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
@@ -1054,7 +1156,7 @@ GRAPH_PROMPTS = [
 # ============================================================================
 
 class BackendMCPServer(BaseMCPServer):
-    # Backend MCP server with 43 tools (18 relational + 11 graph schema + 14 graph data)
+    # Backend MCP server with 48 tools (18 relational + 11 graph schema + 15 graph data + 4 knowledge)
     # Extends BaseMCPServer with: LogicBlok client integration, backend + graph tools, prompts
     
     INSTRUCTIONS = """RationalBloks MCP Server — Backend Mode
@@ -1070,7 +1172,7 @@ TWO PROJECT TYPES:
 
 2. GRAPH (Neo4j) — Hierarchical node/relationship schemas, graph databases
    Schema tools: create_graph_project, get_graph_schema, deploy_graph_staging, etc. (11 tools)
-   Data tools: create_graph_node, bulk_create_graph_nodes, search_graph_nodes, etc. (14 tools)
+   Data tools: create_graph_node, bulk_create_graph_nodes, search_graph_nodes, etc. (15 tools)
 
 ═══════════════════════════════════════════════════════════════════════════
 GRAPH DATA OPERATIONS (Knowledge Graph Population):
@@ -1081,9 +1183,10 @@ After deploying a graph project, use these tools to populate and query data:
 1. get_graph_data_schema — See available entity types and relationship types
 2. create_graph_node / bulk_create_graph_nodes — Add knowledge nodes
 3. create_graph_relationship / bulk_create_graph_relationships — Connect knowledge
-4. search_graph_nodes — Find nodes by properties
-5. traverse_graph — Walk connections from any node
-6. get_graph_statistics — Get counts and overview
+4. search_graph_nodes — Find nodes by specific properties
+5. fulltext_search_graph — Search across ALL text fields at once
+6. traverse_graph — Walk connections from any node
+7. get_graph_statistics — Get counts and overview
 
 KNOWLEDGE GRAPH WORKFLOW:
 1. create_graph_project → Design schema for your knowledge domain
@@ -1091,8 +1194,9 @@ KNOWLEDGE GRAPH WORKFLOW:
 3. get_graph_data_schema → See entity types & relationships
 4. bulk_create_graph_nodes → Populate entities from content
 5. bulk_create_graph_relationships → Connect the knowledge
-6. search_graph_nodes → Query the knowledge
-7. traverse_graph → Explore connections
+6. fulltext_search_graph → Search the knowledge (free-text)
+7. search_graph_nodes → Filter by specific properties
+8. traverse_graph → Explore connections
 
 ═══════════════════════════════════════════════════════════════════════════
 RELATIONAL SCHEMA RULES:
@@ -1118,7 +1222,7 @@ GRAPH SCHEMA RULES:
 7. DON'T define: id, created_at, updated_at (automatic)
 8. Use get_graph_template_schemas FIRST to see valid examples
 
-Available: 43 tools (18 relational + 11 graph schema + 14 graph data).
+Available: 48 tools (18 relational + 11 graph schema + 15 graph data + 4 knowledge).
 Full documentation: https://infra.rationalbloks.com/documentation"""
     
     def __init__(
@@ -1139,6 +1243,7 @@ Full documentation: https://infra.rationalbloks.com/documentation"""
         self.register_tools(BACKEND_TOOLS)
         self.register_tools(GRAPH_TOOLS)
         self.register_tools(GRAPH_DATA_TOOLS)
+        self.register_tools(KNOWLEDGE_TOOLS)
         self.register_prompts(BACKEND_PROMPTS)
         self.register_prompts(GRAPH_PROMPTS)
         
@@ -1358,6 +1463,15 @@ Full documentation: https://infra.rationalbloks.com/documentation"""
                     offset=arguments.get("offset", 0),
                     environment=arguments.get("environment", "staging"),
                 )
+            elif name == "fulltext_search_graph":
+                return await client.fulltext_search_graph(
+                    project_id=arguments["project_id"],
+                    query=arguments["query"],
+                    entity_type=arguments.get("entity_type"),
+                    limit=arguments.get("limit", 50),
+                    offset=arguments.get("offset", 0),
+                    environment=arguments.get("environment", "staging"),
+                )
             elif name == "traverse_graph":
                 return await client.traverse_graph(
                     project_id=arguments["project_id"],
@@ -1378,6 +1492,32 @@ Full documentation: https://infra.rationalbloks.com/documentation"""
                 return await client.get_graph_data_schema(
                     project_id=arguments["project_id"],
                     environment=arguments.get("environment", "staging"),
+                )
+            # Knowledge processing tools
+            elif name == "process_content":
+                return await client.process_content(
+                    project_id=arguments["project_id"],
+                    content=arguments["content"],
+                    environment=arguments.get("environment", "staging"),
+                    quality=arguments.get("quality", "balanced"),
+                    source_name=arguments.get("source_name"),
+                )
+            elif name == "process_url":
+                return await client.process_url(
+                    project_id=arguments["project_id"],
+                    url=arguments["url"],
+                    environment=arguments.get("environment", "staging"),
+                    quality=arguments.get("quality", "balanced"),
+                )
+            elif name == "get_processing_job":
+                return await client.get_processing_job(
+                    job_id=arguments["job_id"],
+                )
+            elif name == "list_processing_jobs":
+                return await client.list_processing_jobs(
+                    project_id=arguments.get("project_id"),
+                    limit=arguments.get("limit", 50),
+                    offset=arguments.get("offset", 0),
                 )
             else:
                 raise ValueError(f"Unknown backend tool: {name}")

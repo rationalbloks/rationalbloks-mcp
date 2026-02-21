@@ -447,6 +447,27 @@ class LogicBlokClient:
             args["entity_type"] = entity_type
         return await self._execute("search_graph_nodes", args)
 
+    async def fulltext_search_graph(
+        self,
+        project_id: str,
+        query: str,
+        entity_type: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+        environment: str = "staging",
+    ) -> dict:
+        # Full-text search across all string properties of all nodes
+        args = {
+            "project_id": project_id,
+            "query": query,
+            "limit": limit,
+            "offset": offset,
+            "environment": environment,
+        }
+        if entity_type:
+            args["entity_type"] = entity_type
+        return await self._execute("fulltext_search_graph", args)
+
     async def traverse_graph(
         self,
         project_id: str,
@@ -493,3 +514,62 @@ class LogicBlokClient:
             "project_id": project_id,
             "environment": environment,
         })
+
+    # ========================================================================
+    # KNOWLEDGE PROCESSING (4 methods)
+    # ========================================================================
+
+    async def process_content(
+        self,
+        project_id: str,
+        content: str,
+        environment: str = "staging",
+        quality: str = "balanced",
+        source_name: str | None = None,
+    ) -> dict:
+        # Submit text content for AI extraction into a Knowledge Graph
+        payload = {
+            "project_id": project_id,
+            "content": content,
+            "environment": environment,
+            "quality": quality,
+        }
+        if source_name:
+            payload["source_name"] = source_name
+        return await self._execute("process_content", payload)
+
+    async def process_url(
+        self,
+        project_id: str,
+        url: str,
+        environment: str = "staging",
+        quality: str = "balanced",
+    ) -> dict:
+        # Scrape a URL and process its content into a Knowledge Graph
+        return await self._execute("process_url", {
+            "project_id": project_id,
+            "url": url,
+            "environment": environment,
+            "quality": quality,
+        })
+
+    async def get_processing_job(
+        self,
+        job_id: str,
+    ) -> dict:
+        # Get the status of an AI content processing job
+        return await self._execute("get_processing_job", {
+            "job_id": job_id,
+        })
+
+    async def list_processing_jobs(
+        self,
+        project_id: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> dict:
+        # List AI content processing jobs
+        payload: dict = {"limit": limit, "offset": offset}
+        if project_id:
+            payload["project_id"] = project_id
+        return await self._execute("list_processing_jobs", payload)
