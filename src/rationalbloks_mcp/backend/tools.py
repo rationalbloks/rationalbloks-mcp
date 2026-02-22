@@ -3,9 +3,7 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# 48 Backend tools organized into INFRASTRUCTURE (44) + APPLICATION (4):
-#
-# ─── INFRASTRUCTURE TOOLS (44) ───────────────────────────────────────────
+# 44 Infrastructure tools:
 #
 # RELATIONAL (18):
 #   READ (11): list_projects, get_project, get_schema, get_user_info,
@@ -30,12 +28,6 @@
 #   WRITE (7): create_graph_node, update_graph_node, delete_graph_node,
 #              create_graph_relationship, delete_graph_relationship,
 #              bulk_create_graph_nodes, bulk_create_graph_relationships
-#
-# ─── GRAFOREST STANDALONE APP TOOLS (4) ─────────────────────────────────
-#
-# GRAFOREST (4) — Standalone app for AI content processing into Knowledge Graphs:
-#   READ (2):  get_knowledge_job, list_knowledge_jobs
-#   WRITE (2): process_knowledge_content, process_knowledge_url
 # ============================================================================
 
 from typing import Any
@@ -51,9 +43,7 @@ __all__ = [
     "BACKEND_TOOLS",
     "GRAPH_TOOLS",
     "GRAPH_DATA_TOOLS",
-    "GRAFOREST_TOOLS",
     "INFRASTRUCTURE_TOOLS",
-    "APPLICATION_TOOLS",
     "BACKEND_PROMPTS",
     "GRAPH_PROMPTS",
     "BackendMCPServer",
@@ -1010,80 +1000,6 @@ Returns: Available entity keys (for create_graph_node, list_graph_nodes, etc.) a
 
 
 # ============================================================================
-# GRAFOREST STANDALONE APP TOOLS (4 tools)
-# ============================================================================
-# AI-powered content processing into Knowledge Graphs.
-# Graforest is a STANDALONE APPLICATION that uses RationalBloks infrastructure
-# (GraphBlok). It is NOT platform infrastructure — it's like a customer app.
-# These tools proxy to wherever Graforest is deployed.
-# ============================================================================
-
-GRAFOREST_TOOLS = [
-    {
-        "name": "process_knowledge_content",
-        "title": "Graforest: Process Content",
-        "description": "Submit text content to Graforest for AI-powered extraction into a Knowledge Graph. The server chunks the content, sends it to the best AI model for entity/relationship extraction, and populates the graph automatically. Returns a job ID for tracking progress. Supports quality levels: fast (GPT-4o-mini), balanced (Claude Sonnet), thorough (Claude Opus).",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "project_id": {"type": "string", "description": "Target graph project ID (UUID)"},
-                "content": {"type": "string", "description": "Text content to process (max 500K characters)"},
-                "environment": {"type": "string", "description": "staging or production (default: staging)"},
-                "quality": {"type": "string", "enum": ["fast", "balanced", "thorough"], "description": "Extraction quality level (default: balanced)"},
-                "source_name": {"type": "string", "description": "Source identifier (e.g., book title, article name)"},
-            },
-            "required": ["project_id", "content"]
-        },
-        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
-    },
-    {
-        "name": "process_knowledge_url",
-        "title": "Graforest: Process URL",
-        "description": "Scrape a URL, extract its content, and process it into a Knowledge Graph using Graforest AI. The server fetches the page, extracts clean text, chunks it, runs AI extraction, and populates the graph. Returns a job ID for tracking.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "project_id": {"type": "string", "description": "Target graph project ID (UUID)"},
-                "url": {"type": "string", "description": "URL to scrape and process"},
-                "environment": {"type": "string", "description": "staging or production (default: staging)"},
-                "quality": {"type": "string", "enum": ["fast", "balanced", "thorough"], "description": "Extraction quality level (default: balanced)"},
-            },
-            "required": ["project_id", "url"]
-        },
-        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
-    },
-    {
-        "name": "get_knowledge_job",
-        "title": "Graforest: Get Job Status",
-        "description": "Check the status of a Graforest AI processing job. Returns progress (chunks processed, entities created, relationships created), timing, AI model used, and token usage.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "job_id": {"type": "string", "description": "Processing job ID (UUID)"},
-            },
-            "required": ["job_id"]
-        },
-        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
-    },
-    {
-        "name": "list_knowledge_jobs",
-        "title": "Graforest: List Jobs",
-        "description": "List all Graforest AI processing jobs. Optionally filter by project. Shows status, progress, and results for each job.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "project_id": {"type": "string", "description": "Filter by project ID (optional)"},
-                "limit": {"type": "integer", "description": "Max results (default: 50)"},
-                "offset": {"type": "integer", "description": "Pagination offset (default: 0)"},
-            },
-            "required": []
-        },
-        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
-    },
-]
-
-
-# ============================================================================
 # BACKEND PROMPTS
 # ============================================================================
 
@@ -1137,28 +1053,6 @@ GRAPH_PROMPTS = [
             )
         ],
     ),
-    Prompt(
-        name="process-content-to-knowledge-graph",
-        title="Process Content to Knowledge Graph",
-        description="Extract entities and relationships from text content and populate a knowledge graph using MCP tools. Provide the content and the project ID of an existing graph project.",
-        arguments=[
-            PromptArgument(
-                name="content",
-                description="The text content to extract knowledge from (article, book chapter, document, etc.)",
-                required=True,
-            ),
-            PromptArgument(
-                name="project_id",
-                description="The project ID (UUID) of the target graph project that already has a deployed schema",
-                required=True,
-            ),
-            PromptArgument(
-                name="environment",
-                description="Target environment: staging or production (default: staging)",
-                required=False,
-            ),
-        ],
-    ),
 ]
 
 
@@ -1166,13 +1060,12 @@ GRAPH_PROMPTS = [
 # BACKEND MCP SERVER
 # ============================================================================
 
-# Grouped exports for clarity
-INFRASTRUCTURE_TOOLS = BACKEND_TOOLS + GRAPH_TOOLS + GRAPH_DATA_TOOLS  # 44 tools
-APPLICATION_TOOLS = GRAFOREST_TOOLS  # 4 tools
+# All tools are infrastructure-only (44 tools)
+INFRASTRUCTURE_TOOLS = BACKEND_TOOLS + GRAPH_TOOLS + GRAPH_DATA_TOOLS
 
 
 class BackendMCPServer(BaseMCPServer):
-    # Backend MCP server with 48 tools: Infrastructure (44) + Graforest Standalone App (4)
+    # Backend MCP server with 44 infrastructure tools
     # Extends BaseMCPServer with: LogicBlok client integration, backend + graph tools, prompts
     
     INSTRUCTIONS = """RationalBloks MCP Server — Backend Mode
@@ -1238,7 +1131,7 @@ GRAPH SCHEMA RULES:
 7. DON'T define: id, created_at, updated_at (automatic)
 8. Use get_graph_template_schemas FIRST to see valid examples
 
-Available: 48 tools — Infrastructure (44): 18 relational + 11 graph schema + 15 graph data | Graforest (4): AI content processing.
+Available: 44 tools — 18 relational + 11 graph schema + 15 graph data.
 Full documentation: https://infra.rationalbloks.com/documentation"""
     
     def __init__(
@@ -1255,11 +1148,10 @@ Full documentation: https://infra.rationalbloks.com/documentation"""
             http_mode=http_mode,
         )
         
-        # Register backend tools and prompts
+        # Register infrastructure tools and prompts
         self.register_tools(BACKEND_TOOLS)
         self.register_tools(GRAPH_TOOLS)
         self.register_tools(GRAPH_DATA_TOOLS)
-        self.register_tools(GRAFOREST_TOOLS)
         self.register_prompts(BACKEND_PROMPTS)
         self.register_prompts(GRAPH_PROMPTS)
         
@@ -1278,10 +1170,6 @@ Full documentation: https://infra.rationalbloks.com/documentation"""
         self.register_prompt_handler(
             "create-graph-project-from-description",
             self._handle_create_graph_project_prompt,
-        )
-        self.register_prompt_handler(
-            "process-content-to-knowledge-graph",
-            self._handle_process_content_prompt,
         )
         
         # Set up MCP handlers
@@ -1509,32 +1397,6 @@ Full documentation: https://infra.rationalbloks.com/documentation"""
                     project_id=arguments["project_id"],
                     environment=arguments.get("environment", "staging"),
                 )
-            # Graforest application tools
-            elif name == "process_knowledge_content":
-                return await client.process_knowledge_content(
-                    project_id=arguments["project_id"],
-                    content=arguments["content"],
-                    environment=arguments.get("environment", "staging"),
-                    quality=arguments.get("quality", "balanced"),
-                    source_name=arguments.get("source_name"),
-                )
-            elif name == "process_knowledge_url":
-                return await client.process_knowledge_url(
-                    project_id=arguments["project_id"],
-                    url=arguments["url"],
-                    environment=arguments.get("environment", "staging"),
-                    quality=arguments.get("quality", "balanced"),
-                )
-            elif name == "get_knowledge_job":
-                return await client.get_knowledge_job(
-                    job_id=arguments["job_id"],
-                )
-            elif name == "list_knowledge_jobs":
-                return await client.list_knowledge_jobs(
-                    project_id=arguments.get("project_id"),
-                    limit=arguments.get("limit", 50),
-                    offset=arguments.get("offset", 0),
-                )
             else:
                 raise ValueError(f"Unknown backend tool: {name}")
     
@@ -1759,119 +1621,6 @@ HIERARCHICAL EXAMPLE:
 }}
 
 Generate the graph schema now following ALL rules above:""",
-                    ),
-                )
-            ]
-        )
-
-    def _handle_process_content_prompt(
-        self,
-        name: str,
-        arguments: dict[str, str] | None,
-    ) -> GetPromptResult:
-        # Handle process-content-to-knowledge-graph prompt
-        content = arguments.get("content", "") if arguments else ""
-        project_id = arguments.get("project_id", "") if arguments else ""
-        environment = arguments.get("environment", "staging") if arguments else "staging"
-        
-        return GetPromptResult(
-            messages=[
-                PromptMessage(
-                    role="user",
-                    content=TextContent(
-                        type="text",
-                        text=f"""Extract knowledge from the following content and populate the knowledge graph.
-
-═══════════════════════════════════════════════════════════════════════════
-TARGET GRAPH PROJECT
-═══════════════════════════════════════════════════════════════════════════
-Project ID: {project_id}
-Environment: {environment}
-
-═══════════════════════════════════════════════════════════════════════════
-WORKFLOW — FOLLOW THESE STEPS IN ORDER:
-═══════════════════════════════════════════════════════════════════════════
-
-STEP 1: DISCOVER THE SCHEMA
-   Call get_graph_data_schema with project_id="{project_id}" and environment="{environment}"
-   This tells you the available entity types (nodes) and relationship types.
-   Study the schema carefully — you can ONLY create nodes and relationships
-   that match the defined schema.
-
-STEP 2: ANALYZE THE CONTENT
-   Read the content below and identify:
-   • Entities (people, concepts, places, organizations, events, etc.)
-   • Relationships between entities (who relates to whom, how)
-   • Properties of each entity (names, descriptions, dates, attributes)
-   • Properties of relationships (dates, weights, descriptions)
-   
-   Map each discovered entity to the closest matching entity type in the schema.
-   Map each discovered relationship to the closest matching relationship type.
-   Skip any entities or relationships that don't fit the schema.
-
-STEP 3: CREATE ENTITIES WITH BULK OPERATIONS
-   Use bulk_create_graph_nodes to efficiently create entities in batches.
-   For each entity type found in the content:
-   • Gather all entities of that type
-   • Create unique entity_id values (use slugified names: "albert-einstein", "theory-of-relativity")
-   • Batch them in groups of up to 500
-   • Call bulk_create_graph_nodes for each entity type
-
-   ENTITY ID RULES:
-   • Use lowercase-kebab-case: "quantum-mechanics", "isaac-newton"
-   • Must be unique within an entity type
-   • Should be human-readable and deterministic (same content → same IDs)
-   • Avoid generic IDs like "entity-1" — use meaningful names
-
-STEP 4: CREATE RELATIONSHIPS WITH BULK OPERATIONS
-   Use bulk_create_graph_relationships to connect entities.
-   For each relationship type found:
-   • Gather all relationships of that type
-   • Use the entity_id values from Step 3 as from_id and to_id
-   • Include any relationship properties from the content
-   • Batch them in groups of up to 500
-   • Call bulk_create_graph_relationships for each type
-
-STEP 5: VERIFY THE GRAPH
-   Call get_graph_statistics to confirm the data was created.
-   Report a summary: how many nodes and relationships were created,
-   organized by type.
-
-═══════════════════════════════════════════════════════════════════════════
-KNOWLEDGE EXTRACTION GUIDELINES
-═══════════════════════════════════════════════════════════════════════════
-
-ENTITY EXTRACTION:
-• Extract ALL meaningful entities — be comprehensive, not selective
-• Prefer specific entities over vague ones ("Albert Einstein" > "a scientist")
-• Include both major and supporting entities
-• Preserve original names and terminology from the content
-• Add descriptive properties: summaries, categories, dates, quotes
-
-RELATIONSHIP EXTRACTION:
-• Extract explicit relationships stated in the text
-• Infer implicit relationships when strongly supported by context
-• Include temporal relationships (before, after, during)
-• Include causal relationships (caused, influenced, led to)
-• Include hierarchical relationships (part of, type of, belongs to)
-• Add relationship properties when available (date, strength, context)
-
-QUALITY RULES:
-• Never invent facts not present or strongly implied in the content
-• When uncertain about a relationship, skip it rather than guess
-• Deduplicate: same real-world entity → same entity_id
-• Cross-reference: if "Einstein" and "Albert Einstein" refer to the same
-  person, use the same entity_id
-
-═══════════════════════════════════════════════════════════════════════════
-CONTENT TO PROCESS
-═══════════════════════════════════════════════════════════════════════════
-
-{content}
-
-═══════════════════════════════════════════════════════════════════════════
-
-Begin by calling get_graph_data_schema, then extract and populate the knowledge graph:""",
                     ),
                 )
             ]

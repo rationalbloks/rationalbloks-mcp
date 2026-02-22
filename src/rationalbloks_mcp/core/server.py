@@ -8,7 +8,7 @@
 #
 # ARCHITECTURE:
 # - BaseMCPServer provides common MCP infrastructure
-# - BackendMCPServer adds 48 tools and handlers
+# - BackendMCPServer adds 44 tools and handlers
 # ============================================================================
 
 import json
@@ -53,14 +53,15 @@ DOCS_GETTING_STARTED = """# Getting Started with RationalBloks MCP
 2. Set environment variable: export RATIONALBLOKS_API_KEY=rb_sk_...
 3. Run the server: uvx rationalbloks-mcp
 
-## Tools (48 total)
+## Tools (44 total)
 
-RationalBloks MCP provides 48 tools across 4 categories:
+RationalBloks MCP provides 44 infrastructure tools across 3 categories:
 
 - **Relational** (18 tools): Create, deploy, and manage PostgreSQL REST APIs
 - **Graph Schema** (11 tools): Create, deploy, and manage Neo4j Graph APIs
 - **Graph Data** (15 tools): CRUD, search, traverse, and bulk operations on graph data
-- **Graforest** (4 tools): Standalone app — AI content processing into Knowledge Graphs
+
+For AI knowledge processing, connect to the Graforest MCP endpoint separately.
 
 ## Need Help?
 
@@ -174,10 +175,7 @@ DOCS_API_REFERENCE = """# RationalBloks MCP API Reference
 - search_graph_nodes, fulltext_search_graph, traverse_graph
 - get_graph_statistics, get_graph_data_schema
 
-## Graforest Tools (4) — Standalone App
-- process_content, process_url
-- get_processing_job, list_processing_jobs
-
+For AI knowledge processing tools, connect to the Graforest MCP endpoint.
 For full documentation, visit https://rationalbloks.com/docs
 """
 
