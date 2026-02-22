@@ -7,7 +7,11 @@
 #   - Relational: 18 tools (create, list, deploy, rollback, templates, etc.)
 #   - Graph Schema: 11 tools (create, deploy, rollback, templates, etc.)
 #   - Graph Data: 15 tools (CRUD, search, traverse, bulk, fulltext)
-#   - Knowledge: 4 tools (AI content processing → Knowledge Graph)
+#   - Graforest: 4 tools (AI content processing → Knowledge Graph)
+#
+# Tool Organization:
+#   INFRASTRUCTURE_TOOLS (44) = BACKEND_TOOLS + GRAPH_TOOLS + GRAPH_DATA_TOOLS
+#   APPLICATION_TOOLS (4) = GRAFOREST_TOOLS
 #
 # Usage:
 #   export RATIONALBLOKS_API_KEY=rb_sk_your_key_here
@@ -35,11 +39,16 @@ __all__ = [
     "BACKEND_TOOLS",
     "GRAPH_TOOLS",
     "GRAPH_DATA_TOOLS",
-    "KNOWLEDGE_TOOLS",
+    "GRAFOREST_TOOLS",
+    "INFRASTRUCTURE_TOOLS",
+    "APPLICATION_TOOLS",
 ]
 
 # Re-export for convenience
-from .backend.tools import BACKEND_TOOLS, GRAPH_TOOLS, GRAPH_DATA_TOOLS, KNOWLEDGE_TOOLS
+from .backend.tools import (
+    BACKEND_TOOLS, GRAPH_TOOLS, GRAPH_DATA_TOOLS, GRAFOREST_TOOLS,
+    INFRASTRUCTURE_TOOLS, APPLICATION_TOOLS,
+)
 
 
 def _validate_api_key(api_key: str | None, transport: str) -> str | None:

@@ -516,10 +516,10 @@ class LogicBlokClient:
         })
 
     # ========================================================================
-    # KNOWLEDGE PROCESSING (4 methods)
+    # GRAFOREST APPLICATION (4 methods)
     # ========================================================================
 
-    async def process_content(
+    async def process_knowledge_content(
         self,
         project_id: str,
         content: str,
@@ -527,7 +527,7 @@ class LogicBlokClient:
         quality: str = "balanced",
         source_name: str | None = None,
     ) -> dict:
-        # Submit text content for AI extraction into a Knowledge Graph
+        # Submit text content to Graforest for AI extraction into a Knowledge Graph
         payload = {
             "project_id": project_id,
             "content": content,
@@ -536,40 +536,40 @@ class LogicBlokClient:
         }
         if source_name:
             payload["source_name"] = source_name
-        return await self._execute("process_content", payload)
+        return await self._execute("process_knowledge_content", payload)
 
-    async def process_url(
+    async def process_knowledge_url(
         self,
         project_id: str,
         url: str,
         environment: str = "staging",
         quality: str = "balanced",
     ) -> dict:
-        # Scrape a URL and process its content into a Knowledge Graph
-        return await self._execute("process_url", {
+        # Scrape a URL and process into a Knowledge Graph via Graforest
+        return await self._execute("process_knowledge_url", {
             "project_id": project_id,
             "url": url,
             "environment": environment,
             "quality": quality,
         })
 
-    async def get_processing_job(
+    async def get_knowledge_job(
         self,
         job_id: str,
     ) -> dict:
-        # Get the status of an AI content processing job
-        return await self._execute("get_processing_job", {
+        # Get the status of a Graforest AI processing job
+        return await self._execute("get_knowledge_job", {
             "job_id": job_id,
         })
 
-    async def list_processing_jobs(
+    async def list_knowledge_jobs(
         self,
         project_id: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> dict:
-        # List AI content processing jobs
+        # List Graforest AI processing jobs
         payload: dict = {"limit": limit, "offset": offset}
         if project_id:
             payload["project_id"] = project_id
-        return await self._execute("list_processing_jobs", payload)
+        return await self._execute("list_knowledge_jobs", payload)

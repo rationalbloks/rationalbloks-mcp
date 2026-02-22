@@ -3,7 +3,9 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# 48 Backend tools (18 relational + 11 graph schema + 15 graph data + 4 knowledge):
+# 48 Backend tools organized into INFRASTRUCTURE (44) + APPLICATION (4):
+#
+# ─── INFRASTRUCTURE TOOLS (44) ───────────────────────────────────────────
 #
 # RELATIONAL (18):
 #   READ (11): list_projects, get_project, get_schema, get_user_info,
@@ -29,9 +31,11 @@
 #              create_graph_relationship, delete_graph_relationship,
 #              bulk_create_graph_nodes, bulk_create_graph_relationships
 #
-# KNOWLEDGE (4):
-#   READ (2):  get_processing_job, list_processing_jobs
-#   WRITE (2): process_content, process_url
+# ─── GRAFOREST APPLICATION TOOLS (4) ────────────────────────────────────
+#
+# GRAFOREST (4) — AI content processing into Knowledge Graphs:
+#   READ (2):  get_knowledge_job, list_knowledge_jobs
+#   WRITE (2): process_knowledge_content, process_knowledge_url
 # ============================================================================
 
 from typing import Any
@@ -47,7 +51,9 @@ __all__ = [
     "BACKEND_TOOLS",
     "GRAPH_TOOLS",
     "GRAPH_DATA_TOOLS",
-    "KNOWLEDGE_TOOLS",
+    "GRAFOREST_TOOLS",
+    "INFRASTRUCTURE_TOOLS",
+    "APPLICATION_TOOLS",
     "BACKEND_PROMPTS",
     "GRAPH_PROMPTS",
     "BackendMCPServer",
@@ -1004,17 +1010,19 @@ Returns: Available entity keys (for create_graph_node, list_graph_nodes, etc.) a
 
 
 # ============================================================================
-# KNOWLEDGE PROCESSING TOOLS (4 tools)
+# GRAFOREST APPLICATION TOOLS (4 tools)
 # ============================================================================
-# Tools for automated AI content processing into Knowledge Graphs.
-# These connect to the Graforest service for server-side AI extraction.
+# AI-powered content processing into Knowledge Graphs.
+# These proxy to the Graforest service — an APPLICATION built on GraphBlok
+# infrastructure. Graforest handles: content ingestion, semantic chunking,
+# multi-model AI extraction, and automatic graph population.
 # ============================================================================
 
-KNOWLEDGE_TOOLS = [
+GRAFOREST_TOOLS = [
     {
-        "name": "process_content",
-        "title": "Process Content to Knowledge Graph",
-        "description": "Submit text content for AI-powered extraction into a Knowledge Graph. The server chunks the content, sends it to the best AI model for entity/relationship extraction, and populates the graph automatically. Returns a job ID for tracking progress. Supports quality levels: fast (GPT-4o-mini), balanced (Claude Sonnet), thorough (Claude Opus).",
+        "name": "process_knowledge_content",
+        "title": "Graforest: Process Content",
+        "description": "Submit text content to Graforest for AI-powered extraction into a Knowledge Graph. The server chunks the content, sends it to the best AI model for entity/relationship extraction, and populates the graph automatically. Returns a job ID for tracking progress. Supports quality levels: fast (GPT-4o-mini), balanced (Claude Sonnet), thorough (Claude Opus).",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -1029,9 +1037,9 @@ KNOWLEDGE_TOOLS = [
         "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
     },
     {
-        "name": "process_url",
-        "title": "Process URL to Knowledge Graph",
-        "description": "Scrape a URL, extract its content, and process it into a Knowledge Graph using AI. The server fetches the page, extracts clean text, chunks it, runs AI extraction, and populates the graph. Returns a job ID for tracking.",
+        "name": "process_knowledge_url",
+        "title": "Graforest: Process URL",
+        "description": "Scrape a URL, extract its content, and process it into a Knowledge Graph using Graforest AI. The server fetches the page, extracts clean text, chunks it, runs AI extraction, and populates the graph. Returns a job ID for tracking.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -1045,9 +1053,9 @@ KNOWLEDGE_TOOLS = [
         "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
     },
     {
-        "name": "get_processing_job",
-        "title": "Get Processing Job Status",
-        "description": "Check the status of an AI content processing job. Returns progress (chunks processed, entities created, relationships created), timing, AI model used, and token usage.",
+        "name": "get_knowledge_job",
+        "title": "Graforest: Get Job Status",
+        "description": "Check the status of a Graforest AI processing job. Returns progress (chunks processed, entities created, relationships created), timing, AI model used, and token usage.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -1058,9 +1066,9 @@ KNOWLEDGE_TOOLS = [
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
     {
-        "name": "list_processing_jobs",
-        "title": "List Processing Jobs",
-        "description": "List all AI content processing jobs. Optionally filter by project. Shows status, progress, and results for each job.",
+        "name": "list_knowledge_jobs",
+        "title": "Graforest: List Jobs",
+        "description": "List all Graforest AI processing jobs. Optionally filter by project. Shows status, progress, and results for each job.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -1158,8 +1166,13 @@ GRAPH_PROMPTS = [
 # BACKEND MCP SERVER
 # ============================================================================
 
+# Grouped exports for clarity
+INFRASTRUCTURE_TOOLS = BACKEND_TOOLS + GRAPH_TOOLS + GRAPH_DATA_TOOLS  # 44 tools
+APPLICATION_TOOLS = GRAFOREST_TOOLS  # 4 tools
+
+
 class BackendMCPServer(BaseMCPServer):
-    # Backend MCP server with 48 tools (18 relational + 11 graph schema + 15 graph data + 4 knowledge)
+    # Backend MCP server with 48 tools: Infrastructure (44) + Graforest Application (4)
     # Extends BaseMCPServer with: LogicBlok client integration, backend + graph tools, prompts
     
     INSTRUCTIONS = """RationalBloks MCP Server — Backend Mode
@@ -1225,7 +1238,7 @@ GRAPH SCHEMA RULES:
 7. DON'T define: id, created_at, updated_at (automatic)
 8. Use get_graph_template_schemas FIRST to see valid examples
 
-Available: 48 tools (18 relational + 11 graph schema + 15 graph data + 4 knowledge).
+Available: 48 tools — Infrastructure (44): 18 relational + 11 graph schema + 15 graph data | Graforest (4): AI content processing.
 Full documentation: https://infra.rationalbloks.com/documentation"""
     
     def __init__(
@@ -1246,7 +1259,7 @@ Full documentation: https://infra.rationalbloks.com/documentation"""
         self.register_tools(BACKEND_TOOLS)
         self.register_tools(GRAPH_TOOLS)
         self.register_tools(GRAPH_DATA_TOOLS)
-        self.register_tools(KNOWLEDGE_TOOLS)
+        self.register_tools(GRAFOREST_TOOLS)
         self.register_prompts(BACKEND_PROMPTS)
         self.register_prompts(GRAPH_PROMPTS)
         
@@ -1496,28 +1509,28 @@ Full documentation: https://infra.rationalbloks.com/documentation"""
                     project_id=arguments["project_id"],
                     environment=arguments.get("environment", "staging"),
                 )
-            # Knowledge processing tools
-            elif name == "process_content":
-                return await client.process_content(
+            # Graforest application tools
+            elif name == "process_knowledge_content":
+                return await client.process_knowledge_content(
                     project_id=arguments["project_id"],
                     content=arguments["content"],
                     environment=arguments.get("environment", "staging"),
                     quality=arguments.get("quality", "balanced"),
                     source_name=arguments.get("source_name"),
                 )
-            elif name == "process_url":
-                return await client.process_url(
+            elif name == "process_knowledge_url":
+                return await client.process_knowledge_url(
                     project_id=arguments["project_id"],
                     url=arguments["url"],
                     environment=arguments.get("environment", "staging"),
                     quality=arguments.get("quality", "balanced"),
                 )
-            elif name == "get_processing_job":
-                return await client.get_processing_job(
+            elif name == "get_knowledge_job":
+                return await client.get_knowledge_job(
                     job_id=arguments["job_id"],
                 )
-            elif name == "list_processing_jobs":
-                return await client.list_processing_jobs(
+            elif name == "list_knowledge_jobs":
+                return await client.list_knowledge_jobs(
                     project_id=arguments.get("project_id"),
                     limit=arguments.get("limit", 50),
                     offset=arguments.get("offset", 0),
