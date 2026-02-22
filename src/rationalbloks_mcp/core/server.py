@@ -60,7 +60,7 @@ RationalBloks MCP provides 48 tools across 4 categories:
 - **Relational** (18 tools): Create, deploy, and manage PostgreSQL REST APIs
 - **Graph Schema** (11 tools): Create, deploy, and manage Neo4j Graph APIs
 - **Graph Data** (15 tools): CRUD, search, traverse, and bulk operations on graph data
-- **Knowledge** (4 tools): AI-powered content processing into Knowledge Graphs
+- **Graforest** (4 tools): Standalone app — AI content processing into Knowledge Graphs
 
 ## Need Help?
 
@@ -174,7 +174,7 @@ DOCS_API_REFERENCE = """# RationalBloks MCP API Reference
 - search_graph_nodes, fulltext_search_graph, traverse_graph
 - get_graph_statistics, get_graph_data_schema
 
-## Knowledge Tools (4)
+## Graforest Tools (4) — Standalone App
 - process_content, process_url
 - get_processing_job, list_processing_jobs
 

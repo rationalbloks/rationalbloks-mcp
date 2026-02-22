@@ -7,7 +7,7 @@
 #   - Relational: 18 tools (create, list, deploy, rollback, templates, etc.)
 #   - Graph Schema: 11 tools (create, deploy, rollback, templates, etc.)
 #   - Graph Data: 15 tools (CRUD, search, traverse, bulk, fulltext)
-#   - Graforest: 4 tools (AI content processing → Knowledge Graph)
+#   - Graforest: 4 tools (standalone app — AI content processing → Knowledge Graph)
 #
 # Tool Organization:
 #   INFRASTRUCTURE_TOOLS (44) = BACKEND_TOOLS + GRAPH_TOOLS + GRAPH_DATA_TOOLS

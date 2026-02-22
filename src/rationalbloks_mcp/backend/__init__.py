@@ -7,7 +7,7 @@
 # - Relational: 18 tools (project CRUD, schema, deploy, rollback)
 # - Graph Schema: 11 tools (graph CRUD, schema, deploy, rollback)
 # - Graph Data: 15 tools (node/relationship CRUD, search, traverse, bulk)
-# - Graforest: 4 tools (AI content processing → Knowledge Graph)
+# - Graforest: 4 tools (standalone app — AI content processing → Knowledge Graph)
 # ============================================================================
 
 from .client import LogicBlokClient

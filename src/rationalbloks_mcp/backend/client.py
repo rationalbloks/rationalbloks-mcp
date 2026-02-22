@@ -516,7 +516,7 @@ class LogicBlokClient:
         })
 
     # ========================================================================
-    # GRAFOREST APPLICATION (4 methods)
+    # GRAFOREST STANDALONE APP (4 methods)
     # ========================================================================
 
     async def process_knowledge_content(

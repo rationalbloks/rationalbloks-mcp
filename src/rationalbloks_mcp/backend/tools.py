@@ -31,9 +31,9 @@
 #              create_graph_relationship, delete_graph_relationship,
 #              bulk_create_graph_nodes, bulk_create_graph_relationships
 #
-# ─── GRAFOREST APPLICATION TOOLS (4) ────────────────────────────────────
+# ─── GRAFOREST STANDALONE APP TOOLS (4) ─────────────────────────────────
 #
-# GRAFOREST (4) — AI content processing into Knowledge Graphs:
+# GRAFOREST (4) — Standalone app for AI content processing into Knowledge Graphs:
 #   READ (2):  get_knowledge_job, list_knowledge_jobs
 #   WRITE (2): process_knowledge_content, process_knowledge_url
 # ============================================================================
@@ -72,7 +72,7 @@ BACKEND_TOOLS = [
         "title": "List Projects",
         "description": "List all your RationalBloks projects with their status and URLs",
         "inputSchema": {"type": "object", "properties": {}, "required": []},
-        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
     {
         "name": "get_project",
@@ -85,7 +85,7 @@ BACKEND_TOOLS = [
             },
             "required": ["project_id"]
         },
-        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
     {
         "name": "get_schema",
@@ -98,14 +98,14 @@ BACKEND_TOOLS = [
             },
             "required": ["project_id"]
         },
-        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
     {
         "name": "get_user_info",
         "title": "Get User Info",
         "description": "Get information about the authenticated user",
         "inputSchema": {"type": "object", "properties": {}, "required": []},
-        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
     {
         "name": "get_job_status",
@@ -118,7 +118,7 @@ BACKEND_TOOLS = [
             },
             "required": ["job_id"]
         },
-        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
     {
         "name": "get_project_info",
@@ -131,7 +131,7 @@ BACKEND_TOOLS = [
             },
             "required": ["project_id"]
         },
-        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
     {
         "name": "get_version_history",
@@ -144,21 +144,21 @@ BACKEND_TOOLS = [
             },
             "required": ["project_id"]
         },
-        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
     {
         "name": "get_template_schemas",
         "title": "Get Template Schemas",
         "description": "Get pre-built template schemas for common use cases. ⭐ USE THIS FIRST when creating a new project! Templates show the CORRECT schema format with: proper FLAT structure (no 'fields' nesting), every field has a 'type' property, foreign key relationships configured correctly, best practices for field naming and types. Available templates: E-commerce (products, orders, customers), Team collaboration (projects, tasks, users), General purpose templates. You can use these templates directly with create_project or modify them for your needs. TIP: Study these templates to understand the correct schema format before creating custom schemas.",
         "inputSchema": {"type": "object", "properties": {}, "required": []},
-        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
     {
         "name": "get_subscription_status",
         "title": "Get Subscription Status",
         "description": "Get your subscription tier, limits, and usage",
         "inputSchema": {"type": "object", "properties": {}, "required": []},
-        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
     {
         "name": "get_project_usage",
@@ -171,7 +171,7 @@ BACKEND_TOOLS = [
             },
             "required": ["project_id"]
         },
-        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
     {
         "name": "get_schema_at_version",
@@ -185,7 +185,7 @@ BACKEND_TOOLS = [
             },
             "required": ["project_id", "version"]
         },
-        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
     {
         "name": "create_project",
@@ -1010,12 +1010,12 @@ Returns: Available entity keys (for create_graph_node, list_graph_nodes, etc.) a
 
 
 # ============================================================================
-# GRAFOREST APPLICATION TOOLS (4 tools)
+# GRAFOREST STANDALONE APP TOOLS (4 tools)
 # ============================================================================
 # AI-powered content processing into Knowledge Graphs.
-# These proxy to the Graforest service — an APPLICATION built on GraphBlok
-# infrastructure. Graforest handles: content ingestion, semantic chunking,
-# multi-model AI extraction, and automatic graph population.
+# Graforest is a STANDALONE APPLICATION that uses RationalBloks infrastructure
+# (GraphBlok). It is NOT platform infrastructure — it's like a customer app.
+# These tools proxy to wherever Graforest is deployed.
 # ============================================================================
 
 GRAFOREST_TOOLS = [
@@ -1172,7 +1172,7 @@ APPLICATION_TOOLS = GRAFOREST_TOOLS  # 4 tools
 
 
 class BackendMCPServer(BaseMCPServer):
-    # Backend MCP server with 48 tools: Infrastructure (44) + Graforest Application (4)
+    # Backend MCP server with 48 tools: Infrastructure (44) + Graforest Standalone App (4)
     # Extends BaseMCPServer with: LogicBlok client integration, backend + graph tools, prompts
     
     INSTRUCTIONS = """RationalBloks MCP Server — Backend Mode
