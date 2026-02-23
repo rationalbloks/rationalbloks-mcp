@@ -1,6 +1,6 @@
 # RationalBloks MCP Server
 
-**Deploy production APIs in minutes.** 18 tools for projects, schemas, and deployments.
+**Deploy production APIs in minutes.** 44 tools for projects, schemas, deployments, and graph data.
 
 [![License](https://img.shields.io/badge/license-Proprietary-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -61,9 +61,9 @@ Visit [rationalbloks.com/settings](https://rationalbloks.com/settings) and creat
 
 ---
 
-## 18 Tools
+## 44 Tools
 
-### Read Operations (11 tools)
+### Relational Read Operations (11 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -79,7 +79,7 @@ Visit [rationalbloks.com/settings](https://rationalbloks.com/settings) and creat
 | `get_project_usage` | CPU/memory metrics |
 | `get_schema_at_version` | Schema at specific commit |
 
-### Write Operations (7 tools)
+### Relational Write Operations (7 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -90,6 +90,42 @@ Visit [rationalbloks.com/settings](https://rationalbloks.com/settings) and creat
 | `delete_project` | Delete project permanently |
 | `rollback_project` | Rollback to previous version |
 | `rename_project` | Rename project |
+
+### Graph Schema Operations (11 tools)
+
+| Tool | Description |
+|------|-------------|
+| `get_graph_schema` | Get graph project schema |
+| `get_graph_template_schemas` | Pre-built graph schema templates |
+| `get_graph_version_history` | Graph schema version history |
+| `get_graph_schema_at_version` | Schema at specific version |
+| `get_graph_project_info` | Graph project info with K8s/Neo4j status |
+| `create_graph_project` | Create Neo4j graph project |
+| `update_graph_schema` | Update graph schema |
+| `deploy_graph_staging` | Deploy graph to staging |
+| `deploy_graph_production` | Deploy graph to production |
+| `delete_graph_project` | Delete graph project |
+| `rollback_graph_project` | Rollback graph to previous version |
+
+### Graph Data Operations (15 tools)
+
+| Tool | Description |
+|------|-------------|
+| `create_graph_node` | Create a single node |
+| `get_graph_node` | Get node by ID |
+| `list_graph_nodes` | List nodes by entity type |
+| `update_graph_node` | Update node properties |
+| `delete_graph_node` | Delete a node |
+| `create_graph_relationship` | Create a relationship |
+| `get_node_relationships` | Get node's relationships |
+| `delete_graph_relationship` | Delete a relationship |
+| `bulk_create_graph_nodes` | Bulk create nodes |
+| `bulk_create_graph_relationships` | Bulk create relationships |
+| `search_graph_nodes` | Search nodes by property filters |
+| `fulltext_search_graph` | Full-text search across all fields |
+| `traverse_graph` | Traverse graph from a node |
+| `get_graph_statistics` | Get graph statistics (counts) |
+| `get_graph_data_schema` | Get deployed data schema |
 
 ---
 
