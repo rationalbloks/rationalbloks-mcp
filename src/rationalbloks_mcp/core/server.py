@@ -147,6 +147,13 @@ Add user_id → app_users.id for user-owned resources:
 - enum: ["value1", "value2"]
 - foreign_key: "table_name.id"
 
+## 7. Backend Engine (Relational Projects)
+
+- python (default): FastAPI backend — mature, full-featured
+- rust: Axum backend — faster cold starts, lower memory, high performance
+
+Set via backend_type parameter in create_project.
+
 Full docs: https://infra.rationalbloks.com/documentation
 """
 

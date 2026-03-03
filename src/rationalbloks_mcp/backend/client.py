@@ -120,12 +120,16 @@ class LogicBlokClient:
         name: str,
         schema: dict,
         description: str | None = None,
+        backend_type: str | None = None,
     ) -> dict:
         # Create a new project from a JSON schema
         # Returns: Project details with job_id for deployment tracking
+        # backend_type: "python" (FastAPI, default) or "rust" (Axum)
         args = {"name": name, "schema": schema}
         if description:
             args["description"] = description
+        if backend_type:
+            args["backend_type"] = backend_type
         return await self._execute("create_project", args)
     
     async def update_schema(self, project_id: str, schema: dict) -> dict:

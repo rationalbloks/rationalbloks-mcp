@@ -84,8 +84,9 @@ class APIKeyCache:
         self._max_size = max_size
     
     def _get_cache_key(self, api_key: str) -> str:
-        # Get cache key from API key (uses prefix only for security)
-        return api_key[:20] if len(api_key) >= 20 else api_key
+        # Get cache key from API key (hash for security + collision avoidance)
+        import hashlib
+        return hashlib.sha256(api_key.encode()).hexdigest()[:32]
     
     def get(self, api_key: str) -> dict[str, Any] | None:
         # Get cached user info for API key

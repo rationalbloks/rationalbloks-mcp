@@ -232,10 +232,14 @@ BACKEND_TOOLS = [
 
 AVAILABLE TYPES: string, text, integer, decimal, boolean, uuid, date, datetime, json
 
+BACKEND ENGINE:
+• python (default): FastAPI backend — mature, full-featured
+• rust: Axum backend — faster cold starts, lower memory, high performance
+
 WORKFLOW:
 1. Use get_template_schemas FIRST to see valid examples
 2. Create schema following ALL rules above
-3. Call this tool
+3. Call this tool (optionally choose backend_type: "python" or "rust")
 4. Monitor with get_job_status (2-5 min deployment)
 
 After creation, use get_job_status with returned job_id to monitor deployment.""",
@@ -244,7 +248,8 @@ After creation, use get_job_status with returned job_id to monitor deployment.""
             "properties": {
                 "name": {"type": "string", "description": "Project name"},
                 "schema": {"type": "object", "description": "JSON schema in FLAT format (table_name → field_name → properties). Every field MUST have a 'type' property. Use get_template_schemas to see valid examples."},
-                "description": {"type": "string", "description": "Optional project description"}
+                "description": {"type": "string", "description": "Optional project description"},
+                "backend_type": {"type": "string", "enum": ["python", "rust"], "description": "Backend engine: 'python' (FastAPI, default) or 'rust' (Axum, faster). Default: python"}
             },
             "required": ["name", "schema"]
         },
@@ -1216,6 +1221,7 @@ Full documentation: https://infra.rationalbloks.com/documentation"""
                     name=arguments["name"],
                     schema=arguments["schema"],
                     description=arguments.get("description"),
+                    backend_type=arguments.get("backend_type"),
                 )
             elif name == "update_schema":
                 return await client.update_schema(
