@@ -230,7 +230,14 @@ BACKEND_TOOLS = [
    • enum: ["val1", "val2"]
    • foreign_key: "table.id"
 
-AVAILABLE TYPES: string, text, integer, decimal, boolean, uuid, date, datetime, json
+AVAILABLE TYPES: string, text, integer, decimal, boolean, uuid, date, datetime, json, uuid_array, integer_array, text_array, float_array
+
+   Array types store PostgreSQL native arrays with automatic GIN indexing:
+   • uuid_array: UUID[] — for sets of references (e.g., tensor coordinates)
+   • integer_array: BIGINT[] — for dimension indices, integer sets
+   • text_array: TEXT[] — for tags, categories, label sets
+   • float_array: DOUBLE PRECISION[] — for weight vectors, scores
+   GIN-indexed operators: @> (contains), <@ (contained_by), && (overlaps)
 
 BACKEND ENGINE:
 • python (default): FastAPI backend — mature, full-featured
@@ -1472,7 +1479,13 @@ CRITICAL SCHEMA RULES - FOLLOW EXACTLY:
    • enum: ["value1", "value2"]
    • foreign_key: "table_name.id"
 
-AVAILABLE TYPES: string, text, integer, decimal, boolean, uuid, date, datetime, json
+AVAILABLE TYPES: string, text, integer, decimal, boolean, uuid, date, datetime, json, uuid_array, integer_array, text_array, float_array
+
+   Array types store PostgreSQL native arrays with automatic GIN indexing:
+   • uuid_array: UUID[] — for sets of references (e.g., tensor coordinates)
+   • integer_array: BIGINT[] — for dimension indices, integer sets
+   • text_array: TEXT[] — for tags, categories, label sets
+   • float_array: DOUBLE PRECISION[] — for weight vectors, scores
 
 ═══════════════════════════════════════════════════════════════════════════
 
