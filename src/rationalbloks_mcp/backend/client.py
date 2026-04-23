@@ -8,6 +8,7 @@
 # ============================================================================
 
 import httpx
+import os
 import ssl
 import certifi
 import json
@@ -20,8 +21,11 @@ __all__ = ["LogicBlokClient"]
 class LogicBlokClient:
     # HTTP client for LogicBlok MCP Gateway
     # All operations go through POST /api/mcp/execute with tool name and arguments
-    
-    BASE_URL = "https://logicblok.rationalbloks.com"
+
+    # LOGICBLOK_URL env var (set via K8s ConfigMap) lets in-cluster traffic stay
+    # in-cluster (http://logicblok-api.logicblok.svc.cluster.local:8000).
+    # Falls back to the public ingress for local / STDIO / dev use.
+    BASE_URL = os.environ.get("LOGICBLOK_URL", "https://logicblok.rationalbloks.com")
     
     def __init__(self, api_key: str) -> None:
         # Initialize client with API key (rb_sk_...)
@@ -59,7 +63,13 @@ class LogicBlokClient:
             raise Exception(f"MCP Gateway error: {error}")
         
         return result.get("result")
-    
+
+    # Public alias — preferred call path for the MCP tool dispatcher.
+    # The dispatcher does not need per-tool wrappers; it passes the MCP tool
+    # name straight through to the LogicBlok gateway.
+    async def execute(self, tool: str, arguments: dict | None = None) -> Any:
+        return await self._execute(tool, arguments)
+
     # ========================================================================
     # READ OPERATIONS
     # ========================================================================

@@ -312,14 +312,14 @@ class BaseMCPServer:
             handler = self._tool_handlers.get(name) or self._tool_handlers.get("*")
             if not handler:
                 raise ValueError(f"No handler registered for tool: {name}")
-            
-            try:
-                result = await handler(name, arguments)
-                formatted = json.dumps(result, indent=2, default=str)
-                return [TextContent(type="text", text=formatted)]
-            except Exception as e:
-                print(f"[rationalbloks-mcp] Error in {name}: {e}", file=sys.stderr)
-                return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+            # NO outer try/except here. Chain-of-events mantra: let exceptions
+            # propagate so the MCP SDK wraps them into a proper error response
+            # (isError=True on CallToolResult). Silently returning "Error: ..."
+            # text lets AI agents chain a next step after a failed tool call.
+            result = await handler(name, arguments)
+            formatted = json.dumps(result, indent=2, default=str)
+            return [TextContent(type="text", text=formatted)]
     
     def _setup_prompt_handlers(self) -> None:
         # Set up prompt listing and execution handlers
