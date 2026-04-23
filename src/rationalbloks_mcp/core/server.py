@@ -31,7 +31,7 @@ from mcp.types import (
 )
 from starlette.requests import Request
 
-from .auth import validate_api_key, extract_api_key_from_request, APIKeyCache
+from .auth import validate_api_key, extract_api_key_from_request
 from .transport import run_stdio, run_http
 
 # Public API
@@ -225,8 +225,7 @@ class BaseMCPServer:
         self.version = version
         self.instructions = instructions
         self.http_mode = http_mode
-        self._api_key_cache = APIKeyCache()
-        
+
         # Validate API key for STDIO mode
         if not http_mode:
             is_valid, error = validate_api_key(api_key)
