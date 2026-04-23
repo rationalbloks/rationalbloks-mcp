@@ -1,5 +1,4 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.rationalbloks/rationalbloks-mcp",
   "title": "RationalBloks",
   "description": "Deploy production REST APIs and Neo4j Graph APIs from JSON schemas in seconds. 44 tools for projects, schemas, deployments, and graph data.",
