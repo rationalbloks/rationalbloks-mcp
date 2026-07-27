@@ -3,13 +3,13 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# 44 Infrastructure tools:
+# 45 Infrastructure tools:
 #
-# RELATIONAL (18):
-#   READ (11): list_projects, get_project, get_schema, get_user_info,
+# RELATIONAL (19):
+#   READ (12): list_projects, get_project, get_schema, get_user_info,
 #              get_job_status, get_project_info, get_version_history,
 #              get_template_schemas, get_subscription_status, get_project_usage,
-#              get_schema_at_version
+#              get_schema_at_version, list_clusters
 #   WRITE (7): create_project, update_schema, deploy_staging, deploy_production,
 #              delete_project, rollback_project, rename_project
 #
@@ -94,6 +94,13 @@ BACKEND_TOOLS = [
         "name": "get_user_info",
         "title": "Get User Info",
         "description": "Get information about the authenticated user",
+        "inputSchema": {"type": "object", "properties": {}, "required": []},
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    {
+        "name": "list_clusters",
+        "title": "List Resource Pools",
+        "description": "List your registered BYOC resource pools (client-owned Kubernetes clusters). Each returned cluster has an 'id' you can pass as create_project's cluster_id to deploy a project onto your own infrastructure instead of RationalBloks-hosted. Registering a pool is a UI action (paste kubeconfig / run our bootstrap) — this tool only lists pools you already registered, it never uploads cluster credentials.",
         "inputSchema": {"type": "object", "properties": {}, "required": []},
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
@@ -256,7 +263,8 @@ After creation, use get_job_status with returned job_id to monitor deployment.""
                 "name": {"type": "string", "description": "Project name"},
                 "schema": {"type": "object", "description": "JSON schema in FLAT format (table_name → field_name → properties). Every field MUST have a 'type' property. Use get_template_schemas to see valid examples."},
                 "description": {"type": "string", "description": "Optional project description"},
-                "backend_type": {"type": "string", "enum": ["python", "rust"], "description": "Backend engine: 'python' (FastAPI, default) or 'rust' (Axum, faster). Default: python"}
+                "backend_type": {"type": "string", "enum": ["python", "rust"], "description": "Backend engine: 'python' (FastAPI, default) or 'rust' (Axum, faster). Default: python"},
+                "cluster_id": {"type": "string", "description": "Optional BYOC resource pool ID (from list_clusters) to deploy this project onto your own cluster. Omit to deploy on RationalBloks-hosted infrastructure."}
             },
             "required": ["name", "schema"]
         },
@@ -537,7 +545,8 @@ After creation, use get_job_status with returned job_id to monitor deployment.""
             "properties": {
                 "name": {"type": "string", "description": "Project name"},
                 "schema": {"type": "object", "description": "Graph schema with 'nodes' and optionally 'relationships' keys. Use get_graph_template_schemas to see valid examples."},
-                "description": {"type": "string", "description": "Optional project description"}
+                "description": {"type": "string", "description": "Optional project description"},
+                "cluster_id": {"type": "string", "description": "Optional BYOC resource pool ID (from list_clusters) to deploy this project onto your own cluster. Omit to deploy on RationalBloks-hosted infrastructure."}
             },
             "required": ["name", "schema"]
         },

@@ -1,6 +1,6 @@
 # RationalBloks MCP Server
 
-**Deploy production APIs in minutes.** 44 tools for projects, schemas, deployments, and graph data.
+**Deploy production APIs in minutes.** 45 tools for projects, schemas, deployments, and graph data.
 
 [![License](https://img.shields.io/badge/license-Proprietary-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -61,9 +61,9 @@ Visit [rationalbloks.com/settings](https://rationalbloks.com/settings) and creat
 
 ---
 
-## 44 Tools
+## 45 Tools
 
-### Relational Read Operations (11 tools)
+### Relational Read Operations (12 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -78,6 +78,7 @@ Visit [rationalbloks.com/settings](https://rationalbloks.com/settings) and creat
 | `get_subscription_status` | Plan and usage limits |
 | `get_project_usage` | CPU/memory metrics |
 | `get_schema_at_version` | Schema at specific commit |
+| `list_clusters` | List your BYOC resource pools (client-owned clusters) |
 
 ### Relational Write Operations (7 tools)
 
