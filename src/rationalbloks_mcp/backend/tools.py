@@ -100,7 +100,7 @@ BACKEND_TOOLS = [
     {
         "name": "list_clusters",
         "title": "List Resource Pools",
-        "description": "List your registered BYOC resource pools (client-owned Kubernetes clusters). Each returned cluster has an 'id' you MUST pass as create_project's cluster_id to deploy a project onto your own infrastructure — owned hosting is retired, so every project we operate runs on your own cluster. Registering a pool is a UI action (paste kubeconfig / run our bootstrap) — this tool only lists pools you already registered, it never uploads cluster credentials.",
+        "description": "List your registered BYOC resource pools (client-owned Kubernetes clusters). Each returned cluster has an 'id' you MUST pass as create_project's cluster_id to deploy a project onto your own infrastructure — owned hosting is retired, so every project we operate runs on your own cluster. Registering a pool is a UI action (create a bare Ubuntu box, authorise the key we generate, then we provision it into a cluster automatically) — this tool only lists pools you already registered, it never handles cluster credentials.",
         "inputSchema": {"type": "object", "properties": {}, "required": []},
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
