@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rationalbloks-mcp"
-version = "0.10.3"
-description = "RationalBloks MCP Server - Deploy production REST APIs and Neo4j Graph APIs in minutes. 44 infrastructure tools for projects, schemas, and graph data."
+version = "0.11.0"
+description = "RationalBloks MCP Server - Deploy production REST APIs and Neo4j Graph APIs in minutes. 45 infrastructure tools for projects, schemas, and graph data."
 readme = "README.md"
 license = {text = "Proprietary"}
 requires-python = ">=3.10"
@@ -26,18 +26,17 @@ classifiers = [
 ]
 
 dependencies = [
-    # mcp<2 is the load-bearing pin: SDK 2.0 removed the decorator handler API
-    # (@server.list_tools) this package registers with, so an unbounded >=1.0.0
-    # resolves 2.0.0 and crashes at startup. Cap every API-bearing dep below its
-    # next major so a future SDK break can't silently reach users. certifi stays
-    # open — it is a date-versioned CA bundle with a trivial, stable API, and
-    # pinning it would only block the security updates we want.
-    "mcp>=1.0.0,<2",
+    # This package targets the SDK 2.0 handler-registration API (constructor
+    # callbacks); 2.0 removed the 1.x decorator API, so mcp>=2 is required, and <3
+    # caps the next major so a future SDK break can't silently reach users. The same
+    # major-cap guards the other API-bearing deps; certifi stays open — a
+    # date-versioned CA bundle with a trivial, stable API whose updates we want.
+    "mcp>=2,<3",
     "httpx>=0.27.0,<1",
     "certifi>=2024.0.0",
     "starlette>=0.41.0,<1",
     "uvicorn>=0.32.0,<1",
-    "sse-starlette>=2.1.0,<3",
+    "sse-starlette>=3.0.0,<4",
 ]
 
 [project.optional-dependencies]

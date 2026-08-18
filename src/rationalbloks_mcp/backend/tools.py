@@ -1081,12 +1081,12 @@ GRAPH_PROMPTS = [
 # BACKEND MCP SERVER
 # ============================================================================
 
-# All tools are infrastructure-only (44 tools)
+# All tools are infrastructure-only (45 tools)
 INFRASTRUCTURE_TOOLS = BACKEND_TOOLS + GRAPH_TOOLS + GRAPH_DATA_TOOLS
 
 
 class BackendMCPServer(BaseMCPServer):
-    # Backend MCP server with 44 infrastructure tools
+    # Backend MCP server with 45 infrastructure tools
     # Extends BaseMCPServer with: LogicBlok client integration, backend + graph tools, prompts
     
     INSTRUCTIONS = """RationalBloks MCP Server — Backend Mode
@@ -1098,7 +1098,7 @@ TWO PROJECT TYPES:
 ═══════════════════════════════════════════════════════════════════════════
 
 1. RELATIONAL (PostgreSQL) — Flat table schemas, SQL databases, CRUD APIs
-   Tools: create_project, get_schema, deploy_staging, etc. (18 tools)
+   Tools: create_project, get_schema, deploy_staging, etc. (19 tools)
 
 2. GRAPH (Neo4j) — Hierarchical node/relationship schemas, graph databases
    Schema tools: create_graph_project, get_graph_schema, deploy_graph_staging, etc. (11 tools)
@@ -1152,7 +1152,7 @@ GRAPH SCHEMA RULES:
 7. DON'T define: id, created_at, updated_at (automatic)
 8. Use get_graph_template_schemas FIRST to see valid examples
 
-Available: 44 tools — 18 relational + 11 graph schema + 15 graph data.
+Available: 45 tools — 19 relational + 11 graph schema + 15 graph data.
 Full documentation: https://infra.rationalbloks.com/documentation"""
     
     def __init__(
@@ -1192,9 +1192,6 @@ Full documentation: https://infra.rationalbloks.com/documentation"""
             "create-graph-project-from-description",
             self._handle_create_graph_project_prompt,
         )
-        
-        # Set up MCP handlers
-        self.setup_handlers()
     
     def _get_client(self) -> LogicBlokClient:
         # Get LogicBlok client with current API key
@@ -1207,7 +1204,7 @@ Full documentation: https://infra.rationalbloks.com/documentation"""
         # Single dispatch: every tool is a passthrough to LogicBlok's
         # /api/mcp/execute endpoint. LogicBlok is the source of truth for
         # tool semantics, argument validation, and error messages.
-        # Previously this method contained a 44-branch if/elif unpacking
+        # Previously this method contained a per-tool if/elif unpacking
         # arguments and calling per-tool wrapper methods — all pure
         # pass-throughs that forced every new tool to be added in 3 places
         # (tool schema, client wrapper, dispatcher branch).

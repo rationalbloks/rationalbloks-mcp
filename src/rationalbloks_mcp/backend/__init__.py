@@ -3,8 +3,8 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# Backend mode provides 44 infrastructure tools:
-# - Relational: 18 tools (project CRUD, schema, deploy, rollback)
+# Backend mode provides 45 infrastructure tools:
+# - Relational: 19 tools (project CRUD, schema, deploy, rollback)
 # - Graph Schema: 11 tools (graph CRUD, schema, deploy, rollback)
 # - Graph Data: 15 tools (node/relationship CRUD, search, traverse, bulk)
 # ============================================================================

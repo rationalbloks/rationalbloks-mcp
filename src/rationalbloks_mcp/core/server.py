@@ -8,11 +8,12 @@
 #
 # ARCHITECTURE:
 # - BaseMCPServer provides common MCP infrastructure
-# - BackendMCPServer adds 44 tools and handlers
+# - BackendMCPServer adds 45 tools and handlers
 # ============================================================================
 
 import json
 import sys
+from contextvars import ContextVar
 from typing import Any, Callable
 
 from mcp.server import Server
@@ -23,16 +24,26 @@ from mcp.types import (
     ToolAnnotations,
     TextContent,
     Prompt,
-    PromptArgument,
-    PromptMessage,
     GetPromptResult,
     Resource,
     Icon,
+    ListToolsResult,
+    CallToolResult,
+    ListPromptsResult,
+    ListResourcesResult,
+    ReadResourceResult,
+    TextResourceContents,
 )
 from starlette.requests import Request
 
 from .auth import validate_api_key, extract_api_key_from_request
 from .transport import run_stdio, run_http
+
+# The in-flight HTTP request for the current tool call. SDK 2.0 hands the request to
+# handlers via ctx.request (it removed Server.request_context), so on_call_tool stashes
+# it here for get_api_key_for_request to read during HTTP per-request auth. A ContextVar
+# is task-local, so concurrent requests never read each other's key. None on stdio.
+_current_request: ContextVar = ContextVar("rationalbloks_mcp_current_request", default=None)
 
 # Public API
 __all__ = [
@@ -53,11 +64,11 @@ DOCS_GETTING_STARTED = """# Getting Started with RationalBloks MCP
 2. Set environment variable: export RATIONALBLOKS_API_KEY=rb_sk_...
 3. Run the server: uvx rationalbloks-mcp
 
-## Tools (44 total)
+## Tools (45 total)
 
-RationalBloks MCP provides 44 infrastructure tools across 3 categories:
+RationalBloks MCP provides 45 infrastructure tools across 3 categories:
 
-- **Relational** (18 tools): Create, deploy, and manage PostgreSQL REST APIs
+- **Relational** (19 tools): Create, deploy, and manage PostgreSQL REST APIs
 - **Graph Schema** (11 tools): Create, deploy, and manage Neo4j Graph APIs
 - **Graph Data** (15 tools): CRUD, search, traverse, and bulk operations on graph data
 
@@ -159,8 +170,8 @@ Full docs: https://infra.rationalbloks.com/documentation
 
 DOCS_API_REFERENCE = """# RationalBloks MCP API Reference
 
-## Relational Tools (18)
-- list_projects, get_project, get_schema, get_user_info
+## Relational Tools (19)
+- list_projects, get_project, get_schema, get_user_info, list_clusters
 - get_job_status, get_project_info, get_version_history
 - get_template_schemas, get_subscription_status, get_project_usage
 - get_schema_at_version, create_project, update_schema
@@ -191,9 +202,11 @@ def create_mcp_server(
     name: str,
     version: str,
     instructions: str,
+    handlers: dict[str, Callable],
 ) -> Server:
-    # Create a configured MCP Server instance
-    # Returns: Configured MCP Server with icons and metadata
+    # Create a configured MCP Server. SDK 2.0 registers request handlers as constructor
+    # callbacks (the 1.x decorator API was removed), so `handlers` (built by
+    # BaseMCPServer._build_handlers) is expanded into the constructor.
     return Server(
         name=name,
         version=version,
@@ -203,6 +216,7 @@ def create_mcp_server(
             Icon(src="https://rationalbloks.com/logo.svg", mimeType="image/svg+xml"),
             Icon(src="https://rationalbloks.com/logo.png", mimeType="image/png", sizes=["128x128"]),
         ],
+        **handlers,
     )
 
 
@@ -234,22 +248,23 @@ class BaseMCPServer:
             self.api_key = api_key
         else:
             self.api_key = None
-        
-        # Create MCP server instance
-        self.server = create_mcp_server(name, version, instructions)
-        
-        # Tools and handlers (set by subclass)
+
+        # Registries populated by subclasses via register_*(). Initialized BEFORE the
+        # Server is built so the handler closures can read them lazily at call time — a
+        # subclass registers its tools/prompts after super().__init__() returns.
         self._tools: list[dict] = []
         self._tool_handlers: dict[str, Callable] = {}
         self._prompts: list[Prompt] = []
         self._prompt_handlers: dict[str, Callable] = {}
-        
-        # Resources
         self._static_resources: dict[str, str] = {
             "rationalbloks://docs/getting-started": DOCS_GETTING_STARTED,
             "rationalbloks://docs/schema-reference": DOCS_SCHEMA_REFERENCE,
             "rationalbloks://docs/api-reference": DOCS_API_REFERENCE,
         }
+
+        # SDK 2.0 takes request handlers as constructor callbacks, so build them first
+        # and pass them in. Nothing to register after construction.
+        self.server = create_mcp_server(name, version, instructions, self._build_handlers())
     
     def register_tools(self, tools: list[dict]) -> None:
         # Register tools for this server mode
@@ -267,18 +282,14 @@ class BaseMCPServer:
         # Register a handler function for a prompt
         self._prompt_handlers[name] = handler
     
-    def setup_handlers(self) -> None:
-        # Set up all MCP protocol handlers
-        # Call this AFTER registering tools and prompts
-        self._setup_tool_handlers()
-        self._setup_prompt_handlers()
-        self._setup_resource_handlers()
-    
-    def _setup_tool_handlers(self) -> None:
-        # Set up tool listing and execution handlers
-        
-        @self.server.list_tools()
-        async def list_tools() -> list[Tool]:
+    def _build_handlers(self) -> dict[str, Callable]:
+        # Build the MCP request handlers as closures over self. SDK 2.0 takes them as
+        # Server constructor callbacks (the 1.x decorator API was removed); each gets
+        # (ctx, params) and returns a typed *Result. The closures read the registries
+        # at CALL time, so tools/prompts a subclass registers after super().__init__()
+        # are still served.
+
+        async def on_list_tools(ctx, params) -> ListToolsResult:
             tools_list = []
             for tool in self._tools:
                 annotations = None
@@ -288,57 +299,51 @@ class BaseMCPServer:
                         readOnlyHint=ann.get("readOnlyHint"),
                         destructiveHint=ann.get("destructiveHint"),
                         idempotentHint=ann.get("idempotentHint"),
-                        openWorldHint=ann.get("openWorldHint")
+                        openWorldHint=ann.get("openWorldHint"),
                     )
-                
-                tool_obj = Tool(
+                tools_list.append(Tool(
                     name=tool["name"],
                     title=tool.get("title"),
                     description=tool["description"],
                     inputSchema=tool["inputSchema"],
-                    annotations=annotations
-                )
-                tools_list.append(tool_obj)
-            return tools_list
-        
-        @self.server.call_tool()
-        async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+                    annotations=annotations,
+                ))
+            return ListToolsResult(tools=tools_list)
+
+        async def on_call_tool(ctx, params) -> CallToolResult:
+            # SDK 2.0 removed Server.request_context; the HTTP request now arrives on
+            # ctx.request. Stash it so get_api_key_for_request can read the bearer key
+            # for this call (HTTP mode). None on stdio, where the stored key is used.
+            _current_request.set(getattr(ctx, "request", None))
+
+            name = params.name
+            arguments = params.arguments or {}
             valid_tools = [t["name"] for t in self._tools]
             if name not in valid_tools:
                 raise ValueError(f"Unknown tool: {name}")
-            
-            # Check for specific handler first, then wildcard handler
+
+            # Specific handler first, then the wildcard handler.
             handler = self._tool_handlers.get(name) or self._tool_handlers.get("*")
             if not handler:
                 raise ValueError(f"No handler registered for tool: {name}")
 
-            # NO outer try/except here. Chain-of-events mantra: let exceptions
-            # propagate so the MCP SDK wraps them into a proper error response
-            # (isError=True on CallToolResult). Silently returning "Error: ..."
-            # text lets AI agents chain a next step after a failed tool call.
+            # NO outer try/except. Chain-of-events: let exceptions propagate so the SDK
+            # marks the result isError=True. Silently returning "Error: ..." text lets
+            # an agent chain a next step after a failed tool call.
             result = await handler(name, arguments)
             formatted = json.dumps(result, indent=2, default=str)
-            return [TextContent(type="text", text=formatted)]
-    
-    def _setup_prompt_handlers(self) -> None:
-        # Set up prompt listing and execution handlers
-        
-        @self.server.list_prompts()
-        async def list_prompts() -> list[Prompt]:
-            return self._prompts
-        
-        @self.server.get_prompt()
-        async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> GetPromptResult:
-            handler = self._prompt_handlers.get(name)
+            return CallToolResult(content=[TextContent(type="text", text=formatted)])
+
+        async def on_list_prompts(ctx, params) -> ListPromptsResult:
+            return ListPromptsResult(prompts=self._prompts)
+
+        async def on_get_prompt(ctx, params) -> GetPromptResult:
+            handler = self._prompt_handlers.get(params.name)
             if not handler:
-                raise ValueError(f"Unknown prompt: {name}")
-            return handler(name, arguments)
-    
-    def _setup_resource_handlers(self) -> None:
-        # Set up resource listing and reading handlers
-        
-        @self.server.list_resources()
-        async def list_resources() -> list[Resource]:
+                raise ValueError(f"Unknown prompt: {params.name}")
+            return handler(params.name, params.arguments)
+
+        async def on_list_resources(ctx, params) -> ListResourcesResult:
             resources = []
             for uri, _ in self._static_resources.items():
                 name = uri.split("/")[-1].replace("-", " ").title()
@@ -346,33 +351,42 @@ class BaseMCPServer:
                     uri=uri,
                     name=f"{name} Guide",
                     description=f"Documentation: {name}",
-                    mimeType="text/markdown"
+                    mimeType="text/markdown",
                 ))
-            return resources
-        
-        @self.server.read_resource()
-        async def read_resource(uri) -> str:
-            uri_str = str(uri)
-            if uri_str in self._static_resources:
-                return self._static_resources[uri_str]
-            raise ValueError(f"Unknown resource: {uri_str}")
+            return ListResourcesResult(resources=resources)
+
+        async def on_read_resource(ctx, params) -> ReadResourceResult:
+            uri_str = str(params.uri)
+            if uri_str not in self._static_resources:
+                raise ValueError(f"Unknown resource: {uri_str}")
+            return ReadResourceResult(contents=[
+                TextResourceContents(
+                    uri=params.uri,
+                    text=self._static_resources[uri_str],
+                    mimeType="text/markdown",
+                ),
+            ])
+
+        return {
+            "on_list_tools": on_list_tools,
+            "on_call_tool": on_call_tool,
+            "on_list_prompts": on_list_prompts,
+            "on_get_prompt": on_get_prompt,
+            "on_list_resources": on_list_resources,
+            "on_read_resource": on_read_resource,
+        }
     
     def get_api_key_for_request(self) -> str | None:
-        # Get API key for current request
-        # STDIO mode: Returns stored API key
-        # HTTP mode: Extracts from Authorization header
+        # Get the API key for the current request.
+        # STDIO mode: the key validated at startup.
+        # HTTP mode: the bearer key from the in-flight request, stashed by on_call_tool
+        # (SDK 2.0 hands the request to handlers via ctx.request, not a server context).
         if not self.http_mode:
             return self.api_key
-        
-        # HTTP mode - extract from request
-        ctx = getattr(self.server, 'request_context', None)
-        if ctx is None:
-            return None
-        
-        request = getattr(ctx, 'request', None)
+
+        request = _current_request.get()
         if request is None or not isinstance(request, Request):
             return None
-        
         return extract_api_key_from_request(request)
     
     def get_init_options(self) -> InitializationOptions:

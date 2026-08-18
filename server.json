@@ -1,17 +1,17 @@
 {
   "name": "io.github.rationalbloks/rationalbloks-mcp",
   "title": "RationalBloks",
-  "description": "Deploy production REST APIs and Neo4j Graph APIs from JSON schemas in seconds. 44 tools for projects, schemas, deployments, and graph data.",
+  "description": "Deploy production REST APIs and Neo4j Graph APIs from JSON schemas in seconds. 45 tools for projects, schemas, deployments, and graph data.",
   "repository": {
     "url": "https://github.com/rationalbloks/rationalbloks-mcp",
     "source": "github"
   },
-  "version": "0.10.3",
+  "version": "0.11.0",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "rationalbloks-mcp",
-      "version": "0.10.3",
+      "version": "0.11.0",
       "transport": {
         "type": "stdio"
       },
