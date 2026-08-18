@@ -1,0 +1,21 @@
+# ============================================================================
+# CI — smoke test
+# ============================================================================
+# Catches the 0.10.2 failure class (a breaking mcp SDK major crashing the server
+# at construction) that unit tests miss. Runs on the pinned, locked dependencies.
+# ============================================================================
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --locked --extra dev
+      - run: uv run pytest -q
