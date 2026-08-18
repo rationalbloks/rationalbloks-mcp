@@ -39,8 +39,9 @@ htmlcov/
 # Build
 *.whl
 
-# UV
-uv.lock
+# UV — uv.lock IS committed: this package is deployed via Docker `uv sync`, so a
+# pinned lock gives reproducible builds and is the second guard (after the pyproject
+# bounds) against ever resolving a breaking SDK major like mcp 2.0.
 
 # MCP Publisher
 mcp-publisher.exe

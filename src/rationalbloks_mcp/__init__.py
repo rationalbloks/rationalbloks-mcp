@@ -22,6 +22,7 @@
 
 import os
 import sys
+import traceback
 
 # Version from package metadata
 from importlib.metadata import version as _get_version
@@ -89,7 +90,12 @@ def main() -> None:
     except KeyboardInterrupt:
         sys.exit(0)
     except Exception as e:
-        print(f"ERROR: {e}", file=sys.stderr)
+        # Surface the exception CLASS — the most diagnostic part — and, under
+        # RATIONALBLOKS_DEBUG, the full traceback. A bare str(e) at the top-level
+        # entry point hid WHERE and WHY startup failed (chain-of-events: fail loud).
+        print(f"ERROR: {type(e).__name__}: {e}", file=sys.stderr)
+        if os.environ.get("RATIONALBLOKS_DEBUG"):
+            traceback.print_exc(file=sys.stderr)
         sys.exit(1)
 
 
