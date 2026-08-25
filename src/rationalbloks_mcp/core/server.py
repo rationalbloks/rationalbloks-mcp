@@ -411,6 +411,7 @@ class BaseMCPServer:
                 name=self.name,
                 version=self.version,
                 description=self.instructions,
+                init_options=self.get_init_options(),
             )
         else:
             run_stdio(
