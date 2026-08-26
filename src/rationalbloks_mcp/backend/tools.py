@@ -3,12 +3,13 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# 45 Infrastructure tools:
+# 47 Infrastructure tools:
 #
-# RELATIONAL (19):
-#   READ (12): list_projects, get_project, get_schema, get_user_info,
+# RELATIONAL (21):
+#   READ (14): list_projects, get_project, get_schema, get_user_info,
 #              get_job_status, get_project_info, get_version_history,
 #              get_template_schemas, get_subscription_status, get_project_usage,
+#              get_project_storage_usage, list_project_files,
 #              get_schema_at_version, list_clusters
 #   WRITE (7): create_project, update_schema, deploy_staging, deploy_production,
 #              delete_project, rollback_project, rename_project
@@ -165,6 +166,36 @@ BACKEND_TOOLS = [
             "type": "object",
             "properties": {
                 "project_id": {"type": "string", "description": "Project ID (UUID)"}
+            },
+            "required": ["project_id"]
+        },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    {
+        "name": "get_project_storage_usage",
+        "title": "Get Project Storage Usage",
+        "description": "Get object-storage usage for a project: file count and bytes used against the plan limits.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "environment": {"type": "string", "description": "Environment: staging or production (default: production)"}
+            },
+            "required": ["project_id"]
+        },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    {
+        "name": "list_project_files",
+        "title": "List Project Files",
+        "description": "List a project's uploaded files (metadata + public URLs), most recent first. Inspection only — files are not streamed through MCP.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "environment": {"type": "string", "description": "Environment: staging or production (default: production)"},
+                "limit": {"type": "integer", "description": "Max files to return (1-1000, default 100)"},
+                "offset": {"type": "integer", "description": "Pagination offset (default 0)"}
             },
             "required": ["project_id"]
         },
@@ -1081,12 +1112,12 @@ GRAPH_PROMPTS = [
 # BACKEND MCP SERVER
 # ============================================================================
 
-# All tools are infrastructure-only (45 tools)
+# All tools are infrastructure-only (47 tools)
 INFRASTRUCTURE_TOOLS = BACKEND_TOOLS + GRAPH_TOOLS + GRAPH_DATA_TOOLS
 
 
 class BackendMCPServer(BaseMCPServer):
-    # Backend MCP server with 45 infrastructure tools
+    # Backend MCP server with 47 infrastructure tools
     # Extends BaseMCPServer with: LogicBlok client integration, backend + graph tools, prompts
     
     INSTRUCTIONS = """RationalBloks MCP Server — Backend Mode
@@ -1098,7 +1129,7 @@ TWO PROJECT TYPES:
 ═══════════════════════════════════════════════════════════════════════════
 
 1. RELATIONAL (PostgreSQL) — Flat table schemas, SQL databases, CRUD APIs
-   Tools: create_project, get_schema, deploy_staging, etc. (19 tools)
+   Tools: create_project, get_schema, deploy_staging, etc. (21 tools)
 
 2. GRAPH (Neo4j) — Hierarchical node/relationship schemas, graph databases
    Schema tools: create_graph_project, get_graph_schema, deploy_graph_staging, etc. (11 tools)
@@ -1152,7 +1183,7 @@ GRAPH SCHEMA RULES:
 7. DON'T define: id, created_at, updated_at (automatic)
 8. Use get_graph_template_schemas FIRST to see valid examples
 
-Available: 45 tools — 19 relational + 11 graph schema + 15 graph data.
+Available: 47 tools — 21 relational + 11 graph schema + 15 graph data.
 Full documentation: https://infra.rationalbloks.com/documentation"""
     
     def __init__(
