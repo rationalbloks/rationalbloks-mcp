@@ -3,8 +3,8 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# Deploy production REST APIs and Neo4j Graph APIs in minutes. 45 tools for:
-#   - Relational: 19 tools (create, list, deploy, rollback, templates, etc.)
+# Deploy production REST APIs and Neo4j Graph APIs in minutes. 47 tools for:
+#   - Relational: 21 tools (create, list, deploy, rollback, templates, storage, etc.)
 #   - Graph Schema: 11 tools (create, deploy, rollback, templates, etc.)
 #   - Graph Data: 15 tools (CRUD, search, traverse, bulk, fulltext)
 #
@@ -80,7 +80,7 @@ def main() -> None:
     # Validate API key
     validated_key = _validate_api_key(api_key, transport)
     
-    print(f"[rationalbloks-mcp] Starting server (45 tools: 19 relational + 11 graph schema + 15 graph data)...", file=sys.stderr)
+    print(f"[rationalbloks-mcp] Starting server (47 tools: 21 relational + 11 graph schema + 15 graph data)...", file=sys.stderr)
     
     try:
         from .backend import create_backend_server

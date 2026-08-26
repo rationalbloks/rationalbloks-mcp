@@ -64,7 +64,7 @@ DOCS_GETTING_STARTED = """# Getting Started with RationalBloks MCP
 2. Set environment variable: export RATIONALBLOKS_API_KEY=rb_sk_...
 3. Run the server: uvx rationalbloks-mcp
 
-## Tools (45 total)
+## Tools (47 total)
 
 RationalBloks MCP provides 47 infrastructure tools across 3 categories:
 
@@ -170,10 +170,11 @@ Full docs: https://infra.rationalbloks.com/documentation
 
 DOCS_API_REFERENCE = """# RationalBloks MCP API Reference
 
-## Relational Tools (19)
+## Relational Tools (21)
 - list_projects, get_project, get_schema, get_user_info, list_clusters
 - get_job_status, get_project_info, get_version_history
 - get_template_schemas, get_subscription_status, get_project_usage
+- get_project_storage_usage, list_project_files
 - get_schema_at_version, create_project, update_schema
 - deploy_staging, deploy_production, delete_project
 - rollback_project, rename_project
