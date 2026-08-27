@@ -322,16 +322,22 @@ After creation, use get_job_status with returned job_id to monitor deployment.""
 WORKFLOW:
 1. Use get_schema to see current schema
 2. Modify following ALL rules
-3. Call update_schema (saves only)
-4. Call deploy_staging to apply changes
-5. Monitor with get_job_status
+3. (optional) Call update_schema with dry_run=true to preview the migration first
+4. Call update_schema (saves only)
+5. Call deploy_staging to apply changes
+6. Monitor with get_job_status
 
-NOTE: This only saves the schema. You MUST call deploy_staging afterwards to apply changes.""",
+DRY RUN: pass dry_run=true to preview what a deploy WOULD change — renames, drops, creates —
+without saving or deploying anything. The response flags destructive operations (dropped
+tables/columns) so you can review before applying.
+
+NOTE: Without dry_run this only saves the schema. You MUST call deploy_staging afterwards to apply changes.""",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "project_id": {"type": "string", "description": "Project ID (UUID)"},
-                "schema": {"type": "object", "description": "New JSON schema in FLAT format (table_name → field_name → properties). Every field MUST have a 'type' property."}
+                "schema": {"type": "object", "description": "New JSON schema in FLAT format (table_name → field_name → properties). Every field MUST have a 'type' property."},
+                "dry_run": {"type": "boolean", "description": "Preview the planned migration (renames/drops/creates) without saving or deploying. Nothing is applied."}
             },
             "required": ["project_id", "schema"]
         },
