@@ -165,7 +165,7 @@ Add user_id → app_users.id for user-owned resources:
 
 Set via backend_type parameter in create_project.
 
-Full docs: https://infra.rationalbloks.com/documentation
+Full docs: https://rationalbloks.com/documentation
 """
 
 DOCS_API_REFERENCE = """# RationalBloks MCP API Reference

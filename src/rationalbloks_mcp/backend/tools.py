@@ -1197,7 +1197,7 @@ GRAPH SCHEMA RULES:
 8. Use get_graph_template_schemas FIRST to see valid examples
 
 Available: 47 tools — 21 relational + 11 graph schema + 15 graph data.
-Full documentation: https://infra.rationalbloks.com/documentation"""
+Full documentation: https://rationalbloks.com/documentation"""
     
     def __init__(
         self,
