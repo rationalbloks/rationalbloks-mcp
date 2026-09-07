@@ -72,7 +72,6 @@ RationalBloks MCP provides 48 infrastructure tools across 3 categories:
 - **Graph Schema** (11 tools): Create, deploy, and manage Neo4j Graph APIs
 - **Graph Data** (15 tools): CRUD, search, traverse, and bulk operations on graph data
 
-For AI knowledge processing, connect to the Graforest MCP endpoint separately.
 
 ## Need Help?
 
@@ -194,7 +193,6 @@ DOCS_API_REFERENCE = """# RationalBloks MCP API Reference
 - search_graph_nodes, fulltext_search_graph, traverse_graph
 - get_graph_statistics, get_graph_data_schema
 
-For AI knowledge processing tools, connect to the Graforest MCP endpoint.
 For full documentation, visit https://rationalbloks.com/docs
 """
 
