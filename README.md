@@ -1,6 +1,6 @@
 # RationalBloks MCP Server
 
-**Deploy production APIs in minutes.** 47 tools for projects, schemas, deployments, object storage, and graph data.
+**Deploy production APIs in minutes.** 48 tools for projects, schemas, deployments, object storage, and graph data — delivered on infrastructure you own (self-host or your own BYOC cluster).
 
 [![License](https://img.shields.io/badge/license-Proprietary-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -18,6 +18,10 @@ RationalBloks MCP lets AI agents (Claude, Cursor, etc.) deploy production APIs f
 ## Installation
 
 ```bash
+# recommended — no install step, always the latest release
+uvx rationalbloks-mcp@latest
+
+# or install into an environment
 pip install rationalbloks-mcp
 ```
 
@@ -29,13 +33,14 @@ Visit [rationalbloks.com/settings](https://rationalbloks.com/settings) and creat
 
 ### 2. Configure Your AI Agent
 
-**VS Code / Cursor** - Add to `settings.json`:
+**VS Code** - Add to `.vscode/mcp.json` (Cursor: `.cursor/mcp.json` with a `mcpServers` key):
 
 ```json
 {
-  "mcp.servers": {
+  "servers": {
     "rationalbloks": {
-      "command": "rationalbloks-mcp",
+      "command": "uvx",
+      "args": ["rationalbloks-mcp@latest"],
       "env": {
         "RATIONALBLOKS_API_KEY": "rb_sk_your_key_here"
       }
@@ -50,7 +55,8 @@ Visit [rationalbloks.com/settings](https://rationalbloks.com/settings) and creat
 {
   "mcpServers": {
     "rationalbloks": {
-      "command": "rationalbloks-mcp",
+      "command": "uvx",
+      "args": ["rationalbloks-mcp@latest"],
       "env": {
         "RATIONALBLOKS_API_KEY": "rb_sk_your_key_here"
       }
@@ -61,9 +67,13 @@ Visit [rationalbloks.com/settings](https://rationalbloks.com/settings) and creat
 
 ---
 
-## 47 Tools
+**Remote (no install):** point any MCP client at `https://mcp.rationalbloks.com/mcp` (Streamable HTTP; legacy SSE at `/sse`) with `Authorization: Bearer rb_sk_...`.
 
-### Relational Read Operations (14 tools)
+---
+
+## 48 Tools
+
+### Relational Read Operations (15 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -75,6 +85,7 @@ Visit [rationalbloks.com/settings](https://rationalbloks.com/settings) and creat
 | `get_project_info` | Detailed project info with K8s status |
 | `get_version_history` | Git commit history |
 | `get_template_schemas` | Pre-built schema templates |
+| `get_schema_reference` | Advanced schema features reference (`__policy__`, `computed`, `__constraints__`, `__audit__`) |
 | `get_subscription_status` | Plan and usage limits |
 | `get_project_usage` | CPU/memory metrics |
 | `get_project_storage_usage` | Object-storage file count and bytes used vs limits |
@@ -86,8 +97,8 @@ Visit [rationalbloks.com/settings](https://rationalbloks.com/settings) and creat
 
 | Tool | Description |
 |------|-------------|
-| `create_project` | Create new project from schema |
-| `update_schema` | Update project schema |
+| `create_project` | Create new project from schema (`cluster_id` of one of your BYOC pools is required; `backend_type` python or rust) |
+| `update_schema` | Update project schema (`dry_run: true` previews the migration plan without saving) |
 | `deploy_staging` | Deploy to staging environment |
 | `deploy_production` | Deploy to production |
 | `delete_project` | Delete project permanently |
@@ -203,9 +214,11 @@ These provide:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `RATIONALBLOKS_API_KEY` | Your API key (required) | - |
-| `RATIONALBLOKS_TIMEOUT` | Request timeout (seconds) | `30` |
-| `RATIONALBLOKS_LOG_LEVEL` | Log level | `INFO` |
+| `RATIONALBLOKS_API_KEY` | Your API key (required for stdio; HTTP clients send it as a Bearer token per request) | - |
+| `TRANSPORT` | `stdio` or `http` | `stdio` |
+| `HOST` / `PORT` | Bind address for `TRANSPORT=http` | `0.0.0.0` / `8000` |
+| `LOGICBLOK_URL` | LogicBlok gateway base URL | `https://logicblok.rationalbloks.com` |
+| `RATIONALBLOKS_DEBUG` | Print full tracebacks on startup errors | unset |
 
 ---
 

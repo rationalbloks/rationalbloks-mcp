@@ -3,7 +3,7 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# 47 Infrastructure tools:
+# 48 Infrastructure tools:
 #
 # RELATIONAL (21):
 #   READ (14): list_projects, get_project, get_schema, get_user_info,
@@ -1125,12 +1125,12 @@ GRAPH_PROMPTS = [
 # BACKEND MCP SERVER
 # ============================================================================
 
-# All tools are infrastructure-only (47 tools)
+# All tools are infrastructure-only (48 tools)
 INFRASTRUCTURE_TOOLS = BACKEND_TOOLS + GRAPH_TOOLS + GRAPH_DATA_TOOLS
 
 
 class BackendMCPServer(BaseMCPServer):
-    # Backend MCP server with 47 infrastructure tools
+    # Backend MCP server with 48 infrastructure tools
     # Extends BaseMCPServer with: LogicBlok client integration, backend + graph tools, prompts
     
     INSTRUCTIONS = """RationalBloks MCP Server — Backend Mode
@@ -1142,7 +1142,7 @@ TWO PROJECT TYPES:
 ═══════════════════════════════════════════════════════════════════════════
 
 1. RELATIONAL (PostgreSQL) — Flat table schemas, SQL databases, CRUD APIs
-   Tools: create_project, get_schema, deploy_staging, etc. (21 tools)
+   Tools: create_project, get_schema, deploy_staging, etc. (22 tools)
 
 2. GRAPH (Neo4j) — Hierarchical node/relationship schemas, graph databases
    Schema tools: create_graph_project, get_graph_schema, deploy_graph_staging, etc. (11 tools)
@@ -1196,7 +1196,7 @@ GRAPH SCHEMA RULES:
 7. DON'T define: id, created_at, updated_at (automatic)
 8. Use get_graph_template_schemas FIRST to see valid examples
 
-Available: 47 tools — 21 relational + 11 graph schema + 15 graph data.
+Available: 48 tools — 22 relational + 11 graph schema + 15 graph data.
 Full documentation: https://rationalbloks.com/documentation"""
     
     def __init__(

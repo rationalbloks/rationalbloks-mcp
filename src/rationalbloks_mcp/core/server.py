@@ -8,7 +8,7 @@
 #
 # ARCHITECTURE:
 # - BaseMCPServer provides common MCP infrastructure
-# - BackendMCPServer adds 47 tools and handlers
+# - BackendMCPServer adds 48 tools and handlers
 # ============================================================================
 
 import json
@@ -64,11 +64,11 @@ DOCS_GETTING_STARTED = """# Getting Started with RationalBloks MCP
 2. Set environment variable: export RATIONALBLOKS_API_KEY=rb_sk_...
 3. Run the server: uvx rationalbloks-mcp
 
-## Tools (47 total)
+## Tools (48 total)
 
-RationalBloks MCP provides 47 infrastructure tools across 3 categories:
+RationalBloks MCP provides 48 infrastructure tools across 3 categories:
 
-- **Relational** (21 tools): Create, deploy, and manage PostgreSQL REST APIs
+- **Relational** (22 tools): Create, deploy, and manage PostgreSQL REST APIs
 - **Graph Schema** (11 tools): Create, deploy, and manage Neo4j Graph APIs
 - **Graph Data** (15 tools): CRUD, search, traverse, and bulk operations on graph data
 
