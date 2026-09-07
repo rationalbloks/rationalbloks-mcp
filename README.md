@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/rationalbloks-rationalbloks-mcp-badge.png)](https://mseep.ai/app/rationalbloks-rationalbloks-mcp)
+
 # RationalBloks MCP Server
 
 **Deploy production APIs in minutes.** 48 tools for projects, schemas, deployments, object storage, and graph data — delivered on infrastructure you own (self-host or your own BYOC cluster).
