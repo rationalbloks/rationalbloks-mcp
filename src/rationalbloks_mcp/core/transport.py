@@ -149,6 +149,17 @@ def create_http_app(
         # Streamable HTTP requests for the MCP protocol
         await session_manager.handle_request(scope, receive, send)
 
+    async def handle_root(scope: Scope, receive: Receive, send: Send):
+        # The "/" mount serves Streamable HTTP at the origin itself, but it matches every
+        # path no other route claimed. Those are unknown paths: answer 404 instead of
+        # handing them to the session manager, which holds the connection open until the
+        # client times out. Clients probe /.well-known/oauth-* on connect (RFC 9728), so
+        # a hang there stalls a connection that a refusal completes at once.
+        if scope["path"] not in ("", "/"):
+            await JSONResponse({"detail": "Not Found"}, status_code=404)(scope, receive, send)
+            return
+        await handle_streamable(scope, receive, send)
+
     @contextlib.asynccontextmanager
     async def lifespan(app: Starlette) -> AsyncIterator[None]:
         # Application lifespan for the Streamable HTTP session manager
