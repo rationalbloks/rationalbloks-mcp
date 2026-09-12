@@ -691,7 +691,6 @@ dependencies = [
     { name = "certifi" },
     { name = "httpx" },
     { name = "mcp" },
-    { name = "sse-starlette" },
     { name = "starlette" },
     { name = "uvicorn" },
 ]
@@ -709,7 +708,6 @@ requires-dist = [
     { name = "mcp", specifier = ">=2,<3" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.0" },
-    { name = "sse-starlette", specifier = ">=3.0.0,<4" },
     { name = "starlette", specifier = ">=0.41.0,<1" },
     { name = "uvicorn", specifier = ">=0.32.0,<1" },
 ]

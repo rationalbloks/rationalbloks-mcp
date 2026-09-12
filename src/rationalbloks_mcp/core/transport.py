@@ -6,9 +6,10 @@
 # Shared transport implementations for STDIO and HTTP modes.
 # Backend MCP uses these transport functions for both local and cloud deployment.
 #
-# DUAL TRANSPORT ARCHITECTURE:
-# - STDIO:  Local development (Cursor, VS Code, Claude Desktop)
-# - HTTP:   Cloud deployment (Smithery, Replit, web agents)
+# THE TWO TRANSPORTS THE MCP SPECIFICATION DEFINES:
+# - STDIO:           the package run as a subprocess (Claude Desktop, Smithery)
+# - Streamable HTTP: the hosted server (Claude Code, Cursor, GitHub Copilot, and
+#                    anything else that takes a remote MCP server)
 #
 # CHAIN MANTRA: No branching, single path through each transport
 # ============================================================================
@@ -22,9 +23,7 @@ from collections.abc import AsyncIterator
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.server.sse import SseServerTransport
 from mcp.server.models import InitializationOptions
-from mcp.server.lowlevel.server import NotificationOptions
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
 # Public API
@@ -33,6 +32,13 @@ __all__ = [
     "run_http",
     "create_http_app",
 ]
+
+# The paths that ARE the MCP endpoint, which is served at /mcp and at the origin.
+# Starlette's Mount leaves scope["path"] as the full request path and records the
+# matched prefix in root_path, so a handler mounted at /mcp sees "/mcp" here, not a
+# stripped remainder. Anything not in this tuple reached a mount by falling past every
+# named route, which makes it an unknown path.
+MCP_ENDPOINT_PATHS = ("", "/", "/mcp", "/mcp/")
 
 
 # ============================================================================
@@ -67,24 +73,19 @@ def run_http(
     name: str,
     version: str,
     description: str,
-    init_options: InitializationOptions,
     server_card_builder: Callable[[], dict] | None = None,
 ) -> None:
-    # Run MCP server in HTTP mode for cloud deployment
-    # Used by: Smithery, Replit, web agents, cloud platforms
-    # init_options: passed to server.run() for each /sse session (same object stdio uses)
+    # Run MCP server over Streamable HTTP for the hosted deployment
     # CHAIN: Build app → run uvicorn → no branching
     import uvicorn
 
-    app = create_http_app(server, name, version, description, init_options, server_card_builder)
+    app = create_http_app(server, name, version, description, server_card_builder)
 
     port = int(os.environ.get("PORT", 8000))
     host = os.environ.get("HOST", "0.0.0.0")
 
     print(f"[rationalbloks-mcp] HTTP server starting on {host}:{port}", file=sys.stderr)
-    print(f"[rationalbloks-mcp] MCP endpoints:", file=sys.stderr)
-    print(f"[rationalbloks-mcp]   - http://{host}:{port}/mcp (Streamable HTTP — preferred)", file=sys.stderr)
-    print(f"[rationalbloks-mcp]   - http://{host}:{port}/sse (SSE — legacy client compatibility)", file=sys.stderr)
+    print(f"[rationalbloks-mcp] MCP endpoint: http://{host}:{port}/mcp", file=sys.stderr)
 
     uvicorn.run(app, host=host, port=port, log_level="info")
 
@@ -94,19 +95,15 @@ def create_http_app(
     name: str,
     version: str,
     description: str,
-    init_options: InitializationOptions,
     server_card_builder: Callable[[], dict] | None = None,
 ) -> Any:
-    # Create Starlette ASGI application for HTTP transport.
-    # Two distinct MCP transports the spec defines, each on its own route:
-    # - /mcp (+ /):    Streamable HTTP — the current standard, preferred by modern
-    #                  clients (Claude Code, Cursor). Stateless, one endpoint.
-    # - /sse + /messages/: legacy HTTP+SSE — the real SseServerTransport, which emits
-    #                  the `endpoint` event on connect so older clients can hand-shake.
-    # Plus the server card (/.well-known/...) and /health for K8s probes, and CORS.
+    # Create the Starlette ASGI application serving Streamable HTTP, the only transport
+    # the MCP specification defines for a server reached over a network. It answers at
+    # /mcp and at the origin itself, alongside the server card for discovery and /health
+    # for the Kubernetes probes, with CORS so browser-based clients can connect.
     from starlette.applications import Starlette
     from starlette.routing import Route, Mount
-    from starlette.responses import JSONResponse, Response
+    from starlette.responses import JSONResponse
     from starlette.middleware.cors import CORSMiddleware
     from starlette.types import Receive, Scope, Send
 
@@ -116,10 +113,6 @@ def create_http_app(
         json_response=True,
         stateless=True,
     )
-
-    # Legacy SSE — the client POSTs its messages to /messages/ (the path the SDK
-    # advertises in the `endpoint` event it emits on connect).
-    sse_transport = SseServerTransport("/messages/")
 
     async def server_card(request):
         # MCP Server Card for Smithery discovery
@@ -133,32 +126,16 @@ def create_http_app(
         # Health check endpoint for Kubernetes probes
         return JSONResponse({"status": "ok", "version": version})
 
-    async def handle_sse(request):
-        # Legacy SSE transport. connect_sse emits the `endpoint` event immediately,
-        # then server.run drives the session over the SSE stream (auth rides the POST
-        # to /messages/, which the SDK exposes to handlers as ctx.request). Returning a
-        # Response after the stream closes avoids a NoneType error on client disconnect.
-        async with sse_transport.connect_sse(request.scope, request.receive, request._send) as (
-            read_stream,
-            write_stream,
-        ):
-            await server.run(read_stream, write_stream, init_options)
-        return Response()
-
-    async def handle_streamable(scope: Scope, receive: Receive, send: Send):
-        # Streamable HTTP requests for the MCP protocol
-        await session_manager.handle_request(scope, receive, send)
-
-    async def handle_root(scope: Scope, receive: Receive, send: Send):
-        # The "/" mount serves Streamable HTTP at the origin itself, but it matches every
-        # path no other route claimed. Those are unknown paths: answer 404 instead of
-        # handing them to the session manager, which holds the connection open until the
-        # client times out. Clients probe /.well-known/oauth-* on connect (RFC 9728), so
-        # a hang there stalls a connection that a refusal completes at once.
-        if scope["path"] not in ("", "/"):
+    async def handle_mcp(scope: Scope, receive: Receive, send: Send):
+        # Streamable HTTP, mounted at /mcp and at the origin. Anything deeper than
+        # either mount point is an unknown path: answer 404 instead of handing it to
+        # the session manager, which holds the connection open until the client times
+        # out. Clients probe /.well-known/oauth-* on connect (RFC 9728), so a hang there
+        # stalls a connection that a refusal completes at once.
+        if scope["path"] not in MCP_ENDPOINT_PATHS:
             await JSONResponse({"detail": "Not Found"}, status_code=404)(scope, receive, send)
             return
-        await handle_streamable(scope, receive, send)
+        await session_manager.handle_request(scope, receive, send)
 
     @contextlib.asynccontextmanager
     async def lifespan(app: Starlette) -> AsyncIterator[None]:
@@ -172,10 +149,8 @@ def create_http_app(
         routes=[
             Route("/.well-known/mcp/server-card.json", endpoint=server_card, methods=["GET"]),
             Route("/health", endpoint=health, methods=["GET"]),
-            Route("/sse", endpoint=handle_sse, methods=["GET"]),
-            Mount("/messages/", app=sse_transport.handle_post_message),
-            Mount("/mcp", app=handle_streamable),
-            Mount("/", app=handle_streamable),
+            Mount("/mcp", app=handle_mcp),
+            Mount("/", app=handle_mcp),
         ],
         lifespan=lifespan,
     )
