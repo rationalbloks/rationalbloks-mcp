@@ -75,7 +75,7 @@ RationalBloks MCP provides 48 infrastructure tools across 3 categories:
 
 ## Need Help?
 
-Visit https://rationalbloks.com/docs for full documentation.
+Visit https://rationalbloks.com/documentation for full documentation.
 """
 
 DOCS_SCHEMA_REFERENCE = """# RationalBloks Schema Reference
@@ -193,7 +193,7 @@ DOCS_API_REFERENCE = """# RationalBloks MCP API Reference
 - search_graph_nodes, fulltext_search_graph, traverse_graph
 - get_graph_statistics, get_graph_data_schema
 
-For full documentation, visit https://rationalbloks.com/docs
+For full documentation, visit https://rationalbloks.com/documentation
 """
 
 
@@ -211,9 +211,11 @@ def create_mcp_server(
         version=version,
         instructions=instructions,
         website_url="https://rationalbloks.com",
+        # Both assets are served from the portal's public/ directory; logo.svg and
+        # logo.png never existed there and 404'd in every client that fetched them.
         icons=[
-            Icon(src="https://rationalbloks.com/logo.svg", mimeType="image/svg+xml"),
-            Icon(src="https://rationalbloks.com/logo.png", mimeType="image/png", sizes=["128x128"]),
+            Icon(src="https://rationalbloks.com/favicon.svg", mimeType="image/svg+xml"),
+            Icon(src="https://rationalbloks.com/rationalbloks_logo.png", mimeType="image/png", sizes=["1200x250"]),
         ],
         **handlers,
     )

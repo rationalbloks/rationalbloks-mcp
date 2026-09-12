@@ -190,8 +190,8 @@ def _build_default_server_card(name: str, version: str, description: str) -> dic
         "description": description,
         "vendor": "RationalBloks",
         "homepage": "https://rationalbloks.com",
-        "icon": "https://rationalbloks.com/logo.svg",
-        "documentation": "https://rationalbloks.com/docs/mcp",
+        "icon": "https://rationalbloks.com/favicon.svg",
+        "documentation": "https://rationalbloks.com/documentation",
         "capabilities": {
             "tools": True,
             "resources": True,

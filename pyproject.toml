@@ -47,7 +47,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://rationalbloks.com"
-Documentation = "https://rationalbloks.com/docs/mcp"
+Documentation = "https://rationalbloks.com/documentation"
 Repository = "https://github.com/rationalbloks/rationalbloks-mcp"
 Issues = "https://github.com/rationalbloks/rationalbloks-mcp/issues"
 
