@@ -24,6 +24,11 @@
 # passed. PyPI refuses to overwrite a version that already exists, so a release that
 # uploads and then fails cannot be retried without a version bump. That is precisely
 # why all verification runs first and the two uploads run last.
+#
+# IDEMPOTENT PER CHANNEL:
+# Each channel is published only if it is actually missing this version, so running
+# this on every deploy is safe and a repeat run is a no-op. That is what lets it sit
+# inside `deploy_all.py all` without halting the chain on a version already out.
 # ============================================================================
 
 import json
@@ -216,17 +221,30 @@ def verify_tests():
     ok("tests pass")
 
 
-def verify_unpublished(version):
-    # PyPI versions are immutable. Catching a duplicate here turns an unrecoverable
-    # mid-release failure into a one-line message before anything is built.
-    step("Checking the version is unpublished")
-    released = get_json(PYPI_JSON_URL).get("releases", {})
-    if version in released:
-        raise RuntimeError(
-            f"{PACKAGE_NAME} {version} is already on PyPI and versions cannot be "
-            f"overwritten; bump the version in all four manifests"
-        )
-    ok(f"{version} is not on PyPI yet")
+def read_channel_state(version):
+    # What each index already serves. The release is idempotent per channel: a channel
+    # that already carries this version is skipped rather than re-published, so running
+    # this on every deploy is safe and a repeat run does nothing.
+    #
+    # PyPI versions are immutable, so a skip there is not a nicety but the only correct
+    # behaviour. It is announced rather than silent: if this tree has changes that were
+    # never released, the version was not bumped, and the message says so.
+    step("Reading what each channel already serves")
+    on_pypi = version in get_json(PYPI_JSON_URL).get("releases", {})
+    on_registry = read_registry_version() == version
+
+    if on_pypi:
+        ok(f"PyPI already serves {version}, skipping "
+           f"(bump the version if this tree has changes to publish)")
+    else:
+        ok(f"PyPI does not have {version} yet")
+
+    if on_registry:
+        ok(f"the MCP Registry already serves {version}, skipping")
+    else:
+        ok(f"the MCP Registry does not have {version} yet")
+
+    return on_pypi, on_registry
 
 
 def verify_publisher_present():
@@ -256,7 +274,6 @@ def preflight():
     version = verify_manifests()
     verify_working_tree()
     verify_tests()
-    verify_unpublished(version)
     verify_publisher_present()
     return version
 
@@ -312,7 +329,7 @@ def publish_registry(version):
 # Neither index serves a new version instantly, so both are polled. A release is only
 # finished when both actually hand back the version that was just published.
 
-def registry_version():
+def read_registry_version():
     for entry in get_json(REGISTRY_SEARCH_URL).get("servers", []):
         server = entry.get("server", entry)
         if server.get("name") == SERVER_NAME:
@@ -334,7 +351,7 @@ def wait_for(label, reader, version):
 def verify_published(version):
     step("Verifying both indexes")
     wait_for("PyPI", lambda: get_json(PYPI_JSON_URL)["info"]["version"], version)
-    wait_for("MCP Registry", registry_version, version)
+    wait_for("MCP Registry", read_registry_version, version)
 
 
 # ============================================================================
@@ -348,9 +365,23 @@ try:
     print(f"\n{bar}\n  RATIONALBLOKS MCP - RELEASE\n{bar}")
 
     release_version = preflight()
-    build(release_version)
-    publish_pypi(release_version)
-    publish_registry(release_version)
+    on_pypi, on_registry = read_channel_state(release_version)
+
+    if on_pypi and on_registry:
+        print(f"\n{bar}")
+        print(f"  NOTHING TO RELEASE - both channels already serve {release_version}")
+        print(f"{bar}\n")
+        sys.exit(0)
+
+    # PyPI first: the registry validates that the package version it is given already
+    # exists on PyPI, so the order is a requirement of the registry, not a preference.
+    if not on_pypi:
+        build(release_version)
+        publish_pypi(release_version)
+
+    if not on_registry:
+        publish_registry(release_version)
+
     verify_published(release_version)
 
     print(f"\n{bar}")
