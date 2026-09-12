@@ -67,7 +67,7 @@ Visit [rationalbloks.com/settings](https://rationalbloks.com/settings) and creat
 
 ---
 
-**Remote (no install):** point any MCP client at `https://mcp.rationalbloks.com/mcp` (Streamable HTTP; legacy SSE at `/sse`) with `Authorization: Bearer rb_sk_...`.
+**Remote (no install):** point any MCP client at `https://mcp.rationalbloks.com/mcp` (Streamable HTTP) with `Authorization: Bearer rb_sk_...`.
 
 ---
 
