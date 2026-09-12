@@ -4,7 +4,7 @@
 
 name: rationalbloks
 displayName: RationalBloks
-version: 0.11.0
+version: 0.12.0
 description: Deploy production REST APIs and Neo4j Graph APIs in minutes. 48 tools for projects, schemas, deployments, object storage, and graph data.
 author: RationalBloks
 homepage: https://rationalbloks.com
