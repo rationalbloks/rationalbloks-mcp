@@ -224,7 +224,7 @@ These provide:
 
 ## Support
 
-- **Documentation:** [rationalbloks.com/docs](https://rationalbloks.com/docs)
+- **Documentation:** [rationalbloks.com/documentation](https://rationalbloks.com/documentation)
 - **Email:** support@rationalbloks.com
 
 ## License

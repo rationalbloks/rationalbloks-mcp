@@ -9,8 +9,8 @@ description: Deploy production REST APIs and Neo4j Graph APIs in minutes. 48 too
 author: RationalBloks
 homepage: https://rationalbloks.com
 repository: https://github.com/rationalbloks/rationalbloks-mcp
-icon: https://rationalbloks.com/logo.svg
-documentation: https://rationalbloks.com/docs/mcp
+icon: https://rationalbloks.com/rationalbloks_logo.png
+documentation: https://rationalbloks.com/documentation
 
 # Configuration schema for Smithery UI
 configSchema:
