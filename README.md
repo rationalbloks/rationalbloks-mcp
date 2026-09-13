@@ -231,4 +231,4 @@ These provide:
 
 Proprietary - Copyright 2026 RationalBloks. All Rights Reserved.
 
-<!-- mcp-name: io.github.rationalbloks/rationalbloks-mcp -->
+<!-- mcp-name: com.rationalbloks/mcp -->

@@ -28,15 +28,20 @@
 # IDEMPOTENT PER CHANNEL:
 # What each index already serves is read BEFORE anything is verified, built or sent,
 # and a channel that already carries this version is skipped. When both carry it there
-# is nothing to release and the run ends there: no test run, no publisher download,
-# and above all no interactive login. That is what lets this sit at the FRONT of
-# `deploy_all.py all` and cost two HTTP reads on every deploy with nothing to publish.
+# is nothing to release and the run ends there, without running the tests or touching
+# the network again. That is what lets this sit at the FRONT of `deploy_all.py all`
+# and cost two HTTP reads on every deploy that has nothing to publish.
+#
+# FULLY UNATTENDED:
+# Both channels authenticate from stored secrets, so a release never waits for a human.
+# See REGISTRY IDENTITY below for why the registry half is domain-backed.
 #
 # USAGE:
 #   python release.py           # publish whatever the two channels are missing
 #   python release.py status    # read-only: what each channel serves, no side effects
 # ============================================================================
 
+import base64
 import json
 import os
 import platform
@@ -62,7 +67,44 @@ PYPI_TOKEN_FILE = Path(
 )
 
 PACKAGE_NAME = "rationalbloks-mcp"
-SERVER_NAME = "io.github.rationalbloks/rationalbloks-mcp"
+
+
+# ============================================================================
+# REGISTRY IDENTITY
+# ============================================================================
+# The server is published under the reverse-DNS form of a domain this company owns.
+# That is what every established publisher does - com.stripe/mcp, com.notion/mcp,
+# com.atlassian/atlassian-mcp-server - while io.github.* namespaces belong to
+# individual developers.
+#
+# It is also the only form that works here. The registry grants an io.github.<org>
+# namespace from GitHub identity, and since registry v1.8.0 grants it only to org
+# Owners. It is currently not granting it at all: four issues report a token minted
+# with the personal namespace only, despite Owner role and public membership
+# (modelcontextprotocol/registry 1468, 1527, 1537, 1551, all open). The old
+# io.github.rationalbloks name is unreachable until that is fixed.
+#
+# Domain ownership is proved by signing a challenge with a key whose public half is
+# published as a TXT record on the domain. No device code, no browser, nothing that
+# expires while an unattended deploy is running.
+
+SERVER_NAME = "com.rationalbloks/mcp"
+
+DNS_DOMAIN = "rationalbloks.com"
+DNS_KEY_FILE = Path(
+    r"C:\Users\velos\OneDrive\RATIONALBLOKS\01_RELATIONAL_DATABLOK\00_CYBER_CRITICAL"
+    r"\MCP_REGISTRY_DNS_KEY.pem"
+)
+
+# The public half of that key, exactly as it must appear in DNS. It is public by
+# nature, so it is committed: verify_dns_proof() compares the live TXT record against
+# it, and rotating the key means changing this line and the DNS record together.
+DNS_PUBLIC_KEY = "8rHaodJWY3LAtptPtS9obIK5OnlfptnQXzNLAi2t700="
+DNS_TXT_VALUE = f"v=MCPv1; k=ed25519; p={DNS_PUBLIC_KEY}"
+
+# Resolved over DNS-over-HTTPS so the check does not depend on whatever resolver the
+# operator's machine happens to be using.
+DNS_QUERY_URL = f"https://cloudflare-dns.com/dns-query?name={DNS_DOMAIN}&type=TXT"
 
 PYPI_JSON_URL = f"https://pypi.org/pypi/{PACKAGE_NAME}/json"
 REGISTRY_SEARCH_URL = "https://registry.modelcontextprotocol.io/v0.1/servers?search=rationalbloks"
@@ -286,36 +328,42 @@ def verify_server_json():
     ok("server.json is valid")
 
 
-def verify_registry_auth():
-    # Authenticate before anything is transmitted. The device flow is interactive and
-    # times out if nobody is at the keyboard, which is easy to miss when the release is
-    # the last step of a long unattended deploy. Failing here costs nothing; failing
-    # after the PyPI upload cannot be undone, because PyPI versions are immutable.
-    #
-    # An existing credential file means a previous login is still on disk. It is taken
-    # at face value: if it has expired the publish fails and the fix is to log in again,
-    # which is a better trade than prompting on every run.
-    step("Authenticating with the MCP Registry")
-    if any(REPO.glob(".mcpregistry_*")):
-        ok("existing registry credentials found")
-        return
+def verify_dns_proof():
+    # The registry proves domain ownership by reading this TXT record and checking a
+    # signature against it. Verifying it here turns a missing or stale record into a
+    # failure that costs milliseconds and prints the exact fix, rather than one that
+    # surfaces after the PyPI upload, which cannot be taken back.
+    step("Verifying the DNS ownership record")
+    if not DNS_KEY_FILE.exists():
+        raise RuntimeError(f"registry signing key not found at {DNS_KEY_FILE}")
 
-    print("    This is an interactive GitHub device flow. A code appears below:")
-    print("    open https://github.com/login/device and enter it before it expires.")
-    run([str(PUBLISHER_EXE), "login", "github"])
-    ok("authenticated")
+    request = urllib.request.Request(DNS_QUERY_URL,
+                                     headers={"accept": "application/dns-json"})
+    with urllib.request.urlopen(request, timeout=30) as response:
+        answers = json.loads(response.read().decode("utf-8")).get("Answer", [])
+
+    published = [answer.get("data", "").strip('"') for answer in answers]
+    if DNS_TXT_VALUE not in published:
+        raise RuntimeError(
+            f"{DNS_DOMAIN} does not publish the registry ownership record.\n"
+            f"  Add this TXT record, let it propagate, then re-run:\n"
+            f"    name : {DNS_DOMAIN}\n"
+            f"    type : TXT\n"
+            f"    value: {DNS_TXT_VALUE}"
+        )
+    ok(f"{DNS_DOMAIN} publishes the expected ownership record")
 
 
 def preflight():
     # Reached only once a channel is known to be missing this version, so the test run
-    # and the interactive login below are paid for by a run that is going to publish.
-    # Ordered cheapest first, so an obvious mistake fails in milliseconds rather than
-    # after a two-minute test run.
+    # below is paid for by a run that is going to publish. Ordered cheapest first, so an
+    # obvious mistake fails in milliseconds rather than after a two-minute test run.
+    # Nothing here is interactive: the DNS record is proved, not logged into.
     verify_working_tree()
     verify_tests()
     verify_publisher_present()
     verify_server_json()
-    verify_registry_auth()
+    verify_dns_proof()
 
 
 # ============================================================================
@@ -378,10 +426,37 @@ def publish_pypi(version):
     ok(f"{PACKAGE_NAME} {version} uploaded")
 
 
+def read_dns_private_key():
+    # An Ed25519 PKCS#8 key is 48 DER bytes: a 16-byte header then the 32-byte seed,
+    # which is exactly what the publisher wants as hex. Decoding it here rather than
+    # shelling out to openssl drops a runtime dependency and keeps the key out of any
+    # subprocess error text.
+    body = "".join(
+        line for line in DNS_KEY_FILE.read_text(encoding="utf-8").splitlines()
+        if not line.startswith("-----")
+    )
+    der = base64.b64decode(body)
+    if len(der) != 48:
+        raise RuntimeError(
+            f"{DNS_KEY_FILE.name} is {len(der)} DER bytes; an Ed25519 PKCS#8 key is 48"
+        )
+    return der[-32:].hex()
+
+
 def publish_registry(version):
-    # Authentication and server.json validation both happened in preflight. This step
-    # runs after the PyPI upload because the registry validates that the package
-    # version it is given already exists on PyPI.
+    # Authentication runs HERE rather than in preflight because the registry issues a
+    # token that lives 300 seconds, and the PyPI index wait above can consume all of
+    # it. Authenticating last is free precisely because it is non-interactive: the DNS
+    # record was already proved correct in preflight, so this cannot stall on a human.
+    #
+    # The publish itself runs after the PyPI upload because the registry validates that
+    # the package version it is given already exists on PyPI.
+    step("Authenticating with the MCP Registry")
+    private_key = read_dns_private_key()
+    run([str(PUBLISHER_EXE), "login", "dns",
+         "--domain", DNS_DOMAIN, "--private-key", private_key], secret=private_key)
+    ok(f"authenticated as {DNS_DOMAIN}")
+
     step("Publishing to the MCP Registry")
     run([str(PUBLISHER_EXE), "publish"])
     ok(f"{SERVER_NAME} {version} submitted")
