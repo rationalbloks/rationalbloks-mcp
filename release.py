@@ -301,14 +301,39 @@ def build(version):
     ok(f"built {expected[0].name} and {expected[1].name}")
 
 
-def publish_pypi(version):
-    step("Publishing to PyPI")
+def read_pypi_token():
+    # The token file is an operator notes file, not a bare token: it carries headings,
+    # rule lines and a reminder command, with the token on its own line among them. So
+    # the token is extracted rather than assumed to be the entire file.
+    #
+    # Exactly one distinct token must be present. None means the file is not what it
+    # claims. More than one means the file cannot say which is current, and guessing at
+    # a credential is not a thing this script does.
+    #
+    # utf-8-sig, not utf-8: a byte order mark is not whitespace, so .strip() leaves it
+    # attached and the token silently stops matching.
     if not PYPI_TOKEN_FILE.exists():
         raise RuntimeError(f"PyPI token not found at {PYPI_TOKEN_FILE}")
-    token = PYPI_TOKEN_FILE.read_text(encoding="utf-8").strip()
-    if not token.startswith("pypi-"):
-        raise RuntimeError(f"{PYPI_TOKEN_FILE.name} does not contain a pypi- token")
 
+    text = PYPI_TOKEN_FILE.read_text(encoding="utf-8-sig", errors="replace")
+    found = set(re.findall(r"pypi-[A-Za-z0-9_\-]+", text))
+
+    if not found:
+        raise RuntimeError(
+            f"no pypi- token found in {PYPI_TOKEN_FILE.name}; the file should contain "
+            f"the token somewhere in its text"
+        )
+    if len(found) > 1:
+        raise RuntimeError(
+            f"{PYPI_TOKEN_FILE.name} holds {len(found)} different pypi- tokens; leave "
+            f"exactly one so there is no question which is current"
+        )
+    return found.pop()
+
+
+def publish_pypi(version):
+    step("Publishing to PyPI")
+    token = read_pypi_token()
     run(["uv", "publish", "--token", token], secret=token)
     ok(f"{PACKAGE_NAME} {version} uploaded")
 
