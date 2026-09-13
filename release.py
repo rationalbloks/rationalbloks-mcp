@@ -351,8 +351,14 @@ def publish_registry(version):
 # ============================================================================
 # VERIFICATION
 # ============================================================================
-# Neither index serves a new version instantly, so both are polled. A release is only
-# finished when both actually hand back the version that was just published.
+# Neither index serves a new version instantly, so each publish is confirmed before the
+# next step runs. This is not politeness: the registry validates the version against
+# PyPI, so publishing to it before PyPI has indexed the upload is a race that fails on
+# a release that actually succeeded.
+
+def read_pypi_version():
+    return get_json(PYPI_JSON_URL)["info"]["version"]
+
 
 def read_registry_version():
     for entry in get_json(REGISTRY_SEARCH_URL).get("servers", []):
@@ -371,12 +377,6 @@ def wait_for(label, reader, version):
         print(f"    ... {label} still serves {current} ({attempt}/{VERIFY_ATTEMPTS})")
         time.sleep(VERIFY_INTERVAL)
     raise RuntimeError(f"{label} did not serve {version} within the wait window")
-
-
-def verify_published(version):
-    step("Verifying both indexes")
-    wait_for("PyPI", lambda: get_json(PYPI_JSON_URL)["info"]["version"], version)
-    wait_for("MCP Registry", read_registry_version, version)
 
 
 # ============================================================================
@@ -398,16 +398,17 @@ try:
         print(f"{bar}\n")
         sys.exit(0)
 
-    # PyPI first: the registry validates that the package version it is given already
-    # exists on PyPI, so the order is a requirement of the registry, not a preference.
+    # PyPI first, and its index must actually serve the version before the registry is
+    # told about it: the registry validates the package version against PyPI, so this
+    # ordering is a requirement rather than a preference.
     if not on_pypi:
         build(release_version)
         publish_pypi(release_version)
+        wait_for("PyPI", read_pypi_version, release_version)
 
     if not on_registry:
         publish_registry(release_version)
-
-    verify_published(release_version)
+        wait_for("MCP Registry", read_registry_version, release_version)
 
     print(f"\n{bar}")
     print(f"  RELEASED {release_version} - PyPI and MCP Registry both serve it")
