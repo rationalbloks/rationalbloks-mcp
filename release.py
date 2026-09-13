@@ -270,11 +270,42 @@ def verify_publisher_present():
     ok(f"{PUBLISHER_EXE.name} downloaded")
 
 
+def verify_server_json():
+    # The publisher's own validator, run against the live registry. It is the authority
+    # on server.json, so it catches anything the hand-written checks above do not know
+    # about. It needs no credentials and publishes nothing.
+    step("Validating server.json against the registry")
+    run([str(PUBLISHER_EXE), "validate"])
+    ok("server.json is valid")
+
+
+def verify_registry_auth():
+    # Authenticate before anything is transmitted. The device flow is interactive and
+    # times out if nobody is at the keyboard, which is easy to miss when the release is
+    # the last step of a long unattended deploy. Failing here costs nothing; failing
+    # after the PyPI upload cannot be undone, because PyPI versions are immutable.
+    #
+    # An existing credential file means a previous login is still on disk. It is taken
+    # at face value: if it has expired the publish fails and the fix is to log in again,
+    # which is a better trade than prompting on every run.
+    step("Authenticating with the MCP Registry")
+    if any(REPO.glob(".mcpregistry_*")):
+        ok("existing registry credentials found")
+        return
+
+    print("    This is an interactive GitHub device flow. A code appears below:")
+    print("    open https://github.com/login/device and enter it before it expires.")
+    run([str(PUBLISHER_EXE), "login", "github"])
+    ok("authenticated")
+
+
 def preflight():
     version = verify_manifests()
     verify_working_tree()
     verify_tests()
     verify_publisher_present()
+    verify_server_json()
+    verify_registry_auth()
     return version
 
 
@@ -339,11 +370,10 @@ def publish_pypi(version):
 
 
 def publish_registry(version):
-    # `login github` opens a device flow in the browser and waits for the operator.
-    # It runs after the PyPI upload because the registry validates that the package
+    # Authentication and server.json validation both happened in preflight. This step
+    # runs after the PyPI upload because the registry validates that the package
     # version it is given already exists on PyPI.
     step("Publishing to the MCP Registry")
-    run([str(PUBLISHER_EXE), "login", "github"])
     run([str(PUBLISHER_EXE), "publish"])
     ok(f"{SERVER_NAME} {version} submitted")
 
