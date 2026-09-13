@@ -30,7 +30,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://mcp.rationalbloks.com/mcp"
+      "url": "https://mcp.rationalbloks.com/"
     }
   ]
 }
