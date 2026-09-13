@@ -26,9 +26,15 @@
 # why all verification runs first and the two uploads run last.
 #
 # IDEMPOTENT PER CHANNEL:
-# Each channel is published only if it is actually missing this version, so running
-# this on every deploy is safe and a repeat run is a no-op. That is what lets it sit
-# inside `deploy_all.py all` without halting the chain on a version already out.
+# What each index already serves is read BEFORE anything is verified, built or sent,
+# and a channel that already carries this version is skipped. When both carry it there
+# is nothing to release and the run ends there: no test run, no publisher download,
+# and above all no interactive login. That is what lets this sit at the FRONT of
+# `deploy_all.py all` and cost two HTTP reads on every deploy with nothing to publish.
+#
+# USAGE:
+#   python release.py           # publish whatever the two channels are missing
+#   python release.py status    # read-only: what each channel serves, no side effects
 # ============================================================================
 
 import json
@@ -145,8 +151,9 @@ def read_server_json():
 # ============================================================================
 # PREFLIGHT
 # ============================================================================
-# Ordered cheapest first, so an obvious mistake fails in milliseconds rather than
-# after a two-minute test run.
+# verify_manifests runs first and always, because it yields the version every other
+# check is measured against. The rest are gathered into preflight() at the end of this
+# section and run only when a channel is actually missing that version.
 
 def verify_manifests():
     # Every field the registry validates, checked before it can reject the upload.
@@ -300,13 +307,15 @@ def verify_registry_auth():
 
 
 def preflight():
-    version = verify_manifests()
+    # Reached only once a channel is known to be missing this version, so the test run
+    # and the interactive login below are paid for by a run that is going to publish.
+    # Ordered cheapest first, so an obvious mistake fails in milliseconds rather than
+    # after a two-minute test run.
     verify_working_tree()
     verify_tests()
     verify_publisher_present()
     verify_server_json()
     verify_registry_auth()
-    return version
 
 
 # ============================================================================
@@ -391,11 +400,15 @@ def read_pypi_version():
 
 
 def read_registry_version():
+    # None means the registry holds no entry for this server at all, which is the normal
+    # state before a first publish rather than a failure. Every caller compares against
+    # the version it wants, so absence and staleness take the same path: publish, then
+    # wait for it to appear.
     for entry in get_json(REGISTRY_SEARCH_URL).get("servers", []):
         server = entry.get("server", entry)
         if server.get("name") == SERVER_NAME:
             return server.get("version")
-    raise RuntimeError(f"{SERVER_NAME} not found in the registry")
+    return None
 
 
 def wait_for(label, reader, version):
@@ -404,9 +417,41 @@ def wait_for(label, reader, version):
         if current == version:
             ok(f"{label} serves {version}")
             return
-        print(f"    ... {label} still serves {current} ({attempt}/{VERIFY_ATTEMPTS})")
+        print(f"    ... {label} serves {current or 'no entry'} ({attempt}/{VERIFY_ATTEMPTS})")
         time.sleep(VERIFY_INTERVAL)
     raise RuntimeError(f"{label} did not serve {version} within the wait window")
+
+
+# ============================================================================
+# STATUS
+# ============================================================================
+
+def print_channel_status():
+    # The read-only view of the same two channels this script publishes to. It lives
+    # here rather than in deploy_all.py so the drift check and the release agree on
+    # what each channel serves by construction, rather than by two implementations
+    # happening to stay in step. Reads only: it never authenticates or publishes.
+    local = read_pyproject_version()
+    channels = [
+        ("PyPI",         PACKAGE_NAME,  read_pypi_version()),
+        ("MCP Registry", "server.json", read_registry_version()),
+    ]
+
+    print(f"\n  {'channel':<14} {'artifact':<20} {'published':<13} {'local':<13} state")
+    print(f"  {'-' * 14} {'-' * 20} {'-' * 13} {'-' * 13} {'-' * 9}")
+
+    behind = 0
+    for channel, artifact, published in channels:
+        state = "IN SYNC" if published == local else "STALE"
+        if state != "IN SYNC":
+            behind += 1
+        print(f"  {channel:<14} {artifact:<20} {published or 'absent':<13} {local:<13} {state}")
+
+    print("")
+    if behind:
+        print(f"  {behind} channel(s) behind - run: python deploy_all.py all")
+    else:
+        ok(f"PyPI and the MCP Registry both serve {local}")
 
 
 # ============================================================================
@@ -417,9 +462,20 @@ def wait_for(label, reader, version):
 
 try:
     bar = "=" * 76
+
+    mode = sys.argv[1] if len(sys.argv) > 1 else "release"
+    if mode not in ("release", "status"):
+        raise RuntimeError(f"unknown mode {mode!r}; valid modes are: release, status")
+
+    if mode == "status":
+        print_channel_status()
+        sys.exit(0)
+
     print(f"\n{bar}\n  RATIONALBLOKS MCP - RELEASE\n{bar}")
 
-    release_version = preflight()
+    # What is missing is decided before anything is verified, built or transmitted, so a
+    # run with nothing to publish never reaches the test suite or the interactive login.
+    release_version = verify_manifests()
     on_pypi, on_registry = read_channel_state(release_version)
 
     if on_pypi and on_registry:
@@ -427,6 +483,8 @@ try:
         print(f"  NOTHING TO RELEASE - both channels already serve {release_version}")
         print(f"{bar}\n")
         sys.exit(0)
+
+    preflight()
 
     # PyPI first, and its index must actually serve the version before the registry is
     # told about it: the registry validates the package version against PyPI, so this
