@@ -1132,7 +1132,7 @@ INFRASTRUCTURE_TOOLS = BACKEND_TOOLS + GRAPH_TOOLS + GRAPH_DATA_TOOLS
 class BackendMCPServer(BaseMCPServer):
     # Backend MCP server with 48 infrastructure tools
     # Extends BaseMCPServer with: LogicBlok client integration, backend + graph tools, prompts
-    
+
     INSTRUCTIONS = """RationalBloks MCP Server — Backend Mode
 
 Build production REST APIs and Graph APIs from JSON schemas in seconds.
@@ -1198,7 +1198,7 @@ GRAPH SCHEMA RULES:
 
 Available: 48 tools — 22 relational + 11 graph schema + 15 graph data.
 Full documentation: https://rationalbloks.com/documentation"""
-    
+
     def __init__(
         self,
         api_key: str | None = None,
@@ -1212,17 +1212,17 @@ Full documentation: https://rationalbloks.com/documentation"""
             api_key=api_key,
             http_mode=http_mode,
         )
-        
+
         # Register infrastructure tools and prompts
         self.register_tools(BACKEND_TOOLS)
         self.register_tools(GRAPH_TOOLS)
         self.register_tools(GRAPH_DATA_TOOLS)
         self.register_prompts(BACKEND_PROMPTS)
         self.register_prompts(GRAPH_PROMPTS)
-        
+
         # Register tool handler
         self.register_tool_handler("*", self._handle_backend_tool)
-        
+
         # Register prompt handlers
         self.register_prompt_handler(
             "create-project-from-description",
@@ -1236,14 +1236,14 @@ Full documentation: https://rationalbloks.com/documentation"""
             "create-graph-project-from-description",
             self._handle_create_graph_project_prompt,
         )
-    
+
     def _get_client(self) -> LogicBlokClient:
         # Get LogicBlok client with current API key
         api_key = self.get_api_key_for_request()
         if not api_key:
             raise ValueError("No API key available")
         return LogicBlokClient(api_key)
-    
+
     async def _handle_backend_tool(self, name: str, arguments: dict) -> Any:
         # Single dispatch: every tool is a passthrough to LogicBlok's
         # /api/mcp/execute endpoint. LogicBlok is the source of truth for
@@ -1262,7 +1262,7 @@ Full documentation: https://rationalbloks.com/documentation"""
     ) -> GetPromptResult:
         # Handle create-project-from-description prompt
         description = arguments.get("description", "") if arguments else ""
-        
+
         return GetPromptResult(
             messages=[
                 PromptMessage(
@@ -1336,7 +1336,7 @@ Generate the schema now following ALL rules above:""",
                 )
             ]
         )
-    
+
     def _handle_fix_schema_prompt(
         self,
         name: str,
@@ -1345,7 +1345,7 @@ Generate the schema now following ALL rules above:""",
         # Handle fix-schema-errors prompt
         schema = arguments.get("schema", "{}") if arguments else "{}"
         error = arguments.get("error_message", "Unknown error") if arguments else "Unknown error"
-        
+
         return GetPromptResult(
             messages=[
                 PromptMessage(
@@ -1396,7 +1396,7 @@ CHECK ALL THESE ISSUES and provide the corrected schema:""",
                 )
             ]
         )
-    
+
     def _handle_create_graph_project_prompt(
         self,
         name: str,
@@ -1404,7 +1404,7 @@ CHECK ALL THESE ISSUES and provide the corrected schema:""",
     ) -> GetPromptResult:
         # Handle create-graph-project-from-description prompt
         description = arguments.get("description", "") if arguments else ""
-        
+
         return GetPromptResult(
             messages=[
                 PromptMessage(

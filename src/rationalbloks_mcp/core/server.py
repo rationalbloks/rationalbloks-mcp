@@ -225,7 +225,7 @@ class BaseMCPServer:
     # Base MCP server with shared infrastructure
     # Provides: Server initialization, common handlers, transport layer, auth
     # Subclasses add: Mode-specific tools and handlers
-    
+
     def __init__(
         self,
         name: str,
@@ -266,23 +266,23 @@ class BaseMCPServer:
         # SDK 2.0 takes request handlers as constructor callbacks, so build them first
         # and pass them in. Nothing to register after construction.
         self.server = create_mcp_server(name, version, instructions, self._build_handlers())
-    
+
     def register_tools(self, tools: list[dict]) -> None:
         # Register tools for this server mode
         self._tools.extend(tools)
-    
+
     def register_tool_handler(self, name: str, handler: Callable) -> None:
         # Register a handler function for a tool
         self._tool_handlers[name] = handler
-    
+
     def register_prompts(self, prompts: list[Prompt]) -> None:
         # Register prompts for this server mode
         self._prompts.extend(prompts)
-    
+
     def register_prompt_handler(self, name: str, handler: Callable) -> None:
         # Register a handler function for a prompt
         self._prompt_handlers[name] = handler
-    
+
     def _build_handlers(self) -> dict[str, Callable]:
         # Build the MCP request handlers as closures over self. SDK 2.0 takes them as
         # Server constructor callbacks (the 1.x decorator API was removed); each gets
@@ -376,7 +376,7 @@ class BaseMCPServer:
             "on_list_resources": on_list_resources,
             "on_read_resource": on_read_resource,
         }
-    
+
     def get_api_key_for_request(self) -> str | None:
         # Get the API key for the current request.
         # STDIO mode: the key validated at startup.
@@ -389,7 +389,7 @@ class BaseMCPServer:
         if request is None or not isinstance(request, Request):
             return None
         return extract_api_key_from_request(request)
-    
+
     def get_init_options(self) -> InitializationOptions:
         # Get MCP initialization options
         return InitializationOptions(
@@ -402,7 +402,7 @@ class BaseMCPServer:
             instructions=self.instructions,
             website_url="https://rationalbloks.com",
         )
-    
+
     def run(self, transport: str = "stdio") -> None:
         # Run the MCP server with specified transport
         # transport: "stdio" for local IDEs or "http" for cloud

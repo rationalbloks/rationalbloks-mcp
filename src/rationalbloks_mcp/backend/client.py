@@ -26,7 +26,7 @@ class LogicBlokClient:
     # in-cluster (http://logicblok-api.logicblok.svc.cluster.local:8000).
     # Falls back to the public ingress for local / STDIO / dev use.
     BASE_URL = os.environ.get("LOGICBLOK_URL", "https://logicblok.rationalbloks.com")
-    
+
     def __init__(self, api_key: str) -> None:
         # Initialize client with API key (rb_sk_...)
         self.api_key = api_key
@@ -38,17 +38,17 @@ class LogicBlokClient:
             timeout=60.0,  # Longer timeout for deployment operations
             verify=ssl_context,
         )
-    
+
     async def close(self) -> None:
         # Close the HTTP client
         await self._client.aclose()
-    
+
     async def __aenter__(self) -> "LogicBlokClient":
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self.close()
-    
+
     async def _execute(self, tool: str, arguments: dict | None = None) -> Any:
         # Execute an MCP tool via the gateway
         # All tools use POST /api/mcp/execute with {"tool": "...", "arguments": {...}}
@@ -56,12 +56,12 @@ class LogicBlokClient:
         response = await self._client.post("/api/mcp/execute", json=payload)
         response.raise_for_status()
         result = response.json()
-        
+
         # Gateway returns {"success": bool, "result": ..., "error": ...}
         if not result.get("success", False):
             error = result.get("error", "Unknown error")
             raise Exception(f"MCP Gateway error: {error}")
-        
+
         return result.get("result")
 
     # Public alias -- preferred call path for the MCP tool dispatcher.
