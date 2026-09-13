@@ -50,6 +50,7 @@ import shutil
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -127,6 +128,14 @@ PUBLISHER_URL = (
 VERIFY_ATTEMPTS = 20
 VERIFY_INTERVAL = 15
 
+# PyPI and the registry are third-party services that go briefly unavailable: a read
+# timeout and an HTTP 500 from the registry have both interrupted a release here. A
+# transport fault is not the release failing, so it is retried with backoff, the same
+# rule deploy_all.py already applies to an SSH connection error. When the attempts are
+# spent it raises and the chain halts.
+NETWORK_ATTEMPTS = 4
+NETWORK_BACKOFF = 5
+
 
 # ============================================================================
 # HELPERS
@@ -146,11 +155,26 @@ def run(argv, capture=False, secret=None):
     return result.stdout.strip() if capture else ""
 
 
-def get_json(url):
-    # Read a JSON document. Raises on transport or parse failure: a release must never
-    # continue on a guess about what an index currently holds.
-    with urllib.request.urlopen(url, timeout=30) as response:
-        return json.loads(response.read().decode("utf-8"))
+def get_json(url, headers=None):
+    # The one way this script reads JSON over HTTP, so every index read gets the same
+    # retry rule. A malformed body still raises on the first attempt: only transport
+    # faults are transient. A release must never continue on a guess about what an
+    # index holds, so exhausting the attempts halts the chain.
+    request = urllib.request.Request(url, headers=headers or {})
+    for attempt in range(1, NETWORK_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except OSError as error:
+            # A 4xx is the service's considered answer, not a blip, so it is never
+            # retried. Everything else here is a transport fault or a 5xx.
+            settled = isinstance(error, urllib.error.HTTPError) and error.code < 500
+            if settled or attempt == NETWORK_ATTEMPTS:
+                raise
+            wait = NETWORK_BACKOFF * attempt
+            print(f"    ... {type(error).__name__} from {url}; "
+                  f"retry {attempt}/{NETWORK_ATTEMPTS - 1} in {wait}s")
+            time.sleep(wait)
 
 
 def step(message):
@@ -337,10 +361,8 @@ def verify_dns_proof():
     if not DNS_KEY_FILE.exists():
         raise RuntimeError(f"registry signing key not found at {DNS_KEY_FILE}")
 
-    request = urllib.request.Request(DNS_QUERY_URL,
-                                     headers={"accept": "application/dns-json"})
-    with urllib.request.urlopen(request, timeout=30) as response:
-        answers = json.loads(response.read().decode("utf-8")).get("Answer", [])
+    answers = get_json(DNS_QUERY_URL,
+                       headers={"accept": "application/dns-json"}).get("Answer", [])
 
     published = [answer.get("data", "").strip('"') for answer in answers]
     if DNS_TXT_VALUE not in published:
