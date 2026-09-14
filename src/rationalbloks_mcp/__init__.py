@@ -24,9 +24,10 @@ import os
 import sys
 import traceback
 
-# Version from package metadata
-from importlib.metadata import version as _get_version
-__version__ = _get_version("rationalbloks-mcp")
+# Version from package metadata, via _version.py. Read from there rather than
+# assigned here, so backend/tools.py can import it without importing this package
+# back and creating a cycle that only works if the assignment stays above line 42.
+from ._version import __version__
 
 # Public API
 __all__ = [
