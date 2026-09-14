@@ -141,8 +141,15 @@ VERIFY_INTERVAL = 15
 # transport fault is not the release failing, so it is retried with backoff, the same
 # rule deploy_all.py already applies to an SSH connection error. When the attempts are
 # spent it raises and the chain halts.
+#
+# The timeout is generous because the registry earns it. Measured back to back, the
+# same search returned in 0.8s, 22.8s and 32.6s, while PyPI answered every call in
+# under half a second. A 30s timeout sat inside that spread, so the registry being
+# ordinarily slow read as a transport fault and failed a release. 60s clears every
+# response measured, and a service that is genuinely down still fails on connect.
 NETWORK_ATTEMPTS = 4
 NETWORK_BACKOFF = 5
+NETWORK_TIMEOUT = 60
 
 
 # ============================================================================
@@ -171,7 +178,7 @@ def get_json(url, headers=None):
     request = urllib.request.Request(url, headers=headers or {})
     for attempt in range(1, NETWORK_ATTEMPTS + 1):
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
+            with urllib.request.urlopen(request, timeout=NETWORK_TIMEOUT) as response:
                 return json.loads(response.read().decode("utf-8"))
         except OSError as error:
             # A 4xx is the service's considered answer, not a blip, so it is never
