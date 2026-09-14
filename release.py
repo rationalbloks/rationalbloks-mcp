@@ -108,7 +108,15 @@ DNS_TXT_VALUE = f"v=MCPv1; k=ed25519; p={DNS_PUBLIC_KEY}"
 DNS_QUERY_URL = f"https://cloudflare-dns.com/dns-query?name={DNS_DOMAIN}&type=TXT"
 
 PYPI_JSON_URL = f"https://pypi.org/pypi/{PACKAGE_NAME}/json"
-REGISTRY_SEARCH_URL = "https://registry.modelcontextprotocol.io/v0.1/servers?search=rationalbloks"
+# version=latest is load-bearing. Without it the search returns EVERY version a server
+# has ever published, oldest first, so reading the first match reports a version that is
+# permanently stale. That failed a release which had in fact succeeded: 0.12.2 was live
+# on the registry and the verification below read 0.12.1 twenty times, then halted the
+# whole deploy queued behind it. With it the registry returns one entry per server.
+REGISTRY_SEARCH_URL = (
+    "https://registry.modelcontextprotocol.io/v0.1/servers"
+    "?search=rationalbloks&version=latest"
+)
 SCHEMA_URL = "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json"
 
 # The registry rejects a description longer than this with HTTP 422. The published
@@ -497,10 +505,12 @@ def read_pypi_version():
 
 
 def read_registry_version():
-    # None means the registry holds no entry for this server at all, which is the normal
-    # state before a first publish rather than a failure. Every caller compares against
-    # the version it wants, so absence and staleness take the same path: publish, then
-    # wait for it to appear.
+    # The search also matches the retired io.github entry, so the name filter is what
+    # picks this server out, and version=latest is what makes the single entry it
+    # returns the current one. None means the registry holds no entry for this server
+    # at all, which is the normal state before a first publish rather than a failure.
+    # Every caller compares against the version it wants, so absence and staleness take
+    # the same path: publish, then wait for it to appear.
     for entry in get_json(REGISTRY_SEARCH_URL).get("servers", []):
         server = entry.get("server", entry)
         if server.get("name") == SERVER_NAME:
