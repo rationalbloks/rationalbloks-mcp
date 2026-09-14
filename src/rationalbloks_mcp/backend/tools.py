@@ -121,7 +121,7 @@ BACKEND_TOOLS = [
     {
         "name": "get_project_info",
         "title": "Get Project Info",
-        "description": "Get detailed project info including deployment status and resource usage. DEPLOYMENT STATUS: Running (healthy), Pending (starting), CrashLoopBackOff (init container failed - usually schema format error), ImagePullBackOff (image build failed). TROUBLESHOOTING: If status is CrashLoopBackOff, the schema is likely in wrong format (nested 'fields' key or missing 'type' properties). Use get_schema to review current schema. If replicas show 0/2, the init container (migration runner) is failing. This is almost always a schema format issue.",
+        "description": "Get detailed project info including deployment status and resource usage. DEPLOYMENT STATUS: Running (healthy), Pending (starting), CrashLoopBackOff (init container failed - usually schema format error), ImagePullBackOff (image build failed). TROUBLESHOOTING: If status is CrashLoopBackOff, the schema is likely in wrong format (nested 'fields' key or missing 'type' properties). Use get_schema to review current schema. If replicas show 0/2, the init container (migration runner) is failing. This is almost always a schema format issue. RETURNS THE LIVE API URL: staging.url and production.url carry the deployed base URL for each environment (append /docs for the interactive OpenAPI docs); github.url is the generated repository. create_project does NOT return a URL, so this is the tool to call once get_job_status reports the deployment finished.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -1182,6 +1182,22 @@ RELATIONAL SCHEMA RULES:
 4. DON'T define: id, created_at, updated_at (automatic)
 5. NEVER create users/customers tables — use built-in app_users
 6. Use get_template_schemas FIRST to see valid examples
+7. cluster_id is REQUIRED: call list_clusters and pass a pool id to create_project
+
+═══════════════════════════════════════════════════════════════════════════
+WHAT EVERY RELATIONAL PROJECT GETS:
+═══════════════════════════════════════════════════════════════════════════
+
+• PostgreSQL database, migrated automatically on every deploy
+• Full CRUD REST endpoints for every table in the schema
+• JWT auth: POST /api/auth/register, POST /api/auth/login, refresh-token rotation
+• Interactive OpenAPI docs at /docs
+• Two environments: staging (deploy_staging) and production (deploy_production)
+• Authorization, resolved per table in this order:
+    1. a declared __policy__ decides access (see get_schema_reference)
+    2. else a user FK to app_users makes the row owner-scoped; admins see all
+    3. else the table is tenant-shared reference data, readable by any
+       authenticated user of that project
 
 ═══════════════════════════════════════════════════════════════════════════
 GRAPH SCHEMA RULES:

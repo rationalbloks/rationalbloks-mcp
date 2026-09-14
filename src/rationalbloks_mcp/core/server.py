@@ -73,6 +73,23 @@ RationalBloks MCP provides 48 infrastructure tools across 3 categories:
 - **Graph Data** (15 tools): CRUD, search, traverse, and bulk operations on graph data
 
 
+## What Every Relational Project Gets
+
+- PostgreSQL database, migrated automatically on every deploy
+- Full CRUD REST endpoints for every table in the schema
+- JWT auth: POST /api/auth/register, POST /api/auth/login, refresh-token rotation
+- Interactive OpenAPI docs at /docs
+- Two environments: staging and production
+- Authorization resolved per table: a declared __policy__ wins; else a user FK to
+  app_users makes rows owner-scoped (admins see all); else the table is tenant-shared
+  reference data readable by any authenticated user of that project
+
+## Deploying
+
+create_project requires a cluster_id — call list_clusters and pass a pool id. It returns
+a job_id, not a URL. Poll get_job_status, then call get_project_info, which returns the
+live base URL as staging.url and production.url.
+
 ## Need Help?
 
 Visit https://rationalbloks.com/documentation for full documentation.
