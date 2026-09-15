@@ -147,7 +147,7 @@ BACKEND_TOOLS = [
     {
         "name": "get_template_schemas",
         "title": "Get Template Schemas",
-        "description": "Get pre-built template schemas for common use cases. ⭐ USE THIS FIRST when creating a new project! Templates show the CORRECT schema format with: proper FLAT structure (no 'fields' nesting), every field has a 'type' property, foreign key relationships configured correctly, best practices for field naming and types. Available templates: E-commerce (products, orders, customers), Team collaboration (projects, tasks, users), General purpose templates. You can use these templates directly with create_project or modify them for your needs. TIP: Study these templates to understand the correct schema format before creating custom schemas.",
+        "description": "Get pre-built template schemas for common use cases. ⭐ USE THIS FIRST when creating a new project! Templates show the CORRECT schema format with: proper FLAT structure (no 'fields' nesting), every field has a 'type' property, foreign key relationships configured correctly, best practices for field naming and types. Available templates: Start from Scratch (every field type), Team Collaboration (workspaces, channels, messages, tasks), E-Commerce Store (customer profiles, products, orders and their line items, reviews, shipments). Each entry's 'schema' goes to create_project as is or adapted; its 'tables' notes say how each table is authorized. TIP: Study these templates to understand the correct schema format before creating custom schemas.",
         "inputSchema": {"type": "object", "properties": {}, "required": []},
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
@@ -446,7 +446,7 @@ GRAPH_TOOLS = [
     {
         "name": "get_graph_template_schemas",
         "title": "Get Graph Template Schemas",
-        "description": """Get pre-built graph template schemas for common use cases. ⭐ USE THIS FIRST when creating a new graph project! Templates show the CORRECT graph schema format with: proper node definitions (description, flat_labels, schema with flat field definitions), relationship configurations (from, to, cardinality, data_schema), and hierarchical entity nesting. Available templates: Social Network (users, posts, follows), Knowledge Graph (topics, articles, authors), Product Catalog (products, categories, suppliers). You can use these templates directly with create_graph_project or modify them for your needs. TIP: Study these templates to understand the correct graph schema format before creating custom schemas.""",
+        "description": """Get pre-built graph template schemas for common use cases. ⭐ USE THIS FIRST when creating a new graph project! Templates show the CORRECT graph schema format with: proper node definitions (description, flat_labels, schema with flat field definitions), relationship configurations (from, to, cardinality, data_schema), and hierarchical entity nesting. Available templates: Start from Scratch (hierarchy, flat labels, every field type), Social Network (people, organizations, content, follows), Knowledge Graph (topic hierarchy, articles, authors, concepts), Product Catalog (products, categories, suppliers, reviews). Each entry's 'schema' goes to create_graph_project as is or adapted. TIP: Study these templates to understand the correct graph schema format before creating custom schemas.""",
         "inputSchema": {
             "type": "object",
             "properties": {},
