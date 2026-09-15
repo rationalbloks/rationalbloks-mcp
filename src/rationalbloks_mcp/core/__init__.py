@@ -15,9 +15,9 @@
 # ============================================================================
 
 from .auth import (
-    validate_api_key,
+    is_api_key,
+    require_api_key,
     extract_api_key_from_request,
-    APIKeyCache,
 )
 from .transport import (
     run_stdio,
@@ -31,9 +31,9 @@ from .server import (
 
 __all__ = [
     # Auth
-    "validate_api_key",
+    "is_api_key",
+    "require_api_key",
     "extract_api_key_from_request",
-    "APIKeyCache",
     # Transport
     "run_stdio",
     "run_http",

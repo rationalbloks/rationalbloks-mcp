@@ -21,10 +21,16 @@ import sys
 from typing import Any, Callable
 from collections.abc import AsyncIterator
 
+import uvicorn
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.server.models import InitializationOptions
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
+from starlette.applications import Starlette
+from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
+from starlette.routing import Mount, Route
+from starlette.types import Receive, Scope, Send
 
 # Public API
 __all__ = [
@@ -77,8 +83,6 @@ def run_http(
 ) -> None:
     # Run MCP server over Streamable HTTP for the hosted deployment
     # CHAIN: Build app → run uvicorn → no branching
-    import uvicorn
-
     app = create_http_app(server, name, version, description, server_card_builder)
 
     port = int(os.environ.get("PORT", 8000))
@@ -101,12 +105,6 @@ def create_http_app(
     # the MCP specification defines for a server reached over a network. It answers at
     # /mcp and at the origin itself, alongside the server card for discovery and /health
     # for the Kubernetes probes, with CORS so browser-based clients can connect.
-    from starlette.applications import Starlette
-    from starlette.routing import Route, Mount
-    from starlette.responses import JSONResponse
-    from starlette.middleware.cors import CORSMiddleware
-    from starlette.types import Receive, Scope, Send
-
     # Streamable HTTP (preferred) — one stateless session manager for /mcp and /.
     session_manager = StreamableHTTPSessionManager(
         app=server,

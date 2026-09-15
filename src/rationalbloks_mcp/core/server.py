@@ -12,9 +12,8 @@
 # ============================================================================
 
 import json
-import sys
 from contextvars import ContextVar
-from typing import Any, Callable
+from typing import Callable
 
 from mcp.server import Server
 from mcp.server.models import InitializationOptions
@@ -36,7 +35,7 @@ from mcp.types import (
 )
 from starlette.requests import Request
 
-from .auth import validate_api_key, extract_api_key_from_request
+from .auth import require_api_key, extract_api_key_from_request
 from .transport import run_stdio, run_http
 
 # The in-flight HTTP request for the current tool call. SDK 2.0 hands the request to
@@ -186,8 +185,8 @@ Full docs: https://rationalbloks.com/documentation
 
 DOCS_API_REFERENCE = """# RationalBloks MCP API Reference
 
-## Relational Tools (21)
-- list_projects, get_project, get_schema, get_user_info, list_clusters
+## Relational Tools (22)
+- list_projects, get_project, get_schema, get_schema_reference, get_user_info, list_clusters
 - get_job_status, get_project_info, get_version_history
 - get_template_schemas, get_subscription_status, get_project_usage
 - get_project_storage_usage, list_project_files
@@ -258,14 +257,8 @@ class BaseMCPServer:
         self.instructions = instructions
         self.http_mode = http_mode
 
-        # Validate API key for STDIO mode
-        if not http_mode:
-            is_valid, error = validate_api_key(api_key)
-            if not is_valid:
-                raise ValueError(error)
-            self.api_key = api_key
-        else:
-            self.api_key = None
+        # STDIO mode carries one key, checked here at startup; HTTP mode reads a key per request
+        self.api_key = None if http_mode else require_api_key(api_key)
 
         # Registries populated by subclasses via register_*(). Initialized BEFORE the
         # Server is built so the handler closures can read them lazily at call time — a

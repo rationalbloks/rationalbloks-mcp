@@ -5,11 +5,11 @@
 #
 # 48 Infrastructure tools:
 #
-# RELATIONAL (21):
-#   READ (14): list_projects, get_project, get_schema, get_user_info,
+# RELATIONAL (22):
+#   READ (15): list_projects, get_project, get_schema, get_user_info,
 #              get_job_status, get_project_info, get_version_history,
-#              get_template_schemas, get_subscription_status, get_project_usage,
-#              get_project_storage_usage, list_project_files,
+#              get_template_schemas, get_schema_reference, get_subscription_status,
+#              get_project_usage, get_project_storage_usage, list_project_files,
 #              get_schema_at_version, list_clusters
 #   WRITE (7): create_project, update_schema, deploy_staging, deploy_production,
 #              delete_project, rollback_project, rename_project
@@ -248,7 +248,7 @@ BACKEND_TOOLS = [
 4. USER AUTHENTICATION:
    ❌ NEVER create "users", "customers", "employees" tables with email/password
    ✅ USE built-in app_users table
-   
+
    Example:
    {
      "employee_profiles": {
@@ -259,7 +259,7 @@ BACKEND_TOOLS = [
 
 5. AUTHORIZATION:
    Add user_id → app_users.id to enable "only see your own data"
-   
+
    Example:
    {
      "orders": {
@@ -300,7 +300,6 @@ After creation, use get_job_status with returned job_id to monitor deployment.""
             "properties": {
                 "name": {"type": "string", "description": "Project name"},
                 "schema": {"type": "object", "description": "JSON schema in FLAT format (table_name → field_name → properties). Every field MUST have a 'type' property. Use get_template_schemas to see valid examples."},
-                "description": {"type": "string", "description": "Optional project description"},
                 "backend_type": {"type": "string", "enum": ["python", "rust"], "description": "Backend engine: 'python' (FastAPI, default) or 'rust' (Axum, faster). Default: python"},
                 "cluster_id": {"type": "string", "description": "REQUIRED — BYOC resource pool ID (from list_clusters) to deploy this project onto your own cluster. Owned hosting is retired: a project we operate must run on your own infrastructure. Register a pool via the Resource Pools UI first, then pass its id here."}
             },
@@ -591,7 +590,6 @@ After creation, use get_job_status with returned job_id to monitor deployment.""
             "properties": {
                 "name": {"type": "string", "description": "Project name"},
                 "schema": {"type": "object", "description": "Graph schema with 'nodes' and optionally 'relationships' keys. Use get_graph_template_schemas to see valid examples."},
-                "description": {"type": "string", "description": "Optional project description"},
                 "cluster_id": {"type": "string", "description": "REQUIRED — BYOC resource pool ID (from list_clusters) to deploy this graph project onto your own cluster. Owned hosting is retired: a project we operate must run on your own infrastructure. Register a pool via the Resource Pools UI first, then pass its id here."}
             },
             "required": ["name", "schema", "cluster_id"]
@@ -1317,7 +1315,7 @@ CRITICAL SCHEMA RULES - FOLLOW EXACTLY:
 4. USER AUTHENTICATION:
    ❌ NEVER create "users", "customers", "employees", "members" tables
    ✅ USE built-in app_users table
-   
+
    Example:
    {{
      "employee_profiles": {{
@@ -1328,7 +1326,7 @@ CRITICAL SCHEMA RULES - FOLLOW EXACTLY:
 
 5. AUTHORIZATION (user ownership):
    • Add user_id foreign key to app_users.id for user-owned resources
-   
+
    Example:
    {{
      "orders": {{

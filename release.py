@@ -614,14 +614,14 @@ try:
 
     print(f"\n{bar}")
     print(f"  RELEASED {release_version} - PyPI and MCP Registry both serve it")
-    print(f"  The hosted server is separate: python deploy_all.py vps3")
+    print("  The hosted server is separate: python deploy_all.py vps3")
     print(f"{bar}\n")
 
 except Exception as error:
     bar = "=" * 76
     print(f"\n{bar}")
-    print(f"  RELEASE FAILED")
+    print("  RELEASE FAILED")
     print(f"{bar}")
     print(f"  {type(error).__name__}: {error}")
-    print(f"\n  Chain of events halted. Nothing further was published.\n")
+    print("\n  Chain of events halted. Nothing further was published.\n")
     sys.exit(1)

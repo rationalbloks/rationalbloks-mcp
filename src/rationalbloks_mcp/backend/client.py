@@ -11,7 +11,6 @@ import httpx
 import os
 import ssl
 import certifi
-import json
 from typing import Any
 
 # Public API
