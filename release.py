@@ -11,13 +11,10 @@
 # and a release are separate acts serving separate audiences. Deploying does not
 # publish, and publishing does not deploy.
 #
-# WHY THIS FILE EXISTS:
-# Both channels were updated by hand and both fell behind without anyone noticing.
-# PyPI sat three fixes stale; the registry sat seven months and five releases stale,
-# telling every client to install a version that predated most of the product. The
-# fleet never rots this way because deploy_all.py stamps and compares every box, so
-# this file gives the packages the same treatment: one command, and a drift row in
-# `deploy_all.py status` that makes falling behind visible.
+# WHY ONE COMMAND:
+# A channel updated by hand falls behind silently. deploy_all.py stamps and compares
+# every box; this file gives the packages the same treatment: one command publishes
+# both channels, and a drift row in `deploy_all.py status` shows a channel behind.
 #
 # CHAIN OF EVENTS:
 # Every step raises on failure and nothing is transmitted until every preflight has
