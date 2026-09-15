@@ -353,28 +353,30 @@ NOTE: Without dry_run this only saves the schema. You MUST call deploy_staging a
     {
         "name": "deploy_staging",
         "title": "Deploy to Staging",
-        "description": "Deploy a project to the staging environment. This triggers: (1) Schema validation, (2) Docker image build, (3) GitHub commit, (4) Kubernetes deployment, (5) Database migrations. The operation is ASYNCHRONOUS - it returns immediately with a job_id. Use get_job_status with the job_id to monitor progress. Deployment typically takes 2-5 minutes depending on schema complexity. If deployment fails, check: (1) Schema format is FLAT (no 'fields' nesting), (2) Every field has a 'type' property, (3) Foreign keys reference existing tables, (4) No PostgreSQL reserved words in table/field names. Use get_project_info to see if the deployment succeeded.",
+        "description": "Deploy a project to the staging environment. This triggers: (1) Schema validation, (2) Docker image build, (3) GitHub commit, (4) Kubernetes deployment, (5) Database migrations. The operation is ASYNCHRONOUS - it returns immediately with a job_id. Use get_job_status with the job_id to monitor progress. Deployment typically takes 2-5 minutes depending on schema complexity. If deployment fails, check: (1) Schema format is FLAT (no 'fields' nesting), (2) Every field has a 'type' property, (3) Foreign keys reference existing tables, (4) No PostgreSQL reserved words in table/field names. Use get_project_info to see if the deployment succeeded. A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "project_id": {"type": "string", "description": "Project ID (UUID)"}
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "confirm_destructive": {"type": "boolean", "description": "Set true only after reviewing the plan: a deploy that drops tables, columns, entities, relationships or fields is refused without it"}
             },
             "required": ["project_id"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}
     },
     {
         "name": "deploy_production",
         "title": "Deploy to Production",
-        "description": "Promote staging to production (requires paid plan)",
+        "description": "Promote staging to production (requires paid plan) A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "project_id": {"type": "string", "description": "Project ID (UUID)"}
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "confirm_destructive": {"type": "boolean", "description": "Set true only after reviewing the plan: a deploy that drops tables, columns, entities, relationships or fields is refused without it"}
             },
             "required": ["project_id"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}
     },
     {
         "name": "delete_project",
@@ -617,12 +619,15 @@ WORKFLOW:
 4. Call deploy_graph_staging to apply changes
 5. Monitor with get_job_status
 
+DRY RUN: pass dry_run=true to preview what a deploy WOULD change (renames, deletions) without saving.
+
 NOTE: This only saves the schema. You MUST call deploy_graph_staging afterwards to deploy.""",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "project_id": {"type": "string", "description": "Project ID (UUID)"},
-                "schema": {"type": "object", "description": "New graph schema with 'nodes' and optionally 'relationships' keys."}
+                "schema": {"type": "object", "description": "New graph schema with 'nodes' and optionally 'relationships' keys."},
+                "dry_run": {"type": "boolean", "description": "Preview the planned migration (renames/deletions) without saving or deploying. Nothing is applied."}
             },
             "required": ["project_id", "schema"]
         },
@@ -631,28 +636,30 @@ NOTE: This only saves the schema. You MUST call deploy_graph_staging afterwards 
     {
         "name": "deploy_graph_staging",
         "title": "Deploy Graph to Staging",
-        "description": "Deploy a graph project to the staging environment. This triggers: (1) Schema validation, (2) Neo4j entity code generation, (3) Docker image build, (4) GitHub commit, (5) Kubernetes deployment with Neo4j instance. The operation is ASYNCHRONOUS — returns immediately with a job_id. Use get_job_status to monitor progress. Deployment typically takes 2-5 minutes. Use get_graph_project_info to verify deployment succeeded.",
+        "description": "Deploy a graph project to the staging environment. This triggers: (1) Schema validation, (2) Neo4j entity code generation, (3) Docker image build, (4) GitHub commit, (5) Kubernetes deployment with Neo4j instance. The operation is ASYNCHRONOUS — returns immediately with a job_id. Use get_job_status to monitor progress. Deployment typically takes 2-5 minutes. Use get_graph_project_info to verify deployment succeeded. A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "project_id": {"type": "string", "description": "Project ID (UUID)"}
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "confirm_destructive": {"type": "boolean", "description": "Set true only after reviewing the plan: a deploy that drops tables, columns, entities, relationships or fields is refused without it"}
             },
             "required": ["project_id"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}
     },
     {
         "name": "deploy_graph_production",
         "title": "Deploy Graph to Production",
-        "description": "Promote graph staging to production. Creates a separate production Neo4j instance with its own credentials and database. Requires paid plan.",
+        "description": "Promote graph staging to production. Creates a separate production Neo4j instance with its own credentials and database. Requires paid plan. A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "project_id": {"type": "string", "description": "Project ID (UUID)"}
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "confirm_destructive": {"type": "boolean", "description": "Set true only after reviewing the plan: a deploy that drops tables, columns, entities, relationships or fields is refused without it"}
             },
             "required": ["project_id"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}
     },
     {
         "name": "delete_graph_project",
