@@ -63,8 +63,8 @@ class LogicBlokClient:
 
         return result.get("result")
 
-    # Public alias -- preferred call path for the MCP tool dispatcher.
-    # The dispatcher does not need per-tool wrappers; it passes the MCP tool
-    # name straight through to the LogicBlok gateway.
     async def execute(self, tool: str, arguments: dict | None = None) -> Any:
+        # Public alias -- preferred call path for the MCP tool dispatcher.
+        # The dispatcher does not need per-tool wrappers; it passes the MCP tool
+        # name straight through to the LogicBlok gateway.
         return await self._execute(tool, arguments)
