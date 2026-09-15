@@ -154,7 +154,7 @@ BACKEND_TOOLS = [
     {
         "name": "get_schema_reference",
         "title": "Get Schema Features Reference",
-        "description": "Get the reference for ADVANCED schema features the templates do not show — read this before adding authorization or derived fields to a schema. Covers: __policy__ (relationship-based read/write authorization with single- and multi-hop membership paths, and the rules that decide whether adopting it is safe — it replaces creator-ownership per table and fails closed on a null link), computed columns (read-only values derived from other columns), __constraints__ (composite uniqueness), __audit__ (append-only audit log), and how user foreign keys are attributed on create.",
+        "description": "Get the reference for ADVANCED schema features the templates do not show — read this before adding authorization or derived fields to a schema. Covers: __policy__ (relationship-based read/write authorization with single- and multi-hop membership paths, and the rules that decide whether adopting it is safe — it replaces creator-ownership per table and fails closed on a null link), computed columns (read-only values derived from other columns), __constraints__ (composite uniqueness), __audit__ (append-only audit log), __admin_write__ (a table only admins write), and how user foreign keys are attributed on create.",
         "inputSchema": {"type": "object", "properties": {}, "required": []},
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
