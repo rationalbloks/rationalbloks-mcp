@@ -321,8 +321,8 @@ After creation, use get_job_status with returned job_id to monitor deployment.""
 
 ⚠️ CRITICAL: Follow ALL rules from create_project:
 • FLAT format (no 'fields' nesting)
-• string: MUST have max_length
-• decimal: MUST have precision + scale
+• string: max_length (default 255)
+• decimal: precision + scale (default 10, 2)
 • Use "datetime" NOT "timestamp"
 • DON'T define: id, created_at, updated_at
 • NEVER create users/customers/employees tables (use app_users)
@@ -1189,7 +1189,7 @@ RELATIONAL SCHEMA RULES:
 ═══════════════════════════════════════════════════════════════════════════
 
 1. FLAT FORMAT: {"users": {"email": {"type": "string", "max_length": 255}}}
-2. string: MUST have max_length | decimal: MUST have precision + scale
+2. string: max_length (default 255) | decimal: precision + scale (default 10, 2)
 3. Use "datetime" NOT "timestamp"
 4. DON'T define: id, created_at, updated_at (automatic)
 5. NEVER create users/customers tables — use built-in app_users
@@ -1266,20 +1266,15 @@ Full documentation: https://rationalbloks.com/documentation"""
         )
 
     def _get_client(self) -> LogicBlokClient:
-        # Get LogicBlok client with current API key
+        # A LogicBlok client for the request's API key
         api_key = self.get_api_key_for_request()
         if not api_key:
-            raise ValueError("No API key available")
+            raise ValueError("No RationalBloks API key: send the header Authorization: Bearer rb_sk_...")
         return LogicBlokClient(api_key)
 
     async def _handle_backend_tool(self, name: str, arguments: dict) -> Any:
-        # Single dispatch: every tool is a passthrough to LogicBlok's
-        # /api/mcp/execute endpoint. LogicBlok is the source of truth for
-        # tool semantics, argument validation, and error messages.
-        # Previously this method contained a per-tool if/elif unpacking
-        # arguments and calling per-tool wrapper methods — all pure
-        # pass-throughs that forced every new tool to be added in 3 places
-        # (tool schema, client wrapper, dispatcher branch).
+        # Single dispatch: every tool is a passthrough to LogicBlok's /api/mcp/execute endpoint.
+        # LogicBlok is the source of truth for tool semantics, argument validation and error messages.
         async with self._get_client() as client:
             return await client.execute(name, arguments)
 

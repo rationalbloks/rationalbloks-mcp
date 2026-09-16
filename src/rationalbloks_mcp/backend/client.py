@@ -48,7 +48,7 @@ class LogicBlokClient:
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self.close()
 
-    async def _execute(self, tool: str, arguments: dict | None = None) -> Any:
+    async def execute(self, tool: str, arguments: dict | None = None) -> Any:
         # Execute an MCP tool via the gateway: POST /api/mcp/execute with {"tool": "...", "arguments": {...}}.
         # The gateway answers a tool's result as {"success": true, "result": ...}; a failed call is an HTTP
         # error whose detail says what to do (a missing argument, a busy project naming its job, a plan
@@ -60,9 +60,3 @@ class LogicBlokClient:
             detail = response.json()["detail"] if is_json else response.text[:500]
             raise Exception(f"RationalBloks answered {response.status_code} to {tool}: {detail}")
         return response.json()["result"]
-
-    async def execute(self, tool: str, arguments: dict | None = None) -> Any:
-        # Public alias -- preferred call path for the MCP tool dispatcher.
-        # The dispatcher does not need per-tool wrappers; it passes the MCP tool
-        # name straight through to the LogicBlok gateway.
-        return await self._execute(tool, arguments)

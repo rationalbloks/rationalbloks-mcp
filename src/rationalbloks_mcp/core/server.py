@@ -126,10 +126,10 @@ CRITICAL SCHEMA RULES:
 
 ## 2. Field Types
 
-- string: MUST have max_length (e.g., "max_length": 255)
+- string: max_length, default 255 (e.g., "max_length": 100)
 - text: Long text fields
 - integer: Whole numbers
-- decimal: MUST have precision and scale (e.g., "precision": 10, "scale": 2)
+- decimal: precision and scale, default 10 and 2 (e.g., "precision": 12, "scale": 4)
 - boolean: True/false values
 - uuid: Primary/foreign keys
 - date: Date only
@@ -338,10 +338,14 @@ class BaseMCPServer:
             if not handler:
                 raise ValueError(f"No handler registered for tool: {name}")
 
-            # NO outer try/except. Chain-of-events: let exceptions propagate so the SDK
-            # marks the result isError=True. Silently returning "Error: ..." text lets
-            # an agent chain a next step after a failed tool call.
-            result = await handler(name, arguments)
+            # The tool call's one try: a failed call is a result marked is_error that carries the
+            # failure (a missing argument, a busy project naming its job, a plan that drops data), so
+            # the agent reads why and never chains a next step on it. SDK 2.0 answers an exception
+            # raised here with a bare "Internal server error" instead.
+            try:
+                result = await handler(name, arguments)
+            except Exception as error:
+                return CallToolResult(content=[TextContent(type="text", text=str(error))], is_error=True)
             formatted = json.dumps(result, indent=2, default=str)
             return CallToolResult(content=[TextContent(type="text", text=formatted)])
 

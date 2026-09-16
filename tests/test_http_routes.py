@@ -88,3 +88,24 @@ def test_health_and_server_card_answer(client):
     card = client.get("/.well-known/mcp/server-card.json")
     assert card.status_code == 200
     assert card.json()["name"], "server card carries no name"
+
+
+def test_a_failed_tool_call_reaches_the_agent_with_its_reason():
+    # SDK 2.0 answers an exception raised by a tool handler with a bare "Internal server error"; the
+    # server returns the failure as a tool result marked isError, carrying the gateway's explanation.
+    server = create_backend_server(api_key=None, http_mode=True)
+    reason = "RationalBloks answered 409 to deploy_staging: Another operation on this project is running."
+
+    async def refused(name, arguments):
+        raise Exception(reason)
+
+    server.register_tool_handler("deploy_staging", refused)
+    app = create_http_app(server.server, server.name, server.version, server.instructions)
+    call = {"jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": {"name": "deploy_staging", "arguments": {"project_id": "p1"}}}
+    with TestClient(app) as test_client:
+        headers = {"Accept": "application/json, text/event-stream", "MCP-Protocol-Version": "2025-06-18"}
+        test_client.post("/mcp", json=INITIALIZE, headers=headers)
+        answer = test_client.post("/mcp", json=call, headers=headers).json()
+    assert answer["result"]["isError"] is True
+    assert answer["result"]["content"][0]["text"] == reason
