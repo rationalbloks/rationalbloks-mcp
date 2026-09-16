@@ -81,7 +81,7 @@ BACKEND_TOOLS = [
     {
         "name": "get_schema",
         "title": "Get Project Schema",
-        "description": "Get the JSON schema definition of a project in FLAT format. Returns the schema structure where each table name maps directly to field definitions. This is the same format required for create_project and update_schema. USE CASES: Review current schema before making updates, copy schema as template for new projects, verify schema structure after deployment, learn the correct schema format by example. The returned schema will be in FLAT format: {table_name: {field_name: {type, properties}}}",
+        "description": "Get the JSON schema definition of a project in FLAT format. Returns the schema structure where each table name maps directly to field definitions. This is the same format required for create_project and update_schema. USE CASES: Review current schema before making updates, copy schema as template for new projects, verify schema structure after deployment, learn the correct schema format by example. The returned schema will be in FLAT format: {table_name: {field_name: {type, properties}}}. The response also says whether this saved schema is the deployed one: saved_schema_deployed is true when the last deploy applied it, false when it was saved after the last deploy (undeployed_changes then lists what deploying it would change), and null when no deployed schema is on record.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -108,7 +108,7 @@ BACKEND_TOOLS = [
     {
         "name": "get_job_status",
         "title": "Get Job Status",
-        "description": "Check the status of a deployment job. STATUS VALUES: pending (job queued), running (deployment in progress), completed (success), failed (deployment failed). TIMELINE: Typical deployment takes 2-5 minutes. If status is 'running' for >10 minutes, check get_project_info for detailed pod status. If status is 'failed', use get_project_info to see deployment errors and check schema format (must be FLAT, no 'fields' nesting).",
+        "description": "Check the status of a deployment job. STATUS VALUES: pending (job queued), running (deployment in progress), completed (success), failed (deployment failed). TIMELINE: Typical deployment takes 2-5 minutes. If status is 'running' for >10 minutes, check get_project_info for detailed pod status. If status is 'failed', read error first: an error that starts with 'RationalBloks platform error' failed inside the platform, so nothing in the schema causes or fixes it (report it); any other failure is the project's: use get_project_info to see deployment errors and check schema format (must be FLAT, no 'fields' nesting).",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -352,7 +352,7 @@ NOTE: Without dry_run this only saves the schema. You MUST call deploy_staging a
     {
         "name": "deploy_staging",
         "title": "Deploy to Staging",
-        "description": "Deploy a project to the staging environment. This triggers: (1) Schema validation, (2) Docker image build, (3) GitHub commit, (4) Kubernetes deployment, (5) Database migrations. The operation is ASYNCHRONOUS - it returns immediately with a job_id. Use get_job_status with the job_id to monitor progress. Deployment typically takes 2-5 minutes depending on schema complexity. If deployment fails, check: (1) Schema format is FLAT (no 'fields' nesting), (2) Every field has a 'type' property, (3) Foreign keys reference existing tables, (4) No PostgreSQL reserved words in table/field names. Use get_project_info to see if the deployment succeeded. A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan.",
+        "description": "Deploy a project to the staging environment. This triggers: (1) Schema validation, (2) Docker image build, (3) GitHub commit, (4) Kubernetes deployment, (5) Database migrations. The operation is ASYNCHRONOUS - it returns immediately with a job_id. Use get_job_status with the job_id to monitor progress. Deployment typically takes 2-5 minutes depending on schema complexity. If deployment fails, read the job's error first: one that starts with 'RationalBloks platform error' is the platform's, not the schema's. Otherwise check: (1) Schema format is FLAT (no 'fields' nesting), (2) Every field has a 'type' property, (3) Foreign keys reference existing tables, (4) No PostgreSQL reserved words in table/field names. Use get_project_info to see if the deployment succeeded. A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -433,7 +433,7 @@ GRAPH_TOOLS = [
     {
         "name": "get_graph_schema",
         "title": "Get Graph Schema",
-        "description": "Get the graph schema definition of a project. Returns the hierarchical schema with nodes (entities) and relationships. Graph schemas define entity hierarchies and typed relationships — a different format than relational flat-table schemas.",
+        "description": "Get the graph schema definition of a project. Returns the hierarchical schema with nodes (entities) and relationships. Graph schemas define entity hierarchies and typed relationships — a different format than relational flat-table schemas. The response also says whether this saved schema is the deployed one: saved_schema_deployed is true when the last deploy applied it, false when it was saved after the last deploy (undeployed_changes then lists what deploying it would change), and null when no deployed schema is on record.",
         "inputSchema": {
             "type": "object",
             "properties": {
