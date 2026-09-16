@@ -56,6 +56,13 @@ __all__ = [
 # TOOL DEFINITIONS
 # ============================================================================
 
+# The refusals every operation that starts a job can answer, stated once
+PLATFORM_UPDATE_REFUSAL = (" While RationalBloks is being updated, the call is refused with 'RationalBloks is being "
+                           "updated': call it again in a few minutes.")
+BUSY_PROJECT_REFUSAL = (" One operation runs on a project at a time: while another runs, the call is refused and the "
+                        "refusal names the running job; wait for it with get_job_status, then call again." + PLATFORM_UPDATE_REFUSAL)
+
+
 BACKEND_TOOLS = [
     # --- READ OPERATIONS ---
     {
@@ -108,7 +115,7 @@ BACKEND_TOOLS = [
     {
         "name": "get_job_status",
         "title": "Get Job Status",
-        "description": "Check the status of a deployment job. STATUS VALUES: pending (job queued), running (deployment in progress), completed (success), failed (deployment failed). TIMELINE: Typical deployment takes 2-5 minutes. If status is 'running' for >10 minutes, check get_project_info for detailed pod status. If status is 'failed', read error first: an error that starts with 'RationalBloks platform error' failed inside the platform, so nothing in the schema causes or fixes it (report it); any other failure is the project's: use get_project_info to see deployment errors and check schema format (must be FLAT, no 'fields' nesting).",
+        "description": "Check the status of a job (a create, deploy, promotion, rollback or deletion). STATUS VALUES: pending (queued), processing (in progress), completed (success), failed. Call it until the status is completed or failed: every job ends, since a job whose server stopped is failed within about three minutes, and a deploy can take up to 15 minutes. If status is 'failed', read error first: an error that starts with 'RationalBloks platform error' failed inside the platform, so nothing in the schema causes or fixes it (report it); any other failure is the project's: use get_project_info to see deployment errors and check schema format (must be FLAT, no 'fields' nesting).",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -294,7 +301,7 @@ WORKFLOW:
 3. Call this tool (optionally choose backend_type: "python" or "rust")
 4. Monitor with get_job_status (2-5 min deployment)
 
-After creation, use get_job_status with returned job_id to monitor deployment.""",
+After creation, use get_job_status with returned job_id to monitor deployment.""" + PLATFORM_UPDATE_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -352,7 +359,7 @@ NOTE: Without dry_run this only saves the schema. You MUST call deploy_staging a
     {
         "name": "deploy_staging",
         "title": "Deploy to Staging",
-        "description": "Deploy a project to the staging environment. This triggers: (1) Schema validation, (2) Docker image build, (3) GitHub commit, (4) Kubernetes deployment, (5) Database migrations. The operation is ASYNCHRONOUS - it returns immediately with a job_id. Use get_job_status with the job_id to monitor progress. Deployment typically takes 2-5 minutes depending on schema complexity. If deployment fails, read the job's error first: one that starts with 'RationalBloks platform error' is the platform's, not the schema's. Otherwise check: (1) Schema format is FLAT (no 'fields' nesting), (2) Every field has a 'type' property, (3) Foreign keys reference existing tables, (4) No PostgreSQL reserved words in table/field names. Use get_project_info to see if the deployment succeeded. A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan.",
+        "description": "Deploy a project to the staging environment. This triggers: (1) Schema validation, (2) Docker image build, (3) GitHub commit, (4) Kubernetes deployment, (5) Database migrations. The operation is ASYNCHRONOUS - it returns immediately with a job_id. Use get_job_status with the job_id to monitor progress. Deployment typically takes 2-5 minutes depending on schema complexity. If deployment fails, read the job's error first: one that starts with 'RationalBloks platform error' is the platform's, not the schema's. Otherwise check: (1) Schema format is FLAT (no 'fields' nesting), (2) Every field has a 'type' property, (3) Foreign keys reference existing tables, (4) No PostgreSQL reserved words in table/field names. Use get_project_info to see if the deployment succeeded. A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan." + BUSY_PROJECT_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -366,7 +373,7 @@ NOTE: Without dry_run this only saves the schema. You MUST call deploy_staging a
     {
         "name": "deploy_production",
         "title": "Deploy to Production",
-        "description": "Promote staging to production (requires paid plan) A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan.",
+        "description": "Promote staging to production (requires paid plan) A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan." + BUSY_PROJECT_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -380,7 +387,7 @@ NOTE: Without dry_run this only saves the schema. You MUST call deploy_staging a
     {
         "name": "delete_project",
         "title": "Delete Project",
-        "description": "Delete a project (removes GitHub repo, K8s deployments, and database)",
+        "description": "Delete a project (removes GitHub repo, K8s deployments, and database)" + BUSY_PROJECT_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -393,7 +400,7 @@ NOTE: Without dry_run this only saves the schema. You MUST call deploy_staging a
     {
         "name": "rollback_project",
         "title": "Rollback Project",
-        "description": "Rollback a project to a previous version. ⚠️ WARNING: This reverts schema AND code to the specified commit. Database data is NOT rolled back. Use get_version_history to find the commit SHA of the version you want to rollback to. After rollback, use get_job_status to monitor the redeployment. Rollback is useful when a schema change breaks deployment.",
+        "description": "Rollback a project to a previous version. ⚠️ WARNING: This reverts schema AND code to the specified commit. Database data is NOT rolled back. Use get_version_history to find the commit SHA of the version you want to rollback to. After rollback, use get_job_status to monitor the redeployment. Rollback is useful when a schema change breaks deployment." + BUSY_PROJECT_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -584,7 +591,7 @@ WORKFLOW:
 3. Call this tool
 4. Monitor with get_job_status (2-5 min deployment)
 
-After creation, use get_job_status with returned job_id to monitor deployment.""",
+After creation, use get_job_status with returned job_id to monitor deployment.""" + PLATFORM_UPDATE_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -634,7 +641,7 @@ NOTE: This only saves the schema. You MUST call deploy_graph_staging afterwards 
     {
         "name": "deploy_graph_staging",
         "title": "Deploy Graph to Staging",
-        "description": "Deploy a graph project to the staging environment. This triggers: (1) Schema validation, (2) Neo4j entity code generation, (3) Docker image build, (4) GitHub commit, (5) Kubernetes deployment with Neo4j instance. The operation is ASYNCHRONOUS — returns immediately with a job_id. Use get_job_status to monitor progress. Deployment typically takes 2-5 minutes. Use get_graph_project_info to verify deployment succeeded. A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan.",
+        "description": "Deploy a graph project to the staging environment. This triggers: (1) Schema validation, (2) Neo4j entity code generation, (3) Docker image build, (4) GitHub commit, (5) Kubernetes deployment with Neo4j instance. The operation is ASYNCHRONOUS — returns immediately with a job_id. Use get_job_status to monitor progress. Deployment typically takes 2-5 minutes. Use get_graph_project_info to verify deployment succeeded. A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan." + BUSY_PROJECT_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -648,7 +655,7 @@ NOTE: This only saves the schema. You MUST call deploy_graph_staging afterwards 
     {
         "name": "deploy_graph_production",
         "title": "Deploy Graph to Production",
-        "description": "Promote graph staging to production. Creates a separate production Neo4j instance with its own credentials and database. Requires paid plan. A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan.",
+        "description": "Promote graph staging to production. Creates a separate production Neo4j instance with its own credentials and database. Requires paid plan. A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan." + BUSY_PROJECT_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -662,7 +669,7 @@ NOTE: This only saves the schema. You MUST call deploy_graph_staging afterwards 
     {
         "name": "delete_graph_project",
         "title": "Delete Graph Project",
-        "description": "Delete a graph project (removes GitHub repo, K8s deployments, Neo4j database, and credentials)",
+        "description": "Delete a graph project (removes GitHub repo, K8s deployments, Neo4j database, and credentials)" + BUSY_PROJECT_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -675,7 +682,7 @@ NOTE: This only saves the schema. You MUST call deploy_graph_staging afterwards 
     {
         "name": "rollback_graph_project",
         "title": "Rollback Graph Project",
-        "description": "Rollback a graph project to a previous version. ⚠️ WARNING: This reverts schema AND code to the specified commit. Neo4j data is NOT rolled back. Use get_graph_version_history to find the commit SHA of the version you want to rollback to. After rollback, the graph API will be redeployed with the old schema.",
+        "description": "Rollback a graph project to a previous version. ⚠️ WARNING: This reverts schema AND code to the specified commit. Neo4j data is NOT rolled back. Use get_graph_version_history to find the commit SHA of the version you want to rollback to. After rollback, the graph API will be redeployed with the old schema." + BUSY_PROJECT_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
