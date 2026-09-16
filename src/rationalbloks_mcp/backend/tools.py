@@ -387,7 +387,7 @@ NOTE: Without dry_run this only saves the schema. You MUST call deploy_staging a
     {
         "name": "delete_project",
         "title": "Delete Project",
-        "description": "Delete a project (removes GitHub repo, K8s deployments, and database)" + BUSY_PROJECT_REFUSAL,
+        "description": "Delete a project (removes GitHub repo, K8s deployments, and database). It runs as a job: poll the returned job_id with get_job_status until it is completed." + BUSY_PROJECT_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -669,7 +669,7 @@ NOTE: This only saves the schema. You MUST call deploy_graph_staging afterwards 
     {
         "name": "delete_graph_project",
         "title": "Delete Graph Project",
-        "description": "Delete a graph project (removes GitHub repo, K8s deployments, Neo4j database, and credentials)" + BUSY_PROJECT_REFUSAL,
+        "description": "Delete a graph project (removes GitHub repo, K8s deployments, Neo4j database, and credentials). It runs as a job: poll the returned job_id with get_job_status until it is completed." + BUSY_PROJECT_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {

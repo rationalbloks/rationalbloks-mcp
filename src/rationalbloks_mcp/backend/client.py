@@ -49,19 +49,17 @@ class LogicBlokClient:
         await self.close()
 
     async def _execute(self, tool: str, arguments: dict | None = None) -> Any:
-        # Execute an MCP tool via the gateway
-        # All tools use POST /api/mcp/execute with {"tool": "...", "arguments": {...}}
+        # Execute an MCP tool via the gateway: POST /api/mcp/execute with {"tool": "...", "arguments": {...}}.
+        # The gateway answers a tool's result as {"success": true, "result": ...}; a failed call is an HTTP
+        # error whose detail says what to do (a missing argument, a busy project naming its job, a plan
+        # that drops data), raised with that detail so the agent reads it.
         payload = {"tool": tool, "arguments": arguments or {}}
         response = await self._client.post("/api/mcp/execute", json=payload)
-        response.raise_for_status()
-        result = response.json()
-
-        # Gateway returns {"success": bool, "result": ..., "error": ...}
-        if not result.get("success", False):
-            error = result.get("error", "Unknown error")
-            raise Exception(f"MCP Gateway error: {error}")
-
-        return result.get("result")
+        if response.is_error:
+            is_json = response.headers.get("content-type", "").startswith("application/json")
+            detail = response.json()["detail"] if is_json else response.text[:500]
+            raise Exception(f"RationalBloks answered {response.status_code} to {tool}: {detail}")
+        return response.json()["result"]
 
     async def execute(self, tool: str, arguments: dict | None = None) -> Any:
         # Public alias -- preferred call path for the MCP tool dispatcher.
