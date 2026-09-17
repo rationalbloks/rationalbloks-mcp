@@ -115,7 +115,7 @@ BACKEND_TOOLS = [
     {
         "name": "get_job_status",
         "title": "Get Job Status",
-        "description": "Check the status of a job (a create, deploy, promotion, rollback or deletion). STATUS VALUES: pending (queued), processing (in progress), completed (success), failed. Call it until the status is completed or failed: every job ends, since a job whose server stopped is failed within about three minutes, and a deploy can take up to 15 minutes. If status is 'failed', read error first: an error that starts with 'RationalBloks platform error' failed inside the platform, so nothing in the schema causes or fixes it (report it); any other failure is the project's: use get_project_info to see deployment errors and check schema format (must be FLAT, no 'fields' nesting).",
+        "description": "Check the status of a job (a create, deploy, promotion, rollback or deletion). STATUS VALUES: pending (queued), processing (in progress), completed (success), failed. Call it until the status is completed or failed: every job ends, since a job whose server stopped is failed within about three minutes, and a deploy can take up to 15 minutes. If status is 'failed', read failure_side and error: 'customer' means the project's input is proven the cause (an invalid schema, data the new schema does not fit, a change the resource pool cannot hold), and error says what to change; 'platform' means no input of the project is known to cause it: report it to RationalBloks rather than changing the schema.",
         "inputSchema": {
             "type": "object",
             "properties": {

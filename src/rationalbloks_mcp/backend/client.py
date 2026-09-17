@@ -13,6 +13,8 @@ import ssl
 import certifi
 from typing import Any
 
+from .._version import __version__
+
 # Public API
 __all__ = ["LogicBlokClient"]
 
@@ -31,9 +33,10 @@ class LogicBlokClient:
         self.api_key = api_key
         # Use certifi for SSL certs (fixes issues in isolated uvx environments)
         ssl_context = ssl.create_default_context(cafile=certifi.where())
+        # The client names itself: Cloudflare refuses a library's default User-Agent (error 1010)
         self._client = httpx.AsyncClient(
             base_url=self.BASE_URL,
-            headers={"Authorization": f"Bearer {api_key}"},
+            headers={"Authorization": f"Bearer {api_key}", "User-Agent": f"rationalbloks-mcp/{__version__}"},
             timeout=60.0,  # Longer timeout for deployment operations
             verify=ssl_context,
         )
