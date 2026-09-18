@@ -2,17 +2,17 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "com.rationalbloks/mcp",
   "title": "RationalBloks",
-  "description": "Deploy production REST and Neo4j Graph APIs from JSON schemas in seconds. 48 tools.",
+  "description": "Deploy production REST and Neo4j Graph APIs from JSON schemas in seconds. 49 tools.",
   "repository": {
     "url": "https://github.com/rationalbloks/rationalbloks-mcp",
     "source": "github"
   },
-  "version": "0.13.5",
+  "version": "0.14.0",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "rationalbloks-mcp",
-      "version": "0.13.5",
+      "version": "0.14.0",
       "transport": {
         "type": "stdio"
       },

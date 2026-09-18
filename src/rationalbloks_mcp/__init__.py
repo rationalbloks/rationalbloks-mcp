@@ -3,7 +3,7 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# Deploy production REST APIs and Neo4j Graph APIs in minutes. 48 tools for:
+# Deploy production REST APIs and Neo4j Graph APIs in minutes. 49 tools for:
 #   - Relational: 22 tools (create, list, deploy, rollback, templates, storage, schema reference, etc.)
 #   - Graph Schema: 11 tools (create, deploy, rollback, templates, etc.)
 #   - Graph Data: 15 tools (CRUD, search, traverse, bulk, fulltext)
@@ -53,7 +53,7 @@ def main() -> None:
     http_mode = transport == "http"
     api_key = None if http_mode else os.environ.get("RATIONALBLOKS_API_KEY")
 
-    print("[rationalbloks-mcp] Starting server (48 tools: 22 relational + 11 graph schema + 15 graph data)...", file=sys.stderr)
+    print("[rationalbloks-mcp] Starting server (49 tools: 23 relational + 11 graph schema + 15 graph data)...", file=sys.stderr)
 
     try:
         server = create_backend_server(api_key=api_key, http_mode=http_mode)

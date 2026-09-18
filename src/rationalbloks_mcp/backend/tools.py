@@ -3,11 +3,11 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# 48 Infrastructure tools:
+# 49 Infrastructure tools:
 #
-# RELATIONAL (22):
-#   READ (15): list_projects, get_project, get_schema, get_user_info,
-#              get_job_status, get_project_info, get_version_history,
+# RELATIONAL (23):
+#   READ (16): list_projects, get_project, get_schema, get_user_info,
+#              get_job_status, list_project_jobs, get_project_info, get_version_history,
 #              get_template_schemas, get_schema_reference, get_subscription_status,
 #              get_project_usage, get_project_storage_usage, list_project_files,
 #              get_schema_at_version, list_clusters
@@ -122,6 +122,21 @@ BACKEND_TOOLS = [
                 "job_id": {"type": "string", "description": "Job ID returned from deployment operations"}
             },
             "required": ["job_id"]
+        },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    {
+        "name": "list_project_jobs",
+        "title": "List Project Jobs",
+        "description": "List a project's jobs, newest first: every create, deploy, promotion, rollback, resource change and module operation, each with its status, error, failure_side and when it started and ended. A job's record is kept for the life of the project, so this is how to find out what an operation did when you no longer have its job_id (after an interruption, or in a later session): the first job of the job_type you want is the latest. Read older jobs a page at a time with offset; a page shorter than limit is the last.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "limit": {"type": "integer", "description": "Max jobs to return (1-1000, default 100)"},
+                "offset": {"type": "integer", "description": "Jobs to skip, newest first (default 0)"}
+            },
+            "required": ["project_id"]
         },
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
@@ -1137,7 +1152,7 @@ GRAPH_PROMPTS = [
 # BACKEND MCP SERVER
 # ============================================================================
 
-# All tools are infrastructure-only (48 tools)
+# All tools are infrastructure-only (49 tools)
 INFRASTRUCTURE_TOOLS = BACKEND_TOOLS + GRAPH_TOOLS + GRAPH_DATA_TOOLS
 
 
@@ -1224,7 +1239,7 @@ GRAPH SCHEMA RULES:
 7. DON'T define: id, created_at, updated_at (automatic)
 8. Use get_graph_template_schemas FIRST to see valid examples
 
-Available: 48 tools — 22 relational + 11 graph schema + 15 graph data.
+Available: 49 tools — 23 relational + 11 graph schema + 15 graph data.
 Full documentation: https://rationalbloks.com/documentation"""
 
     def __init__(

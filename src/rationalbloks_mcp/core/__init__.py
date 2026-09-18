@@ -10,7 +10,7 @@
 #   - Authentication utilities
 #
 # ARCHITECTURE:
-# BackendMCPServer extends this core with 48 tools.
+# BackendMCPServer extends this core with 49 tools.
 # No duplication of server, transport, or auth logic.
 # ============================================================================
 

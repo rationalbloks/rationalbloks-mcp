@@ -8,7 +8,7 @@
 #
 # ARCHITECTURE:
 # - BaseMCPServer provides common MCP infrastructure
-# - BackendMCPServer adds 48 tools and handlers
+# - BackendMCPServer adds 49 tools and handlers
 # ============================================================================
 
 import json
@@ -87,7 +87,8 @@ RationalBloks MCP provides 48 infrastructure tools across 3 categories:
 
 create_project requires a cluster_id — call list_clusters and pass a pool id. It returns
 a job_id, not a URL. Poll get_job_status, then call get_project_info, which returns the
-live base URL as staging.url and production.url.
+live base URL as staging.url and production.url. A job's record is kept: list_project_jobs
+reads a project's jobs newest first, with each one's outcome, when a job_id was lost.
 
 ## Need Help?
 
@@ -185,9 +186,9 @@ Full docs: https://rationalbloks.com/documentation
 
 DOCS_API_REFERENCE = """# RationalBloks MCP API Reference
 
-## Relational Tools (22)
+## Relational Tools (23)
 - list_projects, get_project, get_schema, get_schema_reference, get_user_info, list_clusters
-- get_job_status, get_project_info, get_version_history
+- get_job_status, list_project_jobs, get_project_info, get_version_history
 - get_template_schemas, get_subscription_status, get_project_usage
 - get_project_storage_usage, list_project_files
 - get_schema_at_version, create_project, update_schema
