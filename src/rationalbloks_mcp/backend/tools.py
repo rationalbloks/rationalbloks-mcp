@@ -88,11 +88,13 @@ BACKEND_TOOLS = [
     {
         "name": "get_schema",
         "title": "Get Project Schema",
-        "description": "Get the JSON schema definition of a project in FLAT format. Returns the schema structure where each table name maps directly to field definitions. This is the same format required for create_project and update_schema. USE CASES: Review current schema before making updates, copy schema as template for new projects, verify schema structure after deployment, learn the correct schema format by example. The returned schema will be in FLAT format: {table_name: {field_name: {type, properties}}}. The response also says whether this saved schema is the deployed one: saved_schema_deployed is true when the last deploy applied it, false when it was saved after the last deploy (undeployed_changes then lists what deploying it would change), and null when no deployed schema is on record.",
+        "description": "Get the JSON schema definition of a project in FLAT format. Returns the schema structure where each table name maps directly to field definitions. This is the same format required for create_project and update_schema. USE CASES: Review current schema before making updates, copy schema as template for new projects, verify schema structure after deployment, learn the correct schema format by example. The returned schema will be in FLAT format: {table_name: {field_name: {type, properties}}}. The response also says whether this saved schema is the deployed one: saved_schema_deployed is true when the last deploy applied it, false when it was saved after the last deploy (undeployed_changes then lists what deploying it would change), and null when no deployed schema is on record. A LARGE SCHEMA: pass tables or fields to read only the part you are about to change — the answer's 'version' is the whole schema's either way, so a slice is enough to patch it with patch_schema(expected_version=...).",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "project_id": {"type": "string", "description": "Project ID (UUID)"}
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "tables": {"type": "array", "items": {"type": "string"}, "description": "Read only these tables, whole (e.g. [\"parameters\"]). A table the schema does not hold is refused."},
+                "fields": {"type": "array", "items": {"type": "string"}, "description": "Read only these fields, each written 'table.field' (e.g. [\"parameters.is_clock\"]); their table's own keys come with them."}
             },
             "required": ["project_id"]
         },
@@ -355,9 +357,13 @@ WORKFLOW:
 5. Call deploy_staging to apply changes
 6. Monitor with get_job_status
 
-DRY RUN: pass dry_run=true to preview what a deploy WOULD change — renames, drops, creates —
-without saving or deploying anything. The response flags destructive operations (dropped
-tables/columns) so you can review before applying.
+CHANGING PART OF A SCHEMA: use patch_schema. This tool replaces the WHOLE schema, so it is for a
+new data model or a template; sending back a large schema to change one field risks changing
+something else on the way.
+
+DRY RUN: pass dry_run=true to save nothing and read back 'diff' — every property this schema changes
+in the saved one, so an accidentally changed description, default, enum or computed case shows up —
+and 'plan', the migration a deploy would then run, with destructive steps flagged.
 
 NOTE: Without dry_run this only saves the schema. You MUST call deploy_staging afterwards to apply changes.""",
         "inputSchema": {
@@ -365,11 +371,56 @@ NOTE: Without dry_run this only saves the schema. You MUST call deploy_staging a
             "properties": {
                 "project_id": {"type": "string", "description": "Project ID (UUID)"},
                 "schema": {"type": "object", "description": "New JSON schema in FLAT format (table_name → field_name → properties). Every field MUST have a 'type' property."},
-                "dry_run": {"type": "boolean", "description": "Preview the planned migration (renames/drops/creates) without saving or deploying. Nothing is applied."}
+                "dry_run": {"type": "boolean", "description": "Save nothing: answer the property-level diff against the saved schema and the migration plan a deploy would run."},
+                "expected_version": {"type": "string", "description": "The 'version' a get_schema read answered. The save is refused (409) when the saved schema changed since, so two editors never overwrite each other silently."}
             },
             "required": ["project_id", "schema"]
         },
         "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
+    },
+    {
+        "name": "patch_schema",
+        "title": "Patch Schema",
+        "description": """Change PART of a project's schema (saves to database, does NOT deploy).
+
+Send only the change. The server applies it to the saved schema, in order and all together, and keeps
+every table and field it does not touch — including their identity, so a rename stays a rename and the
+column keeps its data.
+
+OPERATIONS (each one small object, applied in the order given):
+• {"op": "add_table", "table": "clocks", "definition": {...}}      new table, same FLAT rules as create_project
+• {"op": "drop_table", "table": "clocks"}
+• {"op": "rename_table", "table": "clocks", "to": "timers"}
+• {"op": "add_field", "table": "assets", "field": "serial", "definition": {"type": "string", "max_length": 64}}
+• {"op": "drop_field", "table": "parameters", "field": "is_clock"}
+• {"op": "rename_field", "table": "parameters", "field": "is_clock", "to": "clock_kind"}
+• {"op": "set_field", "table": "assets", "field": "name", "properties": {"max_length": 300}}   merges; a property set to null is removed
+• {"op": "set_table", "table": "assets", "properties": {"__audit__": true}}   __policy__, __constraints__, __audit__, __admin_write__
+
+ALL OR NOTHING: an operation that cannot be applied — a table or field that is not there, a name
+already taken, a schema the deploy would refuse — refuses the whole patch, naming the operation, and
+nothing is saved.
+
+EVERY ANSWER IS A DIFF: 'applied' (what each operation did), 'diff' (every changed property by path),
+'summary' and 'plan' (the migration a deploy would then run), and 'version' (the schema's version
+after the change). You never need to read the whole schema back to see what you did.
+
+WORKFLOW:
+1. get_schema with tables/fields to read the part you are changing (its 'version' is the whole schema's)
+2. patch_schema with dry_run=true: check 'diff' and 'plan'
+3. patch_schema with the same operations (pass expected_version to be refused if someone else saved meanwhile)
+4. deploy_staging (confirm_destructive=true when the plan drops data), then get_job_status""",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "operations": {"type": "array", "items": {"type": "object"}, "description": "The operations, applied in order and all together. See the tool description for every op and its fields."},
+                "dry_run": {"type": "boolean", "description": "Save nothing: answer what the operations did, the diff and the migration plan a deploy would run."},
+                "expected_version": {"type": "string", "description": "The 'version' a get_schema read answered. The patch is refused (409) when the saved schema changed since, so two editors never overwrite each other silently."}
+            },
+            "required": ["project_id", "operations"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
     },
     {
         "name": "deploy_staging",
