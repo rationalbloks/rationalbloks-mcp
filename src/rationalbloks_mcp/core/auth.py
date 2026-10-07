@@ -5,11 +5,13 @@
 #
 # The API key rules of the MCP server. Over HTTP a key travels as a Bearer token (RFC 6750
 # header format); over STDIO it is read from RATIONALBLOKS_API_KEY. LogicBlok verifies the key
-# on every call; this module only checks its shape.
+# on every call and answers which tools it may call; this module only checks its shape.
 #
 # CHAIN MANTRA ENFORCEMENT:
 # - One format rule (is_api_key) for both transports
-# - A missing or malformed STDIO key raises at startup, with the remedy in the message
+# - A malformed STDIO key raises at startup, with the remedy in the message
+# - No key is one rule on both transports: the server lists every tool (a directory reads it
+#   that way) and every call answers how to give a key
 # ============================================================================
 
 from starlette.requests import Request
@@ -17,7 +19,7 @@ from starlette.requests import Request
 # Public API
 __all__ = [
     "is_api_key",
-    "require_api_key",
+    "stdio_api_key",
     "extract_api_key_from_request",
 ]
 
@@ -33,13 +35,12 @@ def is_api_key(value: object) -> bool:
     return isinstance(value, str) and value.startswith(API_KEY_PREFIX) and len(value) >= API_KEY_MIN_LENGTH
 
 
-def require_api_key(api_key: str | None) -> str:
-    # The STDIO key, or ValueError naming what is wrong and how to fix it
+def stdio_api_key(api_key: str | None) -> str | None:
+    # The STDIO key from RATIONALBLOKS_API_KEY: None when it is not set (the server then lists every
+    # tool, and each call answers how to set the key), the key itself, or ValueError naming what is
+    # wrong with a key of the wrong shape and how to fix it
     if not api_key:
-        raise ValueError(
-            "RATIONALBLOKS_API_KEY environment variable not set. Get your API key from "
-            "https://rationalbloks.com/settings, then: export RATIONALBLOKS_API_KEY=rb_sk_your_key_here"
-        )
+        return None
     if not is_api_key(api_key):
         raise ValueError(
             f"Invalid API key format: a RationalBloks key starts with '{API_KEY_PREFIX}' and has at "

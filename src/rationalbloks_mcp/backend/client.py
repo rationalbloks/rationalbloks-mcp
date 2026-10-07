@@ -4,7 +4,8 @@
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
 # HTTP client for LogicBlok MCP Gateway (logicblok.rationalbloks.com/api/mcp)
-# Uses the /api/mcp/execute endpoint with tool name + arguments pattern.
+# A tool call is POST /api/mcp/execute with the tool's name and arguments; the tool list asks
+# GET /api/mcp/allowed-tools which tools the key may call.
 # ============================================================================
 
 import httpx
@@ -20,8 +21,8 @@ __all__ = ["LogicBlokClient"]
 
 
 class LogicBlokClient:
-    # HTTP client for LogicBlok MCP Gateway
-    # All operations go through POST /api/mcp/execute with tool name and arguments
+    # HTTP client for LogicBlok MCP Gateway, one per API key: execute runs a tool, allowed_tools names
+    # the tools the key may call
 
     # LOGICBLOK_URL env var (set via K8s ConfigMap) lets in-cluster traffic stay
     # in-cluster (http://logicblok-api.logicblok.svc.cluster.local:8000).
@@ -37,7 +38,7 @@ class LogicBlokClient:
         self._client = httpx.AsyncClient(
             base_url=self.BASE_URL,
             headers={"Authorization": f"Bearer {api_key}", "User-Agent": f"rationalbloks-mcp/{__version__}"},
-            timeout=60.0,  # Longer timeout for deployment operations
+            timeout=180.0,  # longer than the gateway's longest call (150 s, an inline module operation)
             verify=ssl_context,
         )
 
@@ -58,8 +59,20 @@ class LogicBlokClient:
         # that drops data), raised with that detail so the agent reads it.
         payload = {"tool": tool, "arguments": arguments or {}}
         response = await self._client.post("/api/mcp/execute", json=payload)
-        if response.is_error:
-            is_json = response.headers.get("content-type", "").startswith("application/json")
-            detail = response.json()["detail"] if is_json else response.text[:500]
-            raise Exception(f"RationalBloks answered {response.status_code} to {tool}: {detail}")
+        _raise_refusal(response, tool)
         return response.json()["result"]
+
+    async def allowed_tools(self) -> list:
+        # The names of the tools this key may call (GET /api/mcp/allowed-tools), or the gateway's refusal of
+        # the key raised with its detail (an unknown, revoked or expired key)
+        response = await self._client.get("/api/mcp/allowed-tools")
+        _raise_refusal(response, "the tool list")
+        return response.json()["tools"]
+
+
+def _raise_refusal(response: httpx.Response, what: str) -> None:
+    # A failed gateway answer raised with the gateway's detail, so the agent or the client reads why
+    if response.is_error:
+        is_json = response.headers.get("content-type", "").startswith("application/json")
+        detail = response.json()["detail"] if is_json else response.text[:500]
+        raise Exception(f"RationalBloks answered {response.status_code} to {what}: {detail}")

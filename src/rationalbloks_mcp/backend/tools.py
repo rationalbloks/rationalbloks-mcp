@@ -3,32 +3,25 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# 49 Infrastructure tools:
+# The tools, in four lists (the gateway, logicblok/mcp_gateway.py, serves each one and decides what it
+# does; logicblok/tests/test_api_keys.py holds these lists to its tables):
+#   BACKEND_TOOLS     relational projects (the preview, the destructive deploy and the redeploy also take
+#                     graph ones)
+#   GRAPH_TOOLS       graph projects' schemas
+#   GRAPH_DATA_TOOLS  the data of a deployed graph project
+#   MODULE_TOOLS      a project's own frontends and backends
+# api_reference writes them out by kind for the rationalbloks://docs/api-reference resource.
 #
-# RELATIONAL (23):
-#   READ (16): list_projects, get_project, get_schema, get_user_info,
-#              get_job_status, list_project_jobs, get_project_info, get_version_history,
-#              get_template_schemas, get_schema_reference, get_subscription_status,
-#              get_project_usage, get_project_storage_usage, list_project_files,
-#              get_schema_at_version, list_clusters
-#   WRITE (7): create_project, update_schema, deploy_staging, deploy_production,
-#              delete_project, rollback_project, rename_project
-#
-# GRAPH SCHEMA (11):
-#   READ (5):  get_graph_schema, get_graph_template_schemas,
-#              get_graph_version_history, get_graph_schema_at_version,
-#              get_graph_project_info
-#   WRITE (6): create_graph_project, update_graph_schema,
-#              deploy_graph_staging, deploy_graph_production,
-#              delete_graph_project, rollback_graph_project
-#
-# GRAPH DATA (15):
-#   READ (8):  get_graph_node, list_graph_nodes, get_node_relationships,
-#              search_graph_nodes, fulltext_search_graph, traverse_graph,
-#              get_graph_statistics, get_graph_data_schema
-#   WRITE (7): create_graph_node, update_graph_node, delete_graph_node,
-#              create_graph_relationship, delete_graph_relationship,
-#              bulk_create_graph_nodes, bulk_create_graph_relationships
+# ANNOTATIONS. One rule for every tool, so a client that decides by them decides right:
+#   readOnlyHint     true exactly for the tools a read key may call (the gateway's read scope)
+#   destructiveHint  true when a call can delete something (a project, module, table, field, node,
+#                    relationship or environment variable) or replace a whole (a whole schema, a deploy
+#                    that drops data, a rollback); false when a call only adds, or changes the values it
+#                    names. Risk is in the tool name, never in an argument: a client's permission rules
+#                    match names, so every destructive change is a tool of its own (drop_schema_items,
+#                    deploy_destructive).
+#   idempotentHint   true when calling again with the same arguments changes nothing more
+#   openWorldHint    false: every tool acts on the caller's own RationalBloks account
 # ============================================================================
 
 from typing import Any
@@ -44,6 +37,7 @@ __all__ = [
     "BACKEND_TOOLS",
     "GRAPH_TOOLS",
     "GRAPH_DATA_TOOLS",
+    "MODULE_TOOLS",
     "INFRASTRUCTURE_TOOLS",
     "BACKEND_PROMPTS",
     "GRAPH_PROMPTS",
@@ -61,6 +55,14 @@ PLATFORM_UPDATE_REFUSAL = (" While RationalBloks is being updated, the call is r
                            "updated': call it again in a few minutes.")
 BUSY_PROJECT_REFUSAL = (" One operation runs on a project at a time: while another runs, the call is refused and the "
                         "refusal names the running job; wait for it with get_job_status, then call again." + PLATFORM_UPDATE_REFUSAL)
+BUSY_MODULE_REFUSAL = (" One operation runs on a module at a time, and none beside an operation on its project: "
+                       "the refusal names the running job; wait for it with get_job_status, then call again." + PLATFORM_UPDATE_REFUSAL)
+
+# What a deploy tool answers a plan that drops data, stated once
+DESTRUCTIVE_PLAN_REFUSAL = (" A plan that drops data is refused, naming every table, field, entity or relationship it "
+                            "would drop, and every field whose type change rounds or cuts its values (a decimal with a "
+                            "smaller scale or turned integer, a datetime turned date): deploy_destructive applies it, a "
+                            "tool of its own so a client asks before it runs.")
 
 
 BACKEND_TOOLS = [
@@ -117,11 +119,11 @@ BACKEND_TOOLS = [
     {
         "name": "get_job_status",
         "title": "Get Job Status",
-        "description": "Check the status of a job (a create, deploy, promotion, rollback or deletion). STATUS VALUES: pending (queued), processing (in progress), completed (success), failed. Call it until the status is completed or failed: every job ends, since a job whose server stopped is failed within about three minutes, and a deploy can take up to 15 minutes. If status is 'failed', read failure_side and error: 'customer' means the project's input is proven the cause (an invalid schema, data the new schema does not fit, a change the resource pool cannot hold), and error says what to change; 'platform' means no input of the project is known to cause it: report it to RationalBloks rather than changing the schema.",
+        "description": "Check the status of a job (a create, deploy, promotion, rollback, deletion or module operation). STATUS VALUES: pending (queued), processing (in progress), completed (success), failed. Call it until the status is completed or failed: every job ends, since a job whose server stopped is failed within about three minutes, and a deploy can take up to 15 minutes. A module job names its module_code, and a completed module build's result names the image it built (its commit). If status is 'failed', read failure_side and error: 'customer' means the project's input is proven the cause (an invalid schema, data the new schema does not fit, a change the resource pool cannot hold), and error says what to change; 'platform' means no input of the project is known to cause it: report it to RationalBloks rather than changing the schema.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "job_id": {"type": "string", "description": "Job ID returned from deployment operations"}
+                "job_id": {"type": "string", "description": "Job ID a create, deploy, promotion, rollback, deletion or module operation answered"}
             },
             "required": ["job_id"]
         },
@@ -247,78 +249,61 @@ BACKEND_TOOLS = [
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
     {
+        "name": "preview_schema_change",
+        "title": "Preview Schema Change",
+        "description": """Preview a schema change, saving nothing: the one way to see what a change would do before it is saved.
+
+Pass ONE of:
+• operations: the operations patch_schema or drop_schema_items would apply (relational projects)
+• schema: a whole schema in place of the saved one (relational or graph projects)
+
+ANSWER: 'applied' (for operations), 'diff' (every property saving it would change, by path), 'summary' and 'plan' (the migration the next deploy would then run, every table, field, entity or relationship it drops named), and 'version' (the saved schema's: pass it as expected_version to the save that follows, so it is refused if someone saved meanwhile).
+
+A relational schema the deploy would refuse is refused here, with the reason.""",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "operations": {"type": "array", "items": {"type": "object"}, "description": "A change to part of a relational schema, as patch_schema or drop_schema_items take it. Pass this or schema."},
+                "schema": {"type": "object", "description": "A whole schema in place of the saved one (relational or graph). Pass this or operations."}
+            },
+            "required": ["project_id"]
+        },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    {
         "name": "create_project",
         "title": "Create Project",
-        "description": """Create a new RationalBloks project from a JSON schema.
+        "description": """Create a new RationalBloks project (a PostgreSQL REST API) from a JSON schema, on one of your resource pools.
 
 ⚠️ CRITICAL RULES - READ BEFORE CREATING SCHEMA:
 
 1. FLAT FORMAT (REQUIRED):
-   ✅ CORRECT: {users: {email: {type: "string", max_length: 255}}}
-   ❌ WRONG: {users: {fields: {email: {type: "string"}}}}
-   DO NOT nest under 'fields' key!
+   ✅ CORRECT: {"orders": {"total": {"type": "decimal", "precision": 10, "scale": 2}}}
+   ❌ WRONG: {"orders": {"fields": {...}}} — never nest under 'fields'
 
-2. FIELD TYPE REQUIREMENTS:
-   • string: MUST have "max_length" (e.g., max_length: 255)
-   • decimal: MUST have "precision" and "scale" (e.g., precision: 10, scale: 2)
-   • datetime: Use "datetime" NOT "timestamp"
-   • ALL fields: MUST have "type" property
+2. EVERY field has a "type":
+   string (MUST have max_length), text, integer, decimal (precision, scale), boolean, uuid, date,
+   datetime (NOT "timestamp"), json, and the PostgreSQL arrays uuid_array, integer_array, text_array,
+   float_array (GIN-indexed: @> contains, <@ contained_by, && overlaps)
 
-3. AUTOMATIC FIELDS (DON'T define):
-   • id (uuid, primary key)
-   • created_at (datetime)
-   • updated_at (datetime)
+3. AUTOMATIC FIELDS (DON'T define): id, created_at, updated_at
 
-4. USER AUTHENTICATION:
-   ❌ NEVER create "users", "customers", "employees" tables with email/password
-   ✅ USE built-in app_users table
+4. USERS: NEVER create users/customers/employees tables with email or password. Link to the built-in
+   app_users table: {"user_id": {"type": "uuid", "foreign_key": "app_users.id"}}. A table with such a
+   field is owner-scoped: each user sees their own rows.
 
-   Example:
-   {
-     "employee_profiles": {
-       "user_id": {type: "uuid", foreign_key: "app_users.id", required: true},
-       "department": {type: "string", max_length: 100}
-     }
-   }
+5. FIELD OPTIONS: required, unique, default, enum, foreign_key ("table.id"), on_delete (cascade,
+   set_null, restrict, no_action), nullable, index, description, write_only, computed.
+   Advanced features (__policy__, computed columns, __constraints__, __audit__): get_schema_reference.
 
-5. AUTHORIZATION:
-   Add user_id → app_users.id to enable "only see your own data"
-
-   Example:
-   {
-     "orders": {
-       "user_id": {type: "uuid", foreign_key: "app_users.id"},
-       "total": {type: "decimal", precision: 10, scale: 2}
-     }
-   }
-
-6. FIELD OPTIONS:
-   • required: true/false
-   • unique: true/false
-   • default: any value
-   • enum: ["val1", "val2"]
-   • foreign_key: "table.id"
-
-AVAILABLE TYPES: string, text, integer, decimal, boolean, uuid, date, datetime, json, uuid_array, integer_array, text_array, float_array
-
-   Array types store PostgreSQL native arrays with automatic GIN indexing:
-   • uuid_array: UUID[] — for sets of references (e.g., tensor coordinates)
-   • integer_array: BIGINT[] — for dimension indices, integer sets
-   • text_array: TEXT[] — for tags, categories, label sets
-   • float_array: DOUBLE PRECISION[] — for weight vectors, scores
-   GIN-indexed operators: @> (contains), <@ (contained_by), && (overlaps)
-
-BACKEND ENGINE:
-• python (default): FastAPI backend — mature, full-featured
-• rust: Axum backend — faster cold starts, lower memory, high performance
+BACKEND ENGINE (backend_type): "python" (FastAPI, default) or "rust" (Axum: faster cold starts, lower memory).
 
 WORKFLOW:
-1. Use get_template_schemas FIRST to see valid examples
-2. Create schema following ALL rules above
-3. Call this tool (optionally choose backend_type: "python" or "rust")
-4. Monitor with get_job_status (2-5 min deployment)
-
-After creation, use get_job_status with returned job_id to monitor deployment.""" + PLATFORM_UPDATE_REFUSAL,
+1. get_template_schemas FIRST to see valid examples
+2. create_project with a cluster_id from list_clusters
+3. Poll get_job_status with the returned job_id (2-5 minutes)
+4. get_project_info gives the live URL""" + PLATFORM_UPDATE_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -329,14 +314,16 @@ After creation, use get_job_status with returned job_id to monitor deployment.""
             },
             "required": ["name", "schema", "cluster_id"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
     },
     {
         "name": "update_schema",
         "title": "Update Schema",
-        "description": """Update a project's schema (saves to database, does NOT deploy).
+        "description": """Replace a project's WHOLE schema (saves to database, does NOT deploy). DESTRUCTIVE: a table or field the schema leaves out is dropped by the next deploy.
 
-⚠️ CRITICAL: Follow ALL rules from create_project:
+For a new data model or a template. To change part of a schema use patch_schema, and drop_schema_items to drop; sending back a large schema to change one field risks changing something else on the way.
+
+⚠️ Follow ALL rules from create_project:
 • FLAT format (no 'fields' nesting)
 • string: max_length (default 255)
 • decimal: precision + scale (default 10, 2)
@@ -347,41 +334,29 @@ After creation, use get_job_status with returned job_id to monitor deployment.""
 ⚠️ MIGRATION RULES:
 • New fields MUST be "required": false OR have "default" value
 • Cannot add required field without default to existing tables
-• Safe: {new_field: {type: "string", max_length: 100, required: false}}
 
 WORKFLOW:
-1. Use get_schema to see current schema
-2. Modify following ALL rules
-3. (optional) Call update_schema with dry_run=true to preview the migration first
-4. Call update_schema (saves only)
-5. Call deploy_staging to apply changes
-6. Monitor with get_job_status
+1. get_schema to see the current schema (its 'version' pins the save)
+2. preview_schema_change with the new schema: check 'diff' and 'plan'
+3. update_schema (pass expected_version to be refused if someone else saved meanwhile)
+4. deploy_staging, then get_job_status
 
-CHANGING PART OF A SCHEMA: use patch_schema. This tool replaces the WHOLE schema, so it is for a
-new data model or a template; sending back a large schema to change one field risks changing
-something else on the way.
-
-DRY RUN: pass dry_run=true to save nothing and read back 'diff' — every property this schema changes
-in the saved one, so an accidentally changed description, default, enum or computed case shows up —
-and 'plan', the migration a deploy would then run, with destructive steps flagged.
-
-NOTE: Without dry_run this only saves the schema. You MUST call deploy_staging afterwards to apply changes.""",
+A schema the deploy would refuse is refused here, and nothing is saved. The answer carries 'diff', 'plan' and the new 'version'.""",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "project_id": {"type": "string", "description": "Project ID (UUID)"},
-                "schema": {"type": "object", "description": "New JSON schema in FLAT format (table_name → field_name → properties). Every field MUST have a 'type' property."},
-                "dry_run": {"type": "boolean", "description": "Save nothing: answer the property-level diff against the saved schema and the migration plan a deploy would run."},
+                "schema": {"type": "object", "description": "New JSON schema in FLAT format (table_name → field_name → properties) — the WHOLE schema. Every field MUST have a 'type' property."},
                 "expected_version": {"type": "string", "description": "The 'version' a get_schema read answered. The save is refused (409) when the saved schema changed since, so two editors never overwrite each other silently."}
             },
             "required": ["project_id", "schema"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": True, "openWorldHint": False}
     },
     {
         "name": "patch_schema",
         "title": "Patch Schema",
-        "description": """Change PART of a project's schema (saves to database, does NOT deploy).
+        "description": """Change PART of a project's schema without dropping any of it (saves to database, does NOT deploy).
 
 Send only the change. The server applies it to the saved schema, in order and all together, and keeps
 every table and field it does not touch — including their identity, so a rename stays a rename and the
@@ -389,13 +364,13 @@ column keeps its data.
 
 OPERATIONS (each one small object, applied in the order given):
 • {"op": "add_table", "table": "clocks", "definition": {...}}      new table, same FLAT rules as create_project
-• {"op": "drop_table", "table": "clocks"}
 • {"op": "rename_table", "table": "clocks", "to": "timers"}
 • {"op": "add_field", "table": "assets", "field": "serial", "definition": {"type": "string", "max_length": 64}}
-• {"op": "drop_field", "table": "parameters", "field": "is_clock"}
 • {"op": "rename_field", "table": "parameters", "field": "is_clock", "to": "clock_kind"}
 • {"op": "set_field", "table": "assets", "field": "name", "properties": {"max_length": 300}}   merges; a property set to null is removed
 • {"op": "set_table", "table": "assets", "properties": {"__audit__": true}}   __policy__, __constraints__, __audit__, __admin_write__
+
+Dropping a table or field is drop_schema_items, a tool of its own.
 
 ALL OR NOTHING: an operation that cannot be applied — a table or field that is not there, a name
 already taken, a schema the deploy would refuse — refuses the whole patch, naming the operation, and
@@ -403,52 +378,102 @@ nothing is saved.
 
 EVERY ANSWER IS A DIFF: 'applied' (what each operation did), 'diff' (every changed property by path),
 'summary' and 'plan' (the migration a deploy would then run), and 'version' (the schema's version
-after the change). You never need to read the whole schema back to see what you did.
+after the change).
 
 WORKFLOW:
 1. get_schema with tables/fields to read the part you are changing (its 'version' is the whole schema's)
-2. patch_schema with dry_run=true: check 'diff' and 'plan'
+2. preview_schema_change with the operations: check 'diff' and 'plan'
 3. patch_schema with the same operations (pass expected_version to be refused if someone else saved meanwhile)
-4. deploy_staging (confirm_destructive=true when the plan drops data), then get_job_status""",
+4. deploy_staging, then get_job_status""",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "project_id": {"type": "string", "description": "Project ID (UUID)"},
                 "operations": {"type": "array", "items": {"type": "object"}, "description": "The operations, applied in order and all together. See the tool description for every op and its fields."},
-                "dry_run": {"type": "boolean", "description": "Save nothing: answer what the operations did, the diff and the migration plan a deploy would run."},
                 "expected_version": {"type": "string", "description": "The 'version' a get_schema read answered. The patch is refused (409) when the saved schema changed since, so two editors never overwrite each other silently."}
             },
             "required": ["project_id", "operations"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
+    },
+    {
+        "name": "drop_schema_items",
+        "title": "Drop Tables or Fields",
+        "description": """Drop tables or fields from a project's saved schema (saves to database, does NOT deploy). DESTRUCTIVE: the next deploy drops their data.
+
+OPERATIONS (applied in order and all together):
+• {"op": "drop_table", "table": "clocks"}
+• {"op": "drop_field", "table": "parameters", "field": "is_clock"}
+
+A drop that cannot be applied (a table or field that is not there, a schema the deploy would refuse, such as a field another reads) refuses them all, naming it, and nothing is saved. The answer carries 'applied', 'diff', 'plan' and the new 'version'.
+
+WORKFLOW:
+1. preview_schema_change with the same operations: check 'diff' and 'plan'
+2. drop_schema_items (pass expected_version to be refused if someone else saved meanwhile)
+3. deploy_staging refuses the plan and names its drops; deploy_destructive applies it, then get_job_status""",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"},
+                "operations": {"type": "array", "items": {"type": "object"}, "description": "The drops: drop_table(table) and drop_field(table, field) operations, applied in order and all together."},
+                "expected_version": {"type": "string", "description": "The 'version' a get_schema read answered. The drop is refused (409) when the saved schema changed since."}
+            },
+            "required": ["project_id", "operations"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": False}
     },
     {
         "name": "deploy_staging",
         "title": "Deploy to Staging",
-        "description": "Deploy a project to the staging environment. This triggers: (1) Schema validation, (2) Docker image build, (3) GitHub commit, (4) Kubernetes deployment, (5) Database migrations. The operation is ASYNCHRONOUS - it returns immediately with a job_id. Use get_job_status with the job_id to monitor progress. Deployment typically takes 2-5 minutes depending on schema complexity. If deployment fails, read the job's error first: one that starts with 'RationalBloks platform error' is the platform's, not the schema's. Otherwise check: (1) Schema format is FLAT (no 'fields' nesting), (2) Every field has a 'type' property, (3) Foreign keys reference existing tables, (4) No PostgreSQL reserved words in table/field names. Use get_project_info to see if the deployment succeeded. A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan." + BUSY_PROJECT_REFUSAL,
+        "description": "Deploy a project's saved schema to the staging environment. This triggers: (1) Schema validation, (2) Docker image build, (3) GitHub commit, (4) Kubernetes deployment, (5) Database migrations. The operation is ASYNCHRONOUS - it returns immediately with a job_id. Use get_job_status with the job_id to monitor progress. Deployment typically takes 2-5 minutes depending on schema complexity. If deployment fails, read the job's error first: one that starts with 'RationalBloks platform error' is the platform's, not the schema's. Otherwise check: (1) Schema format is FLAT (no 'fields' nesting), (2) Every field has a 'type' property, (3) Foreign keys reference existing tables, (4) No PostgreSQL reserved words in table/field names. Use get_project_info to see if the deployment succeeded." + DESTRUCTIVE_PLAN_REFUSAL + BUSY_PROJECT_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
-                "project_id": {"type": "string", "description": "Project ID (UUID)"},
-                "confirm_destructive": {"type": "boolean", "description": "Set true only after reviewing the plan: a deploy that drops tables, columns, entities, relationships or fields is refused without it"}
+                "project_id": {"type": "string", "description": "Project ID (UUID)"}
             },
             "required": ["project_id"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
     },
     {
         "name": "deploy_production",
         "title": "Deploy to Production",
-        "description": "Promote staging to production (requires paid plan) A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan." + BUSY_PROJECT_REFUSAL,
+        "description": "Promote staging to production (requires a paid plan): production's database migrates from the schema it runs to the one staging runs, and production runs staging's build. With staging unchanged since the last promotion, it rebuilds production with no schema change. The operation is ASYNCHRONOUS: poll the returned job_id with get_job_status." + DESTRUCTIVE_PLAN_REFUSAL + BUSY_PROJECT_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
-                "project_id": {"type": "string", "description": "Project ID (UUID)"},
-                "confirm_destructive": {"type": "boolean", "description": "Set true only after reviewing the plan: a deploy that drops tables, columns, entities, relationships or fields is refused without it"}
+                "project_id": {"type": "string", "description": "Project ID (UUID)"}
             },
             "required": ["project_id"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
+    },
+    {
+        "name": "deploy_destructive",
+        "title": "Deploy a Plan That Drops Data",
+        "description": "Deploy a plan that drops data, of a relational or a graph project. DESTRUCTIVE: the tables, fields, entities or relationships the plan drops lose their data. environment 'staging' deploys the saved schema, 'production' promotes staging. Use it only after a deploy tool (deploy_staging, deploy_production, deploy_graph_staging, deploy_graph_production) refused the plan, naming its drops, and those drops are intended. The operation is ASYNCHRONOUS: poll the returned job_id with get_job_status." + BUSY_PROJECT_REFUSAL,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID), relational or graph"},
+                "environment": {"type": "string", "enum": ["staging", "production"], "description": "staging (deploys the saved schema) or production (promotes staging)"}
+            },
+            "required": ["project_id", "environment"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": False}
+    },
+    {
+        "name": "redeploy_project",
+        "title": "Redeploy Project",
+        "description": "Rebuild and roll out a project's staging environment from the schema it runs, with NO schema change, for a relational or a graph project: the current platform release, the project's settings (email, admin users) and its environment take effect. Refused (409) when the saved schema holds changes the last deploy did not apply (deploy_staging deploys those) or when nothing was deployed yet; a save that lands meanwhile is refused rather than deployed. deploy_production rebuilds production the same way when staging runs what production runs. The operation is ASYNCHRONOUS: poll the returned job_id with get_job_status." + BUSY_PROJECT_REFUSAL,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID), relational or graph"}
+            },
+            "required": ["project_id"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
     },
     {
         "name": "delete_project",
@@ -461,7 +486,7 @@ WORKFLOW:
             },
             "required": ["project_id"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": False}
     },
     {
         "name": "rollback_project",
@@ -476,7 +501,7 @@ WORKFLOW:
             },
             "required": ["project_id", "version"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": False}
     },
     {
         "name": "rename_project",
@@ -496,7 +521,7 @@ WORKFLOW:
 
 
 # ============================================================================
-# GRAPH TOOLS (11 tools for Neo4j graph database projects)
+# GRAPH TOOLS (Neo4j graph database projects)
 # ============================================================================
 
 GRAPH_TOOLS = [
@@ -608,38 +633,9 @@ FIELD TYPES: string, integer, float, boolean, date, json
 
 CARDINALITY OPTIONS: ONE_TO_ONE, ONE_TO_MANY, MANY_TO_ONE, MANY_TO_MANY
 
-HIERARCHICAL NODES:
-Nest entities inside parent entities to create type hierarchies.
-Child entities inherit parent labels automatically.
-
-Example:
-{
-  "nodes": {
-    "Animal": {
-      "description": "Base animal entity",
-      "flat_labels": ["LivingThing"],
-      "schema": {
-        "name": {"type": "string", "required": true},
-        "habitat": {"type": "string"}
-      },
-      "Dog": {
-        "description": "A dog (inherits Animal labels)",
-        "flat_labels": ["Pet"],
-        "schema": {
-          "breed": {"type": "string", "required": true},
-          "trained": {"type": "boolean"}
-        }
-      }
-    }
-  },
-  "relationships": {
-    "OWNS": {
-      "from": "Person",
-      "to": "Animal",
-      "cardinality": "ONE_TO_MANY"
-    }
-  }
-}
+HIERARCHICAL NODES: nest an entity inside its parent entity (beside "description", "flat_labels"
+and "schema") to create a type hierarchy; the child inherits the parent's labels:
+  "Animal": {"description": "...", "schema": {...}, "Dog": {"description": "...", "schema": {...}}}
 
 RULES:
 1. "nodes" key is REQUIRED — must contain at least one entity
@@ -649,15 +645,11 @@ RULES:
 5. Relationship types should be UPPER_SNAKE_CASE
 6. Entity names should be PascalCase
 7. Automatic fields (id, created_at, updated_at) are NOT needed
-8. Use get_graph_template_schemas FIRST to see valid examples
 
 WORKFLOW:
-1. Use get_graph_template_schemas to see valid examples
-2. Create schema following the rules above
-3. Call this tool
-4. Monitor with get_job_status (2-5 min deployment)
-
-After creation, use get_job_status with returned job_id to monitor deployment.""" + PLATFORM_UPDATE_REFUSAL,
+1. get_graph_template_schemas FIRST to see valid examples
+2. create_graph_project with a cluster_id from list_clusters
+3. Poll get_job_status with the returned job_id (2-5 minutes)""" + PLATFORM_UPDATE_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -667,12 +659,12 @@ After creation, use get_job_status with returned job_id to monitor deployment.""
             },
             "required": ["name", "schema", "cluster_id"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
     },
     {
         "name": "update_graph_schema",
         "title": "Update Graph Schema",
-        "description": """Update a graph project's schema (saves to database, does NOT deploy).
+        "description": """Replace a graph project's WHOLE schema (saves to database, does NOT deploy). DESTRUCTIVE: an entity, relationship or field the schema leaves out is deleted by the next deploy.
 
 ⚠️ Follow ALL rules from create_graph_project:
 • Must have "nodes" key with at least one entity
@@ -684,53 +676,46 @@ After creation, use get_job_status with returned job_id to monitor deployment.""
 • Entity names should be PascalCase
 
 WORKFLOW:
-1. Use get_graph_schema to see current schema
-2. Modify following all rules
-3. Call update_graph_schema (saves only)
-4. Call deploy_graph_staging to apply changes
-5. Monitor with get_job_status
-
-DRY RUN: pass dry_run=true to preview what a deploy WOULD change (renames, deletions) without saving.
-
-NOTE: This only saves the schema. You MUST call deploy_graph_staging afterwards to deploy.""",
+1. get_graph_schema to see the current schema (its 'version' pins the save)
+2. preview_schema_change with the new schema: check 'diff' and 'plan'
+3. update_graph_schema (pass expected_version to be refused if someone else saved meanwhile)
+4. deploy_graph_staging, then get_job_status""",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "project_id": {"type": "string", "description": "Project ID (UUID)"},
-                "schema": {"type": "object", "description": "New graph schema with 'nodes' and optionally 'relationships' keys."},
-                "dry_run": {"type": "boolean", "description": "Preview the planned migration (renames/deletions) without saving or deploying. Nothing is applied."}
+                "schema": {"type": "object", "description": "New graph schema with 'nodes' and optionally 'relationships' keys — the WHOLE schema."},
+                "expected_version": {"type": "string", "description": "The 'version' a get_graph_schema read answered. The save is refused (409) when the saved schema changed since."}
             },
             "required": ["project_id", "schema"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": True, "openWorldHint": False}
     },
     {
         "name": "deploy_graph_staging",
         "title": "Deploy Graph to Staging",
-        "description": "Deploy a graph project to the staging environment. This triggers: (1) Schema validation, (2) Neo4j entity code generation, (3) Docker image build, (4) GitHub commit, (5) Kubernetes deployment with Neo4j instance. The operation is ASYNCHRONOUS — returns immediately with a job_id. Use get_job_status to monitor progress. Deployment typically takes 2-5 minutes. Use get_graph_project_info to verify deployment succeeded. A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan." + BUSY_PROJECT_REFUSAL,
+        "description": "Deploy a graph project's saved schema to the staging environment. This triggers: (1) Schema validation, (2) Neo4j entity code generation, (3) Docker image build, (4) GitHub commit, (5) Kubernetes deployment with Neo4j instance. The operation is ASYNCHRONOUS — returns immediately with a job_id. Use get_job_status to monitor progress. Deployment typically takes 2-5 minutes. Use get_graph_project_info to verify deployment succeeded." + DESTRUCTIVE_PLAN_REFUSAL + BUSY_PROJECT_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
-                "project_id": {"type": "string", "description": "Project ID (UUID)"},
-                "confirm_destructive": {"type": "boolean", "description": "Set true only after reviewing the plan: a deploy that drops tables, columns, entities, relationships or fields is refused without it"}
+                "project_id": {"type": "string", "description": "Project ID (UUID)"}
             },
             "required": ["project_id"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
     },
     {
         "name": "deploy_graph_production",
         "title": "Deploy Graph to Production",
-        "description": "Promote graph staging to production. Creates a separate production Neo4j instance with its own credentials and database. Requires paid plan. A deploy that drops data is refused until you pass confirm_destructive=true after reviewing the plan." + BUSY_PROJECT_REFUSAL,
+        "description": "Promote graph staging to production. Creates a separate production Neo4j instance with its own credentials and database. Requires paid plan." + DESTRUCTIVE_PLAN_REFUSAL + BUSY_PROJECT_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
-                "project_id": {"type": "string", "description": "Project ID (UUID)"},
-                "confirm_destructive": {"type": "boolean", "description": "Set true only after reviewing the plan: a deploy that drops tables, columns, entities, relationships or fields is refused without it"}
+                "project_id": {"type": "string", "description": "Project ID (UUID)"}
             },
             "required": ["project_id"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
     },
     {
         "name": "delete_graph_project",
@@ -743,7 +728,7 @@ NOTE: This only saves the schema. You MUST call deploy_graph_staging afterwards 
             },
             "required": ["project_id"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": False}
     },
     {
         "name": "rollback_graph_project",
@@ -758,13 +743,13 @@ NOTE: This only saves the schema. You MUST call deploy_graph_staging afterwards 
             },
             "required": ["project_id", "version"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": False}
     },
 ]
 
 
 # ============================================================================
-# GRAPH DATA TOOLS (15 tools for operating on graph data via deployed APIs)
+# GRAPH DATA TOOLS (operating on graph data via deployed APIs)
 # ============================================================================
 
 GRAPH_DATA_TOOLS = [
@@ -798,7 +783,7 @@ The entity_id is your unique identifier — use meaningful IDs for knowledge gra
             },
             "required": ["project_id", "entity_type", "entity_id", "data"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
     },
     {
         "name": "get_graph_node",
@@ -848,7 +833,7 @@ The entity_id is your unique identifier — use meaningful IDs for knowledge gra
             },
             "required": ["project_id", "entity_type", "entity_id", "data"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
     {
         "name": "delete_graph_node",
@@ -864,7 +849,7 @@ The entity_id is your unique identifier — use meaningful IDs for knowledge gra
             },
             "required": ["project_id", "entity_type", "entity_id"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": False}
     },
     # ========================================================================
     # RELATIONSHIP OPERATIONS
@@ -896,7 +881,7 @@ The from_id and to_id must be entity_ids of existing nodes.""",
             },
             "required": ["project_id", "rel_type", "from_id", "to_id"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
     },
     {
         "name": "get_node_relationships",
@@ -930,7 +915,7 @@ The from_id and to_id must be entity_ids of existing nodes.""",
             },
             "required": ["project_id", "rel_type", "rel_id"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": False}
     },
     # ========================================================================
     # BULK OPERATIONS
@@ -972,7 +957,7 @@ Example:
             },
             "required": ["project_id", "entity_type", "nodes"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
     },
     {
         "name": "bulk_create_graph_relationships",
@@ -1011,7 +996,7 @@ Example:
             },
             "required": ["project_id", "rel_type", "relationships"]
         },
-        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
     },
     # ========================================================================
     # SEARCH & QUERY
@@ -1143,6 +1128,163 @@ Returns: Available entity keys (for create_graph_node, list_graph_nodes, etc.) a
 
 
 # ============================================================================
+# MODULE TOOLS (a project's own frontends and backends)
+# ============================================================================
+# A module is a frontend or backend built from your GitHub repository and run beside the project's API
+# on its resource pool. Each operation goes through the studio's own module route, and the ones that
+# build or restart a module are jobs (get_job_status). A variable's value never comes back.
+
+MODULE_TOOLS = [
+    {
+        "name": "list_modules",
+        "title": "List Modules",
+        "description": "List a project's modules and what each runs: module_id (what every module tool takes), name, type (frontblok or logicblok), repository, url, staging_status (not_deployed, deploying, deployed, failed), deployed_at, image (the image of its last successful build, named by the commit it built: <name>:<short sha>-<build time>), replicas (live pods: 0 when frozen, null while the pool is not reporting), CPU and memory, and env_var_names (the names of its environment variables, never their values).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID)"}
+            },
+            "required": ["project_id"]
+        },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    {
+        "name": "deploy_module",
+        "title": "Deploy Module",
+        "description": "Deploy a new module from a GitHub repository onto the project's resource pool: a frontblok module is a Vite frontend, a logicblok module a backend built from its Dockerfile that serves port 8000 with GET /health. Its job clones the repository (the default branch head, or git_ref), builds it and serves it at the module_url the answer names; the project's CORS origins take the module in. A private repository needs the RationalBloks GitHub App installed on it. The operation is ASYNCHRONOUS: poll the returned job_id with get_job_status." + PLATFORM_UPDATE_REFUSAL,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_id": {"type": "string", "description": "Project ID (UUID) the module belongs to"},
+                "module_name": {"type": "string", "description": "Display name"},
+                "github_repo_url": {"type": "string", "description": "https://github.com/<owner>/<repo>"},
+                "module_type": {"type": "string", "enum": ["frontblok", "logicblok"], "description": "frontblok (a Vite frontend) or logicblok (a backend built from its Dockerfile)"},
+                "dockerfile_path": {"type": "string", "description": "Dockerfile path inside the repository (default: Dockerfile)"},
+                "cpu_millicores": {"type": "integer", "description": "CPU allocation (default: 100)"},
+                "memory_mb": {"type": "integer", "description": "Memory allocation (default: 128)"},
+                "env_vars": {"type": "object", "additionalProperties": {"type": "string"},
+                             "description": "Environment variables {NAME: value}, each value text"},
+                "git_ref": {"type": "string", "description": "Branch, tag or commit SHA for this first build (default: the default branch head)"}
+            },
+            "required": ["project_id", "module_name", "github_repo_url", "module_type"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
+    },
+    {
+        "name": "redeploy_module",
+        "title": "Redeploy Module",
+        "description": "Rebuild a module from its repository's default branch head and roll it out, keeping its pod count. Its data and settings are untouched; the project's API (staging and production) and its backend modules restart to take the module's CORS origin. The operation is ASYNCHRONOUS: poll the returned job_id with get_job_status, whose result names the image built (its commit); list_modules shows it once done." + BUSY_MODULE_REFUSAL,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "module_id": {"type": "string", "description": "Module ID (list_modules)"}
+            },
+            "required": ["module_id"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
+    },
+    {
+        "name": "update_module",
+        "title": "Update Module",
+        "description": "Rename a module, or point it at another GitHub repository, which its next redeploy builds. Pass module_name, github_repo_url or both." + BUSY_MODULE_REFUSAL,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "module_id": {"type": "string", "description": "Module ID (list_modules)"},
+                "module_name": {"type": "string", "description": "New display name"},
+                "github_repo_url": {"type": "string", "description": "New repository, https://github.com/<owner>/<repo>"}
+            },
+            "required": ["module_id"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    {
+        "name": "delete_module",
+        "title": "Delete Module",
+        "description": "Remove a module: its pods stop and it leaves the project and its CORS origins. DESTRUCTIVE." + BUSY_MODULE_REFUSAL,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "module_id": {"type": "string", "description": "Module ID (list_modules)"}
+            },
+            "required": ["module_id"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": False}
+    },
+    {
+        "name": "set_module_env",
+        "title": "Set Module Environment",
+        "description": "Set a module's environment variables: {NAME: value} sets one, {NAME: null} removes one, and every variable not named is kept. A backend module restarts to take them; a frontend module rebuilds (they are build arguments). Values are stored encrypted and never returned: the answer and list_modules name the variables only. DESTRUCTIVE: a value replaced or removed cannot be read back. CORS_ORIGINS, DEPLOY_* and GITHUB_TOKEN are the platform's. The operation is a job: poll the returned job_id with get_job_status." + BUSY_MODULE_REFUSAL,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "module_id": {"type": "string", "description": "Module ID (list_modules)"},
+                "env_vars": {"type": "object", "additionalProperties": {"type": ["string", "null"]},
+                             "description": "{NAME: value} to set (text), {NAME: null} to remove; variables not named are kept"}
+            },
+            "required": ["module_id", "env_vars"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": False}
+    },
+    {
+        "name": "freeze_module",
+        "title": "Freeze Module",
+        "description": "Stop a module's pods (scale to 0), remembering how many it ran; unfreeze_module starts them again. Freezing a frozen module changes nothing." + BUSY_MODULE_REFUSAL,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "module_id": {"type": "string", "description": "Module ID (list_modules)"}
+            },
+            "required": ["module_id"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    {
+        "name": "unfreeze_module",
+        "title": "Unfreeze Module",
+        "description": "Start a frozen module's pods again, as many as it ran before the freeze. A running module is left as it is." + BUSY_MODULE_REFUSAL,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "module_id": {"type": "string", "description": "Module ID (list_modules)"}
+            },
+            "required": ["module_id"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    {
+        "name": "scale_module",
+        "title": "Scale Module",
+        "description": "Run 1 or 2 pods of a module (freeze_module stops it)." + BUSY_MODULE_REFUSAL,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "module_id": {"type": "string", "description": "Module ID (list_modules)"},
+                "replicas": {"type": "integer", "enum": [1, 2], "description": "1 or 2 pods"}
+            },
+            "required": ["module_id", "replicas"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+    },
+    {
+        "name": "set_module_resources",
+        "title": "Set Module Resources",
+        "description": "Set a module's CPU and memory and rebuild it so its pods take them. The allocation is checked against the resource pool's capacity first; a refused one is restored. The operation is ASYNCHRONOUS: poll the returned job_id with get_job_status." + BUSY_MODULE_REFUSAL,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "module_id": {"type": "string", "description": "Module ID (list_modules)"},
+                "cpu_millicores": {"type": "integer", "description": "CPU allocation in millicores"},
+                "memory_mb": {"type": "integer", "description": "Memory allocation in MB"}
+            },
+            "required": ["module_id", "cpu_millicores", "memory_mb"]
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
+    },
+]
+
+
+# ============================================================================
 # BACKEND PROMPTS
 # ============================================================================
 
@@ -1203,95 +1345,68 @@ GRAPH_PROMPTS = [
 # BACKEND MCP SERVER
 # ============================================================================
 
-# All tools are infrastructure-only (49 tools)
-INFRASTRUCTURE_TOOLS = BACKEND_TOOLS + GRAPH_TOOLS + GRAPH_DATA_TOOLS
+# Every tool the server offers
+INFRASTRUCTURE_TOOLS = BACKEND_TOOLS + GRAPH_TOOLS + GRAPH_DATA_TOOLS + MODULE_TOOLS
+
+# The lists under the titles the API reference resource gives them
+TOOL_GROUPS = (
+    ("Relational Tools", BACKEND_TOOLS),
+    ("Graph Schema Tools", GRAPH_TOOLS),
+    ("Graph Data Tools", GRAPH_DATA_TOOLS),
+    ("Module Tools", MODULE_TOOLS),
+)
+
+
+def _kind(tool: dict) -> str:
+    # A tool's kind as its annotations declare it: Read, Write (never loses data) or Destructive
+    hints = tool["annotations"]
+    if hints["readOnlyHint"]:
+        return "Read"
+    return "Destructive" if hints["destructiveHint"] else "Write"
+
+
+def api_reference() -> str:
+    # The rationalbloks://docs/api-reference resource, written from the tool lists themselves, so it names
+    # exactly the tools the server serves, each under the kind its annotations declare
+    lines = ["# RationalBloks MCP API Reference", "",
+             "Read tools only read. Write tools never lose data. Destructive tools can, and declare destructiveHint."]
+    for title, tools in TOOL_GROUPS:
+        lines += ["", f"## {title}"]
+        for kind in ("Read", "Write", "Destructive"):
+            names = [tool["name"] for tool in tools if _kind(tool) == kind]
+            if names:
+                lines.append(f"- {kind}: {', '.join(names)}")
+    lines += ["", "For full documentation, visit https://rationalbloks.com/documentation"]
+    return "\n".join(lines) + "\n"
 
 
 class BackendMCPServer(BaseMCPServer):
-    # Backend MCP server with 48 infrastructure tools
-    # Extends BaseMCPServer with: LogicBlok client integration, backend + graph tools, prompts
+    # Backend MCP server: every tool a pass-through to LogicBlok's gateway, the prompts, and a tool list
+    # narrowed to what the request's key may call
 
-    INSTRUCTIONS = """RationalBloks MCP Server — Backend Mode
+    # Sent to every client on connect. Claude Code keeps the first 2048 characters of a server's
+    # instructions, so they stay under that, the rule that keeps data safe first.
+    INSTRUCTIONS = """RationalBloks: production REST APIs (PostgreSQL) and graph APIs (Neo4j) generated from JSON schemas and deployed onto your own resource pools.
 
-Build production REST APIs and Graph APIs from JSON schemas in seconds.
+CHANGE A SCHEMA SAFELY
+1. get_schema (tables/fields for a slice; its version pins the save)
+2. preview_schema_change: the diff and the deploy plan, nothing saved
+3. patch_schema (add, rename, set; never drops), drop_schema_items (drops) or update_schema (the whole schema)
+4. deploy_staging, then get_job_status until completed or failed
+A deploy tool refuses a plan that drops data and names the drops; deploy_destructive applies it once the drops are confirmed intended. deploy_production promotes staging.
 
-═══════════════════════════════════════════════════════════════════════════
-TWO PROJECT TYPES:
-═══════════════════════════════════════════════════════════════════════════
+REBUILD WITHOUT A SCHEMA CHANGE: redeploy_project (staging); deploy_production when staging runs what production runs.
 
-1. RELATIONAL (PostgreSQL) — Flat table schemas, SQL databases, CRUD APIs
-   Tools: create_project, get_schema, deploy_staging, etc. (22 tools)
+MODULES (your frontends and backends, built from GitHub): list_modules, deploy_module, redeploy_module, set_module_env (values are write-only), freeze_module, unfreeze_module, scale_module, set_module_resources, update_module, delete_module.
 
-2. GRAPH (Neo4j) — Hierarchical node/relationship schemas, graph databases
-   Schema tools: create_graph_project, get_graph_schema, deploy_graph_staging, etc. (11 tools)
-   Data tools: create_graph_node, bulk_create_graph_nodes, search_graph_nodes, etc. (15 tools)
+JOBS: deploys, promotions, rollbacks, deletions and module builds are jobs; list_project_jobs finds a lost job_id. A failed job's failure_side says whether the project's input caused it.
 
-═══════════════════════════════════════════════════════════════════════════
-GRAPH DATA OPERATIONS (Knowledge Graph Population):
-═══════════════════════════════════════════════════════════════════════════
+START: list_projects; create_project needs a cluster_id from list_clusters; get_template_schemas shows valid schemas, get_schema_reference the advanced features (__policy__, computed columns, __constraints__, deletes with a stated count).
 
-After deploying a graph project, use these tools to populate and query data:
+RELATIONAL: FLAT {"table": {"field": {"type": ...}}}; a string has max_length; "datetime", not "timestamp"; never define id, created_at, updated_at; users are the built-in app_users (foreign_key "app_users.id").
+GRAPH: {"nodes": {...}, "relationships": {...}}; PascalCase entities, UPPER_SNAKE_CASE relationships.
 
-1. get_graph_data_schema — See available entity types and relationship types
-2. create_graph_node / bulk_create_graph_nodes — Add knowledge nodes
-3. create_graph_relationship / bulk_create_graph_relationships — Connect knowledge
-4. search_graph_nodes — Find nodes by specific properties
-5. fulltext_search_graph — Search across ALL text fields at once
-6. traverse_graph — Walk connections from any node
-7. get_graph_statistics — Get counts and overview
-
-KNOWLEDGE GRAPH WORKFLOW:
-1. create_graph_project → Design schema for your knowledge domain
-2. deploy_graph_staging → Infrastructure spins up
-3. get_graph_data_schema → See entity types & relationships
-4. bulk_create_graph_nodes → Populate entities from content
-5. bulk_create_graph_relationships → Connect the knowledge
-6. fulltext_search_graph → Search the knowledge (free-text)
-7. search_graph_nodes → Filter by specific properties
-8. traverse_graph → Explore connections
-
-═══════════════════════════════════════════════════════════════════════════
-RELATIONAL SCHEMA RULES:
-═══════════════════════════════════════════════════════════════════════════
-
-1. FLAT FORMAT: {"users": {"email": {"type": "string", "max_length": 255}}}
-2. string: max_length (default 255) | decimal: precision + scale (default 10, 2)
-3. Use "datetime" NOT "timestamp"
-4. DON'T define: id, created_at, updated_at (automatic)
-5. NEVER create users/customers tables — use built-in app_users
-6. Use get_template_schemas FIRST to see valid examples
-7. cluster_id is REQUIRED: call list_clusters and pass a pool id to create_project
-
-═══════════════════════════════════════════════════════════════════════════
-WHAT EVERY RELATIONAL PROJECT GETS:
-═══════════════════════════════════════════════════════════════════════════
-
-• PostgreSQL database, migrated automatically on every deploy
-• Full CRUD REST endpoints for every table in the schema
-• JWT auth: POST /api/auth/register, POST /api/auth/login, refresh-token rotation
-• Interactive OpenAPI docs at /docs
-• Two environments: staging (deploy_staging) and production (deploy_production)
-• Authorization, resolved per table in this order:
-    1. a declared __policy__ decides access (see get_schema_reference)
-    2. else a user FK to app_users makes the row owner-scoped; admins see all
-    3. else the table is tenant-shared reference data, readable by any
-       authenticated user of that project
-
-═══════════════════════════════════════════════════════════════════════════
-GRAPH SCHEMA RULES:
-═══════════════════════════════════════════════════════════════════════════
-
-1. HIERARCHICAL FORMAT with "nodes" and "relationships" keys
-2. FLAT FIELD FORMAT (same as relational): {"field": {"type": "string", "required": true}}
-3. Field types: string, integer, float, boolean, date, json
-4. Cardinality: ONE_TO_ONE, ONE_TO_MANY, MANY_TO_ONE, MANY_TO_MANY
-5. Entity names: PascalCase | Relationship types: UPPER_SNAKE_CASE
-6. Nest entities inside parents to create type hierarchies
-7. DON'T define: id, created_at, updated_at (automatic)
-8. Use get_graph_template_schemas FIRST to see valid examples
-
-Available: 49 tools — 23 relational + 11 graph schema + 15 graph data.
-Full documentation: https://rationalbloks.com/documentation"""
+Setup and Claude Code permissions: https://rationalbloks.com/documentation"""
 
     def __init__(
         self,
@@ -1307,15 +1422,15 @@ Full documentation: https://rationalbloks.com/documentation"""
             http_mode=http_mode,
         )
 
-        # Register infrastructure tools and prompts
-        self.register_tools(BACKEND_TOOLS)
-        self.register_tools(GRAPH_TOOLS)
-        self.register_tools(GRAPH_DATA_TOOLS)
+        # Register infrastructure tools, prompts and the API reference written from the tools
+        self.register_tools(INFRASTRUCTURE_TOOLS)
         self.register_prompts(BACKEND_PROMPTS)
         self.register_prompts(GRAPH_PROMPTS)
+        self.register_resource("rationalbloks://docs/api-reference", api_reference())
 
-        # Register tool handler
+        # Register tool handler, and the tool list's narrowing to the request's key
         self.register_tool_handler("*", self._handle_backend_tool)
+        self.register_tool_filter(self._allowed_tools)
 
         # Register prompt handlers
         self.register_prompt_handler(
@@ -1335,7 +1450,9 @@ Full documentation: https://rationalbloks.com/documentation"""
         # A LogicBlok client for the request's API key
         api_key = self.get_api_key_for_request()
         if not api_key:
-            raise ValueError("No RationalBloks API key: send the header Authorization: Bearer rb_sk_...")
+            raise ValueError("No RationalBloks API key: set RATIONALBLOKS_API_KEY (a local server) or send the header "
+                             "Authorization: Bearer rb_sk_... (the hosted server). Create one at "
+                             "https://rationalbloks.com/settings")
         return LogicBlokClient(api_key)
 
     async def _handle_backend_tool(self, name: str, arguments: dict) -> Any:
@@ -1343,6 +1460,15 @@ Full documentation: https://rationalbloks.com/documentation"""
         # LogicBlok is the source of truth for tool semantics, argument validation and error messages.
         async with self._get_client() as client:
             return await client.execute(name, arguments)
+
+    async def _allowed_tools(self) -> set | None:
+        # The tools the request's key may call (GET /api/mcp/allowed-tools): a read-only key's server lists
+        # the read tools alone, so a client allows all of it with one rule. None for a request without a
+        # key, which is shown every tool, since it can call none of them (a directory reading the server).
+        if not self.get_api_key_for_request():
+            return None
+        async with self._get_client() as client:
+            return set(await client.allowed_tools())
 
     def _handle_create_project_prompt(
         self,

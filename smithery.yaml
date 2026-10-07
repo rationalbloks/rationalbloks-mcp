@@ -4,8 +4,8 @@
 
 name: rationalbloks
 displayName: RationalBloks
-version: 0.15.0
-description: Deploy production REST APIs and Neo4j Graph APIs in minutes. 49 tools for projects, schemas, deployments, object storage, and graph data.
+version: 0.16.0
+description: Deploy production REST APIs and Neo4j Graph APIs in minutes, with tools for projects, schemas, deployments, modules, object storage, and graph data.
 author: RationalBloks
 homepage: https://rationalbloks.com
 repository: https://github.com/rationalbloks/rationalbloks-mcp
@@ -28,7 +28,7 @@ startCommand:
   type: stdio
   command: uvx
   args:
-    - rationalbloks-mcp
+    - rationalbloks-mcp@latest
   env:
     RATIONALBLOKS_API_KEY:
       description: "Your RationalBloks API Key (get it from rationalbloks.com/settings)"

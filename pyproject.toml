@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rationalbloks-mcp"
-version = "0.15.0"
-description = "RationalBloks MCP Server - Deploy production REST APIs and Neo4j Graph APIs in minutes. 49 tools for projects, schemas, deployments, object storage, and graph data."
+version = "0.16.0"
+description = "RationalBloks MCP Server - Deploy production REST APIs and Neo4j Graph APIs in minutes: projects, schemas, deployments, modules, object storage, and graph data."
 readme = "README.md"
 license = {text = "Proprietary"}
 requires-python = ">=3.10"

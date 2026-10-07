@@ -3,10 +3,10 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# Deploy production REST APIs and Neo4j Graph APIs in minutes. 50 tools for:
-#   - Relational: 22 tools (create, list, deploy, rollback, templates, storage, schema reference, etc.)
-#   - Graph Schema: 11 tools (create, deploy, rollback, templates, etc.)
-#   - Graph Data: 15 tools (CRUD, search, traverse, bulk, fulltext)
+# Deploy production REST APIs and Neo4j Graph APIs in minutes. Tools for:
+#   - Relational projects (create, schema, preview, deploy, rollback, templates, storage)
+#   - Graph projects (create, schema, deploy, rollback, templates) and their data
+#   - Modules: a project's own frontends and backends (deploy, redeploy, environment, scale)
 #
 # Usage:
 #   export RATIONALBLOKS_API_KEY=rb_sk_your_key_here
@@ -16,7 +16,8 @@
 #   npm install @rationalbloks/frontblok-auth @rationalbloks/frontblok-crud
 #
 # Environment Variables:
-#   RATIONALBLOKS_API_KEY - Your API key (required for STDIO mode)
+#   RATIONALBLOKS_API_KEY - Your API key (STDIO mode; without it the server lists its tools and
+#                           every call answers how to set it)
 #   TRANSPORT             - Transport: stdio (default) or http
 # ============================================================================
 
@@ -36,24 +37,25 @@ __all__ = [
     "BACKEND_TOOLS",
     "GRAPH_TOOLS",
     "GRAPH_DATA_TOOLS",
+    "MODULE_TOOLS",
     "INFRASTRUCTURE_TOOLS",
 ]
 
 # Re-export for convenience
 from .backend.tools import (
-    BACKEND_TOOLS, GRAPH_TOOLS, GRAPH_DATA_TOOLS,
+    BACKEND_TOOLS, GRAPH_TOOLS, GRAPH_DATA_TOOLS, MODULE_TOOLS,
     INFRASTRUCTURE_TOOLS, create_backend_server,
 )
 
 
 def main() -> None:
-    # Main entry point - runs the backend MCP server. Over STDIO the key is checked when the
-    # server is built (core.auth.require_api_key); over HTTP each request carries its own key.
+    # Main entry point - runs the backend MCP server. Over STDIO the key's shape is checked when the
+    # server is built (core.auth.stdio_api_key); over HTTP each request carries its own key.
     transport = os.environ.get("TRANSPORT", "stdio").lower()
     http_mode = transport == "http"
     api_key = None if http_mode else os.environ.get("RATIONALBLOKS_API_KEY")
 
-    print("[rationalbloks-mcp] Starting server (50 tools: 24 relational + 11 graph schema + 15 graph data)...", file=sys.stderr)
+    print(f"[rationalbloks-mcp] Starting server ({len(INFRASTRUCTURE_TOOLS)} tools)...", file=sys.stderr)
 
     try:
         server = create_backend_server(api_key=api_key, http_mode=http_mode)

@@ -3,7 +3,7 @@
 # RATIONALBLOKS MCP - RELEASE
 # ============================================================================
 # Publishes this package to the two public channels that serve it:
-#   PyPI          - what `uvx rationalbloks-mcp` downloads (Claude Desktop, Smithery)
+#   PyPI          - what `uvx rationalbloks-mcp@latest` downloads (Claude Desktop, Smithery)
 #   MCP Registry  - where MCP clients discover the server
 #
 # The hosted server at mcp.rationalbloks.com is NOT released here. It is built from
@@ -26,8 +26,9 @@
 # What each index already serves is read BEFORE anything is verified, built or sent,
 # and a channel that already carries this version is skipped. When both carry it there
 # is nothing to release and the run ends there, without running the tests or touching
-# the network again. That is what lets this sit at the FRONT of `deploy_all.py all`
-# and cost two HTTP reads on every deploy that has nothing to publish.
+# the network again. That is what lets `deploy_all.py all` run it on every deploy, last,
+# once the platform it calls is live, at a cost of two HTTP reads when there is nothing
+# to publish.
 #
 # FULLY UNATTENDED:
 # Both channels authenticate from stored secrets, so a release never waits for a human.

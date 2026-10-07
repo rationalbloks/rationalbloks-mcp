@@ -10,13 +10,13 @@
 #   - Authentication utilities
 #
 # ARCHITECTURE:
-# BackendMCPServer extends this core with 50 tools.
+# BackendMCPServer extends this core with the RationalBloks tools.
 # No duplication of server, transport, or auth logic.
 # ============================================================================
 
 from .auth import (
     is_api_key,
-    require_api_key,
+    stdio_api_key,
     extract_api_key_from_request,
 )
 from .transport import (
@@ -32,7 +32,7 @@ from .server import (
 __all__ = [
     # Auth
     "is_api_key",
-    "require_api_key",
+    "stdio_api_key",
     "extract_api_key_from_request",
     # Transport
     "run_stdio",
