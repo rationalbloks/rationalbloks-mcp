@@ -1,0 +1,50 @@
+# ============================================================================
+# RETIRE THE OLD REGISTRY NAME
+# ============================================================================
+# The official MCP Registry still lists io.github.rationalbloks/rationalbloks-mcp, the
+# name this server had before com.rationalbloks/mcp (release.py, REGISTRY IDENTITY),
+# so a search finds two RationalBloks servers. Only a GitHub identity of the
+# rationalbloks organization may change that entry, and an Actions run is one: the
+# registry grants its OIDC token, whose repository owner is rationalbloks, the
+# io.github.rationalbloks namespace (the interactive login is not granted it).
+# The job deprecates every version of the old name, naming the new one. Idempotent:
+# an entry no longer active is left as it is (the registry refuses a status the entry
+# already has). A read that fails fails the job. It runs when this file changes on
+# main, and on demand.
+# ============================================================================
+name: Retire the old registry name
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/retire-old-registry-name.yml]
+  workflow_dispatch:
+
+permissions:
+  id-token: write  # the OIDC token the registry exchanges for the organization's namespace
+  contents: read
+
+env:
+  OLD_NAME: io.github.rationalbloks/rationalbloks-mcp
+  OLD_ENTRY_URL: https://registry.modelcontextprotocol.io/v0.1/servers/io.github.rationalbloks%2Frationalbloks-mcp/versions/latest
+  PUBLISHER_URL: https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz
+
+jobs:
+  retire:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read the old name's status
+        id: old
+        shell: bash  # with pipefail: a failed read fails the step
+        run: |
+          status=$(curl -fsS "$OLD_ENTRY_URL" | jq -er '._meta["io.modelcontextprotocol.registry/official"].status')
+          echo "The registry lists $OLD_NAME as: $status"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+      - name: Deprecate every version of the old name
+        if: steps.old.outputs.status == 'active'
+        shell: bash
+        run: |
+          curl -fsSL "$PUBLISHER_URL" | tar xz mcp-publisher
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher status --status deprecated --all-versions --yes \
+            --message "Moved to com.rationalbloks/mcp" "$OLD_NAME"

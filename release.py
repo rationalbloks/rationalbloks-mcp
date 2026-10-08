@@ -80,8 +80,10 @@ PACKAGE_NAME = "rationalbloks-mcp"
 # namespace from GitHub identity, and since registry v1.8.0 grants it only to org
 # Owners. It is currently not granting it at all: four issues report a token minted
 # with the personal namespace only, despite Owner role and public membership
-# (modelcontextprotocol/registry 1468, 1527, 1537, 1551, all open). The old
-# io.github.rationalbloks name is unreachable until that is fixed.
+# (modelcontextprotocol/registry 1468, 1527, 1537, 1551, all open). An Actions run of
+# this repository is granted it, from its OIDC token's repository owner: that is how
+# .github/workflows/retire-old-registry-name.yml deprecates the old
+# io.github.rationalbloks name, which this script never publishes.
 #
 # Domain ownership is proved by signing a challenge with a key whose public half is
 # published as a TXT record on the domain. No device code, no browser, nothing that
