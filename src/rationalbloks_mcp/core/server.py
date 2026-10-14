@@ -147,6 +147,7 @@ CRITICAL SCHEMA RULES:
 - id (uuid, primary key)
 - created_at (datetime)
 - updated_at (datetime)
+- row_version (integer: the row's version, 1 on insert and one more on every update)
 
 ## 4. User Authentication
 
@@ -181,7 +182,7 @@ Add user_id → app_users.id for user-owned resources:
 - on_delete (beside foreign_key): cascade (default), set_null (needs "nullable": true), restrict, no_action
 
 Advanced features (row policies, computed columns, unique groups, audit trails, deletes with a
-stated count): the get_schema_reference tool.
+stated count, writes that state the row_version they read): the get_schema_reference tool.
 
 ## 7. Backend Engine (Relational Projects)
 

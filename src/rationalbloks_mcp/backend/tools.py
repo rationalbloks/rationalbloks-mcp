@@ -180,7 +180,7 @@ BACKEND_TOOLS = [
     {
         "name": "get_schema_reference",
         "title": "Get Schema Features Reference",
-        "description": "Get the reference for ADVANCED schema features the templates do not show — read this before adding authorization or derived fields to a schema. Covers: __policy__ (relationship-based read/write authorization with single- and multi-hop membership paths, and the rules that decide whether adopting it is safe — it replaces creator-ownership per table and fails closed on a null link), computed columns (read-only values derived from other columns), __constraints__ (composite uniqueness), __audit__ (append-only audit log), __admin_write__ (a table only admins write), how user foreign keys are attributed on create, and reading many rows in one request with <field>__in=a,b,c (the values separated by commas only).",
+        "description": "Get the reference for ADVANCED schema features the templates do not show — read this before adding authorization or derived fields to a schema. Covers: __policy__ (relationship-based read/write authorization with single- and multi-hop membership paths, and the rules that decide whether adopting it is safe — it replaces creator-ownership per table and fails closed on a null link), computed columns (read-only values derived from other columns), __constraints__ (composite uniqueness, checked at commit when deferrable), __audit__ (append-only audit log), __admin_write__ (a table only admins write), how user foreign keys are attributed on create, reading many rows in one request with <field>__in=a,b,c (the values separated by commas only), deleting the rows a filter names with expected_count, and writes that state the row_version they read (If-Match on a route, if_version in a batch).",
         "inputSchema": {"type": "object", "properties": {}, "required": []},
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
     },
@@ -287,7 +287,7 @@ A relational schema the deploy would refuse is refused here, with the reason."""
    datetime (NOT "timestamp"), json, and the PostgreSQL arrays uuid_array, integer_array, text_array,
    float_array (GIN-indexed: @> contains, <@ contained_by, && overlaps)
 
-3. AUTOMATIC FIELDS (DON'T define): id, created_at, updated_at
+3. AUTOMATIC FIELDS (DON'T define): id, created_at, updated_at, row_version
 
 4. USERS: NEVER create users/customers/employees tables with email or password. Link to the built-in
    app_users table: {"user_id": {"type": "uuid", "foreign_key": "app_users.id"}}. A table with such a
@@ -328,7 +328,7 @@ For a new data model or a template. To change part of a schema use patch_schema,
 • string: max_length (default 255)
 • decimal: precision + scale (default 10, 2)
 • Use "datetime" NOT "timestamp"
-• DON'T define: id, created_at, updated_at
+• DON'T define: id, created_at, updated_at, row_version
 • NEVER create users/customers/employees tables (use app_users)
 
 ⚠️ MIGRATION RULES:
@@ -1401,9 +1401,9 @@ MODULES (your frontends and backends, built from GitHub): list_modules, deploy_m
 
 JOBS: deploys, promotions, rollbacks, deletions and module builds are jobs; list_project_jobs finds a lost job_id. A failed job's failure_side says whether the project's input caused it.
 
-START: list_projects; create_project needs a cluster_id from list_clusters; get_template_schemas shows valid schemas, get_schema_reference the advanced features (__policy__, computed columns, __constraints__, deletes with a stated count).
+START: list_projects; create_project needs a cluster_id from list_clusters; get_template_schemas shows valid schemas, get_schema_reference the advanced features (__policy__, computed columns, __constraints__, deletes with a stated count, writes that state the row_version they read).
 
-RELATIONAL: FLAT {"table": {"field": {"type": ...}}}; a string has max_length; "datetime", not "timestamp"; never define id, created_at, updated_at; users are the built-in app_users (foreign_key "app_users.id").
+RELATIONAL: FLAT {"table": {"field": {"type": ...}}}; a string has max_length; "datetime", not "timestamp"; never define id, created_at, updated_at, row_version; users are the built-in app_users (foreign_key "app_users.id").
 GRAPH: {"nodes": {...}, "relationships": {...}}; PascalCase entities, UPPER_SNAKE_CASE relationships.
 
 Setup and Claude Code permissions: https://rationalbloks.com/documentation"""
@@ -1505,6 +1505,7 @@ CRITICAL SCHEMA RULES - FOLLOW EXACTLY:
    • id (uuid, primary key)
    • created_at (datetime)
    • updated_at (datetime)
+   • row_version (integer: the row's version, 1 on insert and one more on every update)
 
 4. USER AUTHENTICATION:
    ❌ NEVER create "users", "customers", "employees", "members" tables
@@ -1599,8 +1600,8 @@ COMMON SCHEMA ERRORS:
    ✅ {{"created": {{"type": "datetime"}}}}
 
 6. DEFINING AUTOMATIC FIELDS:
-   ❌ {{"id": {{...}}}}, {{"created_at": {{...}}}}, {{"updated_at": {{...}}}}
-   ✅ Don't define these - they're automatic
+   ❌ {{"id": {{...}}}}, {{"created_at": {{...}}}}, {{"updated_at": {{...}}}}, {{"row_version": {{...}}}}
+   ✅ Don't define these - they're automatic. A column of your own named row_version is renamed with patch_schema rename_field
 
 7. CREATING users/customers/employees TABLE:
    ❌ {{"users": {{"email": {{...}}, "password": {{...}}}}}}

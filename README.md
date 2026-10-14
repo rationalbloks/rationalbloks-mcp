@@ -291,6 +291,7 @@ These are automatic - don't define them:
 - `id` (UUID primary key)
 - `created_at` (datetime)
 - `updated_at` (datetime)
+- `row_version` (integer: the row's version, 1 on insert and one more on every update)
 
 ### User Authentication
 
@@ -305,7 +306,7 @@ Use the built-in `app_users` table:
 }
 ```
 
-`get_schema_reference` covers the advanced features: row policies, computed fields, unique groups (`nulls_not_distinct` for groups with nullable columns), audit trails, and the generated API's scoped deletes.
+`get_schema_reference` covers the advanced features: row policies, computed fields, unique groups (`nulls_not_distinct` for groups with nullable columns, `deferrable` for groups checked at commit), audit trails, the generated API's scoped deletes, and writes that state the `row_version` they read (`If-Match`, `if_version`).
 
 ---
 
