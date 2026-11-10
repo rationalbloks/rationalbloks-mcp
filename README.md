@@ -12,7 +12,7 @@ RationalBloks MCP lets AI agents (Claude Code, Claude Desktop, Cursor, VS Code, 
 
 ```
 "Create a task management API with tasks, projects, and users"
-→ 2 minutes later: Production API running on Kubernetes
+→ 2-5 minutes later: the API runs on staging, on your Kubernetes cluster
 ```
 
 ## Installation
@@ -273,17 +273,18 @@ Schemas must be in **FLAT format**:
 
 ### Field Types
 
-| Type | Required Properties |
-|------|---------------------|
-| `string` | `max_length` |
+| Type | Properties |
+|------|------------|
+| `string` | `max_length` (default 255) |
 | `text` | None |
 | `integer` | None |
-| `decimal` | `precision`, `scale` |
+| `decimal` | `precision`, `scale` (default 10 and 2) |
 | `boolean` | None |
 | `uuid` | None |
 | `date` | None |
 | `datetime` | None |
 | `json` | None |
+| `uuid_array`, `integer_array`, `text_array`, `float_array` | None |
 
 ### Auto-Generated Fields
 
