@@ -1243,7 +1243,9 @@ MODULE_TOOLS = [
     {
         "name": "unfreeze_module",
         "title": "Unfreeze Module",
-        "description": "Start a frozen module's pods again, as many as it ran before the freeze. A running module is left as it is." + BUSY_MODULE_REFUSAL,
+        "description": ("Start a frozen module's pods again, as many as it ran before the freeze, and answer once they "
+                        "serve. A running module is left as it is. A module whose image the pool's node removed while "
+                        "it was frozen is refused: redeploy it.") + BUSY_MODULE_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
