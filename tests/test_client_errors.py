@@ -42,21 +42,23 @@ def test_a_result_is_returned():
     assert asyncio.run(client.execute("list_projects")) == {"projects": [], "total": 0}
 
 
-def test_the_tools_a_key_may_call_are_read_from_the_gateway():
+def test_the_tools_are_read_from_the_gateway_with_the_key_or_without_one():
     asked = []
 
     def gateway(request: httpx.Request) -> httpx.Response:
-        asked.append((request.method, request.url.path))
-        return httpx.Response(200, json={"scopes": ["read"], "tools": ["list_projects", "get_schema"]})
+        asked.append((request.method, request.url.path, request.headers.get("Authorization")))
+        return httpx.Response(200, json={"tools": [{"name": "list_projects"}]})
 
-    client = LogicBlokClient("rb_sk_" + "0" * 40)
-    client._client = httpx.AsyncClient(base_url="https://gateway.test", transport=httpx.MockTransport(gateway))
-    assert asyncio.run(client.allowed_tools()) == ["list_projects", "get_schema"]
-    assert asked == [("GET", "/api/mcp/allowed-tools")]
+    for api_key in ("rb_sk_" + "0" * 40, None):
+        client = LogicBlokClient(api_key)
+        client._client = httpx.AsyncClient(base_url="https://gateway.test", headers=client._client.headers,
+                                           transport=httpx.MockTransport(gateway))
+        assert asyncio.run(client.list_tools()) == [{"name": "list_projects"}]
+    assert asked == [("GET", "/api/mcp/tools", "Bearer rb_sk_" + "0" * 40), ("GET", "/api/mcp/tools", None)]
 
 
 def test_a_refused_key_raises_with_the_gateway_detail():
     client = answering(401, json={"detail": "Invalid API key"})
     with pytest.raises(Exception) as refused:
-        asyncio.run(client.allowed_tools())
+        asyncio.run(client.list_tools())
     assert str(refused.value) == "RationalBloks answered 401 to the tool list: Invalid API key"

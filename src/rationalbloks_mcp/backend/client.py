@@ -4,8 +4,8 @@
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
 # HTTP client for LogicBlok MCP Gateway (logicblok.rationalbloks.com/api/mcp)
-# A tool call is POST /api/mcp/execute with the tool's name and arguments; the tool list asks
-# GET /api/mcp/allowed-tools which tools the key may call.
+# A tool call is POST /api/mcp/execute with the tool's name and arguments; the tool list is
+# GET /api/mcp/tools, the gateway's own definition of every tool the key may call.
 # ============================================================================
 
 import httpx
@@ -21,24 +21,25 @@ __all__ = ["LogicBlokClient"]
 
 
 class LogicBlokClient:
-    # HTTP client for LogicBlok MCP Gateway, one per API key: execute runs a tool, allowed_tools names
-    # the tools the key may call
+    # HTTP client for LogicBlok MCP Gateway, one per API key (or none, for the tool list alone): execute
+    # runs a tool, list_tools answers the tools the key may call
 
     # LOGICBLOK_URL env var (set via K8s ConfigMap) lets in-cluster traffic stay
     # in-cluster (http://logicblok-api.logicblok.svc.cluster.local:8000).
     # Falls back to the public ingress for local / STDIO / dev use.
     BASE_URL = os.environ.get("LOGICBLOK_URL", "https://logicblok.rationalbloks.com")
 
-    def __init__(self, api_key: str) -> None:
-        # Initialize client with API key (rb_sk_...)
+    def __init__(self, api_key: str | None) -> None:
+        # Initialize client with API key (rb_sk_...); None sends no Authorization header
         self.api_key = api_key
         # Use certifi for SSL certs (fixes issues in isolated uvx environments)
         ssl_context = ssl.create_default_context(cafile=certifi.where())
         # The client names itself: Cloudflare refuses a library's default User-Agent (error 1010)
         self._client = httpx.AsyncClient(
             base_url=self.BASE_URL,
-            headers={"Authorization": f"Bearer {api_key}", "User-Agent": f"rationalbloks-mcp/{__version__}"},
-            timeout=180.0,  # longer than the gateway's longest call (150 s, an inline module operation)
+            headers={**({"Authorization": f"Bearer {api_key}"} if api_key else {}),
+                     "User-Agent": f"rationalbloks-mcp/{__version__}"},
+            timeout=360.0,  # longer than the gateway's longest call (330 s, a module's unfreeze)
             verify=ssl_context,
         )
 
@@ -62,10 +63,11 @@ class LogicBlokClient:
         _raise_refusal(response, tool)
         return response.json()["result"]
 
-    async def allowed_tools(self) -> list:
-        # The names of the tools this key may call (GET /api/mcp/allowed-tools), or the gateway's refusal of
-        # the key raised with its detail (an unknown, revoked or expired key)
-        response = await self._client.get("/api/mcp/allowed-tools")
+    async def list_tools(self) -> list:
+        # The tools this key may call, every tool without a key (GET /api/mcp/tools): each with its name, title,
+        # group, description, input schema and annotations, or the gateway's refusal of the key raised with its
+        # detail (an unknown, revoked or expired key)
+        response = await self._client.get("/api/mcp/tools")
         _raise_refusal(response, "the tool list")
         return response.json()["tools"]
 

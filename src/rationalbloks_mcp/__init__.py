@@ -34,18 +34,9 @@ from ._version import __version__
 __all__ = [
     "__version__",
     "main",
-    "BACKEND_TOOLS",
-    "GRAPH_TOOLS",
-    "GRAPH_DATA_TOOLS",
-    "MODULE_TOOLS",
-    "INFRASTRUCTURE_TOOLS",
 ]
 
-# Re-export for convenience
-from .backend.tools import (
-    BACKEND_TOOLS, GRAPH_TOOLS, GRAPH_DATA_TOOLS, MODULE_TOOLS,
-    INFRASTRUCTURE_TOOLS, create_backend_server,
-)
+from .backend.server import create_backend_server
 
 
 def main() -> None:
@@ -55,7 +46,7 @@ def main() -> None:
     http_mode = transport == "http"
     api_key = None if http_mode else os.environ.get("RATIONALBLOKS_API_KEY")
 
-    print(f"[rationalbloks-mcp] Starting server ({len(INFRASTRUCTURE_TOOLS)} tools)...", file=sys.stderr)
+    print("[rationalbloks-mcp] Starting server (its tools are listed from RationalBloks)...", file=sys.stderr)
 
     try:
         server = create_backend_server(api_key=api_key, http_mode=http_mode)

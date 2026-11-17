@@ -22,6 +22,7 @@ import pytest
 from starlette.testclient import TestClient
 
 from rationalbloks_mcp.backend import create_backend_server
+from rationalbloks_mcp.backend.client import LogicBlokClient
 from rationalbloks_mcp.core.transport import create_http_app
 
 # Paths that must reach the session manager rather than the 404 guard.
@@ -53,7 +54,7 @@ def client():
     # http_mode means the key rides each request, so none is needed to build the app.
     server = create_backend_server(api_key=None, http_mode=True)
     app = create_http_app(
-        server.server, server.name, server.version, server.instructions
+        server.server, server.name, server.version, server.INSTRUCTIONS
     )
     # The context manager runs the lifespan, which starts the session manager.
     with TestClient(app) as test_client:
@@ -90,21 +91,22 @@ def test_health_and_server_card_answer(client):
     assert card.json()["name"], "server card carries no name"
 
 
-def test_a_failed_tool_call_reaches_the_agent_with_its_reason():
+def test_a_failed_tool_call_reaches_the_agent_with_its_reason(monkeypatch):
     # SDK 2.0 answers an exception raised by a tool handler with a bare "Internal server error"; the
     # server returns the failure as a tool result marked isError, carrying the gateway's explanation.
     server = create_backend_server(api_key=None, http_mode=True)
     reason = "RationalBloks answered 409 to deploy_staging: Another operation on this project is running."
 
-    async def refused(name, arguments):
+    async def refused(self, tool, arguments=None):
         raise Exception(reason)
 
-    server.register_tool_handler("deploy_staging", refused)
-    app = create_http_app(server.server, server.name, server.version, server.instructions)
+    monkeypatch.setattr(LogicBlokClient, "execute", refused)
+    app = create_http_app(server.server, server.name, server.version, server.INSTRUCTIONS)
     call = {"jsonrpc": "2.0", "id": 2, "method": "tools/call",
             "params": {"name": "deploy_staging", "arguments": {"project_id": "p1"}}}
     with TestClient(app) as test_client:
-        headers = {"Accept": "application/json, text/event-stream", "MCP-Protocol-Version": "2025-06-18"}
+        headers = {"Accept": "application/json, text/event-stream", "MCP-Protocol-Version": "2025-06-18",
+                   "Authorization": "Bearer rb_sk_" + "0" * 40}
         test_client.post("/mcp", json=INITIALIZE, headers=headers)
         answer = test_client.post("/mcp", json=call, headers=headers).json()
     assert answer["result"]["isError"] is True

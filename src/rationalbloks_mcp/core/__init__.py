@@ -3,15 +3,8 @@
 # ============================================================================
 # Copyright 2026 RationalBloks. All Rights Reserved.
 #
-# Shared core components for the MCP server.
-# This module contains:
-#   - Base MCP server class
-#   - Transport layer (STDIO + HTTP)
-#   - Authentication utilities
-#
-# ARCHITECTURE:
-# BackendMCPServer extends this core with the RationalBloks tools.
-# No duplication of server, transport, or auth logic.
+# The server's plumbing: the transport layer (STDIO + HTTP) and the API key utilities. The server itself
+# is backend/server.py.
 # ============================================================================
 
 from .auth import (
@@ -24,10 +17,6 @@ from .transport import (
     run_http,
     create_http_app,
 )
-from .server import (
-    BaseMCPServer,
-    create_mcp_server,
-)
 
 __all__ = [
     # Auth
@@ -38,7 +27,4 @@ __all__ = [
     "run_stdio",
     "run_http",
     "create_http_app",
-    # Server
-    "BaseMCPServer",
-    "create_mcp_server",
 ]

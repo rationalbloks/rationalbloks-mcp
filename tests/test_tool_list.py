@@ -1,13 +1,13 @@
 # ============================================================================
-# TOOL LIST — tools/list offers what the request's key may call
+# TOOL LIST — tools/list offers the gateway's tools, as the request's key may call them
 # ============================================================================
-# The server lists the tools the gateway answers the key may call (GET
-# /api/mcp/allowed-tools), so a read key's server lists the read tools alone and a
-# client allows all of it with one rule. A request without a key lists every tool: it
-# can call none of them, and a directory reads the catalog that way. A refused key
-# fails the list with the gateway's reason instead of listing tools that all fail.
-# The gateway is replaced by a stub of LogicBlokClient.allowed_tools; no backend call
-# is made.
+# The package keeps no copy of a tool: on every tools/list it lists what the gateway
+# serves (GET /api/mcp/tools), with the request's key, so a read key's server lists the
+# read tools alone and a client allows all of it with one rule. A request without a key
+# lists every tool the gateway serves without one: it can call none of them, and a
+# directory reads the catalog that way. A refused key fails the list with the gateway's
+# reason instead of listing tools that all fail. The gateway is replaced by a stub of
+# LogicBlokClient.list_tools; no backend call is made.
 # ============================================================================
 
 import asyncio
@@ -17,13 +17,26 @@ import pytest
 from mcp.types import INTERNAL_ERROR
 from starlette.testclient import TestClient
 
-from rationalbloks_mcp.backend import INFRASTRUCTURE_TOOLS, create_backend_server
+from rationalbloks_mcp.backend import create_backend_server
 from rationalbloks_mcp.backend.client import LogicBlokClient
 from rationalbloks_mcp.core.auth import stdio_api_key
 from rationalbloks_mcp.core.transport import create_http_app
 
 KEY = "rb_sk_" + "0" * 40
-READ_TOOLS = ["list_projects", "get_schema", "get_job_status"]
+
+# No request on STDIO: the server reads the key it started with
+STDIO_CONTEXT = SimpleNamespace(request=None)
+
+
+def tool(name: str, read: bool) -> dict:
+    # One tool as the gateway serves it (logicblok/mcp_gateway.py, mcp_tool)
+    return {"name": name, "title": name.replace("_", " ").title(), "group": "Relational Tools",
+            "description": f"The {name} tool", "inputSchema": {"type": "object", "properties": {}, "required": []},
+            "annotations": {"readOnlyHint": read, "destructiveHint": False, "idempotentHint": read, "openWorldHint": False}}
+
+
+READ_TOOLS = [tool("list_projects", True), tool("get_schema", True)]
+EVERY_TOOL = READ_TOOLS + [tool("deploy_staging", False)]
 
 HEADERS = {"Accept": "application/json, text/event-stream", "MCP-Protocol-Version": "2025-06-18"}
 INITIALIZE = {
@@ -38,32 +51,27 @@ INITIALIZE = {
 }
 LIST_TOOLS = {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}
 
-# No request on STDIO: the server reads the key it started with
-STDIO_CONTEXT = SimpleNamespace(request=None)
 
-# The annotations a tool listing carries
-HINTS = {"readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"}
-
-
-def answering(monkeypatch, answer) -> list:
-    # Stub the gateway's tool list with answer (a list of names, or an exception to raise),
-    # returning the keys it was asked with
+def answering(monkeypatch, keyed, keyless=EVERY_TOOL) -> list:
+    # Stub the gateway's tool list: `keyed` (a list of tools, or an exception to raise) for a client with a
+    # key, `keyless` for one without; returns the keys it was asked with
     asked = []
 
-    async def allowed_tools(self):
+    async def list_tools(self):
         asked.append(self.api_key)
+        answer = keyed if self.api_key else keyless
         if isinstance(answer, Exception):
             raise answer
         return answer
 
-    monkeypatch.setattr(LogicBlokClient, "allowed_tools", allowed_tools)
+    monkeypatch.setattr(LogicBlokClient, "list_tools", list_tools)
     return asked
 
 
 def listed_over_http(headers: dict) -> dict:
     # The hosted server's JSON-RPC answer to tools/list, sent with these headers
     server = create_backend_server(api_key=None, http_mode=True)
-    app = create_http_app(server.server, server.name, server.version, server.instructions)
+    app = create_http_app(server.server, server.name, server.version, server.INSTRUCTIONS)
     with TestClient(app) as client:
         client.post("/mcp", json=INITIALIZE, headers=headers)
         return client.post("/mcp", json=LIST_TOOLS, headers=headers).json()
@@ -72,15 +80,15 @@ def listed_over_http(headers: dict) -> dict:
 def test_a_key_lists_only_the_tools_it_may_call(monkeypatch):
     asked = answering(monkeypatch, READ_TOOLS)
     answer = listed_over_http({**HEADERS, "Authorization": f"Bearer {KEY}"})
-    assert sorted(tool["name"] for tool in answer["result"]["tools"]) == sorted(READ_TOOLS)
+    assert [tool["name"] for tool in answer["result"]["tools"]] == ["list_projects", "get_schema"]
     assert asked == [KEY]
 
 
-def test_a_request_without_a_key_lists_every_tool(monkeypatch):
+def test_a_request_without_a_key_lists_every_tool_the_gateway_serves(monkeypatch):
     asked = answering(monkeypatch, READ_TOOLS)
     answer = listed_over_http(HEADERS)
-    assert len(answer["result"]["tools"]) == len(INFRASTRUCTURE_TOOLS)
-    assert asked == [], "a request without a key asked the gateway for its tools"
+    assert [tool["name"] for tool in answer["result"]["tools"]] == [tool["name"] for tool in EVERY_TOOL]
+    assert asked == [None]
 
 
 def test_a_refused_key_fails_the_list_with_the_gateway_reason(monkeypatch):
@@ -96,20 +104,20 @@ def test_a_stdio_key_lists_only_the_tools_it_may_call(monkeypatch):
     server = create_backend_server(api_key=KEY, http_mode=False)
     on_list_tools = server._build_handlers()["on_list_tools"]
     tools = asyncio.run(on_list_tools(STDIO_CONTEXT, None)).tools
-    assert sorted(tool.name for tool in tools) == sorted(READ_TOOLS)
+    assert [tool.name for tool in tools] == ["list_projects", "get_schema"]
     assert asked == [KEY]
 
 
-def test_a_stdio_server_without_a_key_lists_every_tool_and_each_call_says_how_to_set_it():
+def test_a_stdio_server_without_a_key_lists_every_tool_with_its_hints_and_each_call_says_how_to_set_it(monkeypatch):
+    answering(monkeypatch, READ_TOOLS)
     server = create_backend_server(api_key=None, http_mode=False)
     handlers = server._build_handlers()
     tools = asyncio.run(handlers["on_list_tools"](STDIO_CONTEXT, None)).tools
-    assert len(tools) == len(INFRASTRUCTURE_TOOLS)
 
-    # Each listed tool carries the hints its catalog entry states, the ones a client decides by
-    served = {tool.name: {hint: value for hint, value in tool.annotations.model_dump(by_alias=True).items()
-                          if hint in HINTS} for tool in tools}
-    assert served == {tool["name"]: tool["annotations"] for tool in INFRASTRUCTURE_TOOLS}
+    # Each listed tool carries what the gateway served, the hints a client decides by included
+    served = {tool.name: (tool.title, tool.description, tool.annotations.model_dump(by_alias=True, exclude_none=True))
+              for tool in tools}
+    assert served == {tool["name"]: (tool["title"], tool["description"], tool["annotations"]) for tool in EVERY_TOOL}
 
     call = SimpleNamespace(name="list_projects", arguments={})
     result = asyncio.run(handlers["on_call_tool"](STDIO_CONTEXT, call))

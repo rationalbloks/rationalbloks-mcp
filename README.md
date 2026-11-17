@@ -166,6 +166,8 @@ A plan drops data when it drops a table or field, or changes a field's type in a
 
 A long operation (create, deploy, rollback, delete, module operations) runs as a job: the tool answers a `job_id`, and `get_job_status` follows it to its result.
 
+The server lists its tools from RationalBloks on every `tools/list` (`GET https://logicblok.rationalbloks.com/api/mcp/tools`, each with its full description, arguments and hints), so a client always lists the tools RationalBloks runs. The tables below summarise them.
+
 ### Relational Projects
 
 | Tool | Kind | Description |
