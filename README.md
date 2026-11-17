@@ -315,15 +315,16 @@ Use the built-in `app_users` table:
 
 ## Frontend
 
-For frontend development, use our NPM packages:
+For frontend development, use our NPM package:
 
 ```bash
-npm install @rationalbloks/frontblok-auth @rationalbloks/frontblok-crud
+npm install @rationalbloks/frontblok
 ```
 
-These provide:
-- **frontblok-auth**: Authentication, login, tokens, user context
-- **frontblok-crud**: Generic CRUD via `getApi().getAll()`, `getApi().create()`, etc.
+It provides, by import path:
+- **@rationalbloks/frontblok/auth**: Authentication, login, tokens, user context
+- **@rationalbloks/frontblok/crud**: Generic CRUD via `getApi().getAll()`, `getApi().create()`, etc.
+- **@rationalbloks/frontblok/components**: Ready MUI views (sign-in, password reset, settings), navbar and theme
 
 ---
 

@@ -12,8 +12,8 @@
 #   export RATIONALBLOKS_API_KEY=rb_sk_your_key_here
 #   rationalbloks-mcp
 #
-# For frontend, use our NPM packages:
-#   npm install @rationalbloks/frontblok-auth @rationalbloks/frontblok-crud
+# For frontend, use our NPM package (/auth, /components, /crud):
+#   npm install @rationalbloks/frontblok
 #
 # Environment Variables:
 #   RATIONALBLOKS_API_KEY - Your API key (STDIO mode; without it the server lists its tools and
