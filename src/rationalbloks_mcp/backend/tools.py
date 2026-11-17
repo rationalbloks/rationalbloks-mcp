@@ -1201,7 +1201,8 @@ MODULE_TOOLS = [
     {
         "name": "delete_module",
         "title": "Delete Module",
-        "description": "Remove a module: its pods stop and it leaves the project and its CORS origins. DESTRUCTIVE." + BUSY_MODULE_REFUSAL,
+        "description": ("Remove a module: its pods stop, it leaves the project and its CORS origins, and a backend "
+                        "module's stored data (its /data volume) is deleted with it. DESTRUCTIVE.") + BUSY_MODULE_REFUSAL,
         "inputSchema": {
             "type": "object",
             "properties": {
