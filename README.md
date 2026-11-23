@@ -177,6 +177,7 @@ The server lists its tools from RationalBloks on every `tools/list` (`GET https:
 | `get_schema` | read | Get the current JSON schema (optionally only some tables or fields) |
 | `get_user_info` | read | Get authenticated user info |
 | `list_clusters` | read | List your BYOC resource pools (client-owned clusters) |
+| `reprovision_cluster` | write | Re-run a resource pool's infrastructure, as the portal's update button does (a job) |
 | `get_job_status` | read | Follow a job (create, deploy, promotion, rollback, deletion, module operation) to its result |
 | `list_project_jobs` | read | A project's jobs, newest first, each with its outcome |
 | `get_project_info` | read | Detailed project info with K8s status |
