@@ -319,7 +319,9 @@ REBUILD WITHOUT A SCHEMA CHANGE: redeploy_project (staging); deploy_production w
 
 MODULES (your frontends and backends, built from GitHub): list_modules, deploy_module, redeploy_module, set_module_env (values are write-only), freeze_module, unfreeze_module, scale_module, set_module_resources, update_module, delete_module.
 
-JOBS: deploys, promotions, rollbacks, deletions and module builds are jobs; list_project_jobs finds a lost job_id. A failed job's failure_side says whether the project's input caused it.
+JOBS: deploys, promotions, rollbacks and module builds are jobs; list_project_jobs finds a lost job_id. A failed job's failure_side says whether the project's input caused it.
+
+DELETE: delete_project/delete_graph_project need confirm_name (the project's name) and only schedule it; restore_project cancels.
 
 START: list_projects; create_project needs a cluster_id from list_clusters; get_template_schemas shows valid schemas, get_schema_reference the advanced features (__policy__, computed columns, __constraints__, deletes with a stated count, writes that state the row_version they read).
 

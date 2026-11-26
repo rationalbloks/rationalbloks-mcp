@@ -164,7 +164,9 @@ Run `claude auto-mode config` to see the rules in effect, or edit them in `/perm
 
 A plan drops data when it drops a table or field, or changes a field's type in a way that rounds or cuts its stored values (a decimal given a smaller scale or turned integer, a datetime turned date). The deploy tools refuse such a plan and name each drop; `deploy_destructive` applies it.
 
-A long operation (create, deploy, rollback, delete, module operations) runs as a job: the tool answers a `job_id`, and `get_job_status` follows it to its result.
+A long operation (create, deploy, rollback, module operations) runs as a job: the tool answers a `job_id`, and `get_job_status` follows it to its result.
+
+A project is never deleted in one call: `delete_project` and `delete_graph_project` take its name stated back (`confirm_name`) and schedule the deletion after a grace period, answering the date. Until then nothing is removed and deploys are refused; `restore_project` cancels the deletion.
 
 The server lists its tools from RationalBloks on every `tools/list` (`GET https://logicblok.rationalbloks.com/api/mcp/tools`, each with its full description, arguments and hints), so a client always lists the tools RationalBloks runs. The tables below summarise them.
 
@@ -178,7 +180,7 @@ The server lists its tools from RationalBloks on every `tools/list` (`GET https:
 | `get_user_info` | read | Get authenticated user info |
 | `list_clusters` | read | List your BYOC resource pools (client-owned clusters) |
 | `reprovision_cluster` | write | Re-run a resource pool's infrastructure, as the portal's update button does (a job) |
-| `get_job_status` | read | Follow a job (create, deploy, promotion, rollback, deletion, module operation) to its result |
+| `get_job_status` | read | Follow a job (create, deploy, promotion, rollback, module operation) to its result |
 | `list_project_jobs` | read | A project's jobs, newest first, each with its outcome |
 | `get_project_info` | read | Detailed project info with K8s status |
 | `get_version_history` | read | Git commit history |
@@ -200,7 +202,8 @@ The server lists its tools from RationalBloks on every `tools/list` (`GET https:
 | `drop_schema_items` | destructive | Drop tables or fields from the saved schema |
 | `deploy_destructive` | destructive | Deploy a plan that drops data, to staging or production (relational or graph) |
 | `rollback_project` | destructive | Roll schema and code back to a previous version |
-| `delete_project` | destructive | Delete a project permanently |
+| `delete_project` | destructive | Schedule a project's deletion, its name stated back: nothing is removed before its date |
+| `restore_project` | write | Cancel a scheduled deletion (relational or graph) |
 
 ### Graph Projects
 
@@ -216,7 +219,7 @@ The server lists its tools from RationalBloks on every `tools/list` (`GET https:
 | `deploy_graph_production` | write | Promote graph staging to production. Refuses a plan that drops data |
 | `update_graph_schema` | destructive | Replace the whole graph schema: what it leaves out is dropped by the next deploy |
 | `rollback_graph_project` | destructive | Roll a graph project back to a previous version |
-| `delete_graph_project` | destructive | Delete a graph project |
+| `delete_graph_project` | destructive | Schedule a graph project's deletion, its name stated back |
 
 ### Graph Data
 
