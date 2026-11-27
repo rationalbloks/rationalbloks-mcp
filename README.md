@@ -266,7 +266,7 @@ A module is one of a project's own frontends (frontblok) or backends (logicblok)
 | `create-project-from-description` | A relational schema from a plain English description |
 | `fix-schema-errors` | The corrected schema, from a schema and the error it caused |
 | `create-graph-project-from-description` | A graph schema from a plain English description |
-| `populate-graph-from-text` | Fill a deployed graph with what a text states: keys as the schema gives them, every required field, a search before each new entity (so a second pass adds no duplicates), nodes in bulk, then relationships |
+| `populate-graph-from-text` | Fill a deployed graph with what a text states: keys as the schema gives them, every required field, a search before each new entity and a read of the relationships among existing nodes (so a second pass adds no duplicates), nodes in bulk, then relationships |
 | `explore-graph` | Explore a deployed graph, about a topic or as a whole, and summarise what it holds |
 
 ---

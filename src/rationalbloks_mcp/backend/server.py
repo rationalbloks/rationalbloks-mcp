@@ -773,7 +773,9 @@ Generate the graph schema now following ALL rules above:""",
 2. List the entities and relationships the text states, each under an entity key or a relationship key
    exactly as the schema gives it. Record only what the text states.
 3. Before creating an entity, search for it (fulltext_search_graph with its name) and reuse its entity_id
-   when it exists. Give a new one a meaningful entity_id (e.g. "python", "alan-turing").
+   when it exists. Give a new one a meaningful entity_id (e.g. "python", "alan-turing"). Before relating
+   nodes that already existed, read the relationships among them (get_graph_subgraph, those nodes as
+   seeds, depth 0) and skip one already there.
 4. Fill every required field, the inherited ones included. When the schema has source or page fields,
    fill them.
 5. Write the new nodes with bulk_create_graph_nodes (one call per entity), then the relationships with

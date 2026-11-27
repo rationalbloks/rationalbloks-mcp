@@ -686,7 +686,7 @@ wheels = [
 
 [[package]]
 name = "rationalbloks-mcp"
-version = "0.18.0"
+version = "0.18.1"
 source = { editable = "." }
 dependencies = [
     { name = "certifi" },
