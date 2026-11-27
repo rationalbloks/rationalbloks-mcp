@@ -705,7 +705,7 @@ STRUCTURE:
   }}
 }}
 
-FIELD TYPES: string, integer, float, boolean, date, json
+FIELD TYPES: string, integer, float, boolean, date, json (an object), list[str]
 
 CARDINALITY: ONE_TO_ONE, ONE_TO_MANY, MANY_TO_ONE, MANY_TO_MANY
 
