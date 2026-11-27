@@ -231,8 +231,9 @@ The server lists its tools from RationalBloks on every `tools/list` (`GET https:
 | `search_graph_nodes` | read | Search nodes by property filters |
 | `fulltext_search_graph` | read | Full-text search across all fields |
 | `traverse_graph` | read | Traverse the graph from a node |
+| `get_graph_subgraph` | read | Nodes with the relationships among them, from seeds or a sample |
 | `get_graph_statistics` | read | Graph statistics (counts) |
-| `get_graph_data_schema` | read | The deployed data schema |
+| `get_graph_data_schema` | read | The deployed data schema: fields (inherited ones too), relationship ends, the rules for filling a graph from a text |
 | `create_graph_node` | write | Create a node |
 | `update_graph_node` | write | Update node properties |
 | `create_graph_relationship` | write | Create a relationship |
@@ -257,6 +258,16 @@ A module is one of a project's own frontends (frontblok) or backends (logicblok)
 | `set_module_resources` | write | Set a module's CPU and memory, and rebuild it |
 | `set_module_env` | destructive | Set or remove environment variables (merged: variables not named are kept); values are never read back |
 | `delete_module` | destructive | Remove a module |
+
+## Prompts
+
+| Prompt | What it asks the agent |
+|--------|------------------------|
+| `create-project-from-description` | A relational schema from a plain English description |
+| `fix-schema-errors` | The corrected schema, from a schema and the error it caused |
+| `create-graph-project-from-description` | A graph schema from a plain English description |
+| `populate-graph-from-text` | Fill a deployed graph with what a text states: keys as the schema gives them, every required field, a search before each new entity (so a second pass adds no duplicates), nodes in bulk, then relationships |
+| `explore-graph` | Explore a deployed graph, about a topic or as a whole, and summarise what it holds |
 
 ---
 

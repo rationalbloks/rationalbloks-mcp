@@ -22,4 +22,13 @@ def test_server_constructs_with_every_handler_and_its_prompts():
     assert set(server._build_handlers()) == {"on_list_tools", "on_call_tool", "on_list_prompts", "on_get_prompt",
                                              "on_list_resources", "on_read_resource"}
     assert [prompt.name for prompt in server._prompts] == [
-        "create-project-from-description", "fix-schema-errors", "create-graph-project-from-description"]
+        "create-project-from-description", "fix-schema-errors", "create-graph-project-from-description",
+        "populate-graph-from-text", "explore-graph"]
+    # Every prompt listed has its handler, and the graph prompts carry what they were given
+    assert set(server._prompt_handlers) == {prompt.name for prompt in server._prompts}
+    populate = server._prompt_handlers["populate-graph-from-text"](
+        "populate-graph-from-text", {"project_id": "p-1", "text": "Python is a language."})
+    assert "p-1 (staging)" in populate.messages[0].content.text
+    assert populate.messages[0].content.text.endswith("Python is a language.")
+    explore = server._prompt_handlers["explore-graph"]("explore-graph", {"project_id": "p-1", "topic": "Python"})
+    assert 'fulltext_search_graph for "Python"' in explore.messages[0].content.text

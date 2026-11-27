@@ -271,6 +271,26 @@ GRAPH_PROMPTS = [
             )
         ],
     ),
+    Prompt(
+        name="populate-graph-from-text",
+        title="Populate a Graph from Text",
+        description="Fill a deployed graph project with the entities and relationships a text states, without duplicates",
+        arguments=[
+            PromptArgument(name="project_id", description="The graph project's ID", required=True),
+            PromptArgument(name="text", description="The text to read", required=True),
+            PromptArgument(name="environment", description="staging (default) or production", required=False),
+        ],
+    ),
+    Prompt(
+        name="explore-graph",
+        title="Explore a Graph",
+        description="Explore a deployed graph project, about a topic or as a whole, and summarise what it holds",
+        arguments=[
+            PromptArgument(name="project_id", description="The graph project's ID", required=True),
+            PromptArgument(name="topic", description="What to explore (optional: the whole graph)", required=False),
+            PromptArgument(name="environment", description="staging (default) or production", required=False),
+        ],
+    ),
 ]
 
 
@@ -349,6 +369,8 @@ Setup and Claude Code permissions: https://rationalbloks.com/documentation"""
             "create-project-from-description": self._handle_create_project_prompt,
             "fix-schema-errors": self._handle_fix_schema_prompt,
             "create-graph-project-from-description": self._handle_create_graph_project_prompt,
+            "populate-graph-from-text": self._handle_populate_graph_prompt,
+            "explore-graph": self._handle_explore_graph_prompt,
         }
         # SDK 2.0 takes request handlers as constructor callbacks, so they are built first and passed in
         self.server = create_mcp_server(self.name, self.version, self.INSTRUCTIONS, self._build_handlers())
@@ -689,10 +711,11 @@ RULES:
 1. "nodes" key is REQUIRED — must contain at least one entity
 2. Each entity needs "description" and "schema" with field definitions
 3. Each field is {{"type": "...", "required": true/false}} — required defaults to false
-4. Relationship "from"/"to" must reference defined node names
+4. Relationship "from"/"to" name an entity: its path ("Vehicle:Car"), or its name ("Car") when no other entity has it
 5. Relationship types: UPPER_SNAKE_CASE (e.g., FOLLOWS, CREATED_BY)
 6. Entity names: PascalCase (e.g., Person, Product)
-7. Nest entities inside parents to create type hierarchies
+7. Nest entities inside parents to create type hierarchies: a child inherits its parent's labels and
+   fields (no need to restate one), and a relationship end naming the parent accepts the child too
 8. Automatic fields (id, created_at, updated_at) are NOT needed
 
 HIERARCHICAL EXAMPLE:
@@ -707,7 +730,7 @@ HIERARCHICAL EXAMPLE:
         "year": {{"type": "integer"}}
       }},
       "Car": {{
-        "description": "A car (inherits Vehicle labels)",
+        "description": "A car (inherits Vehicle's labels and its make, model and year)",
         "flat_labels": ["Automobile"],
         "schema": {{
           "doors": {{"type": "integer", "required": true}},
@@ -719,6 +742,79 @@ HIERARCHICAL EXAMPLE:
 }}
 
 Generate the graph schema now following ALL rules above:""",
+                    ),
+                )
+            ]
+        )
+
+    def _handle_populate_graph_prompt(
+        self,
+        name: str,
+        arguments: dict[str, str] | None,
+    ) -> GetPromptResult:
+        # populate-graph-from-text: graforest's ingest prompt with its rules rewritten (graforest roadmap 2.5),
+        # so a second pass over the same text adds nothing twice
+        arguments = arguments or {}
+        project_id = arguments.get("project_id", "")
+        environment = arguments.get("environment") or "staging"
+        text = arguments.get("text", "")
+
+        return GetPromptResult(
+            messages=[
+                PromptMessage(
+                    role="user",
+                    content=TextContent(
+                        type="text",
+                        text=f"""Fill the RationalBloks graph project {project_id} ({environment}) with what the text below states.
+
+1. Call get_graph_data_schema (project_id {project_id}, environment {environment}). It gives every entity's
+   fields, a nested entity's inherited ones included (each names the entity that declares it), and every
+   relationship's ends (from_types / to_types: the entities each end accepts).
+2. List the entities and relationships the text states, each under an entity key or a relationship key
+   exactly as the schema gives it. Record only what the text states.
+3. Before creating an entity, search for it (fulltext_search_graph with its name) and reuse its entity_id
+   when it exists. Give a new one a meaningful entity_id (e.g. "python", "alan-turing").
+4. Fill every required field, the inherited ones included. When the schema has source or page fields,
+   fill them.
+5. Write the new nodes with bulk_create_graph_nodes (one call per entity), then the relationships with
+   bulk_create_graph_relationships (one call per relationship). An end whose node is of an entity nested
+   under the relationship's own names its entity key in from_type / to_type.
+6. Finish with get_graph_statistics, and say what you added and what you found already there.
+
+TEXT:
+{text}""",
+                    ),
+                )
+            ]
+        )
+
+    def _handle_explore_graph_prompt(
+        self,
+        name: str,
+        arguments: dict[str, str] | None,
+    ) -> GetPromptResult:
+        # explore-graph: graforest's explore prompt, on the subgraph read (nodes with their relationships)
+        arguments = arguments or {}
+        project_id = arguments.get("project_id", "")
+        environment = arguments.get("environment") or "staging"
+        topic = arguments.get("topic", "")
+        start = (f"fulltext_search_graph for \"{topic}\", then get_graph_subgraph from the matches as seeds (depth 1)"
+                 if topic else "get_graph_subgraph without seeds, for a sample of the graph")
+
+        return GetPromptResult(
+            messages=[
+                PromptMessage(
+                    role="user",
+                    content=TextContent(
+                        type="text",
+                        text=f"""Explore the RationalBloks graph project {project_id} ({environment}){f' about "{topic}"' if topic else ''}.
+
+1. get_graph_data_schema: the entities, their fields and the relationships that connect them.
+2. get_graph_statistics: how many nodes and relationships of each type the graph holds.
+3. {start}.
+4. Follow what stands out with get_graph_subgraph from those nodes; truncated in its answer means there is more.
+5. Summarise what the graph holds: its main entities, how they connect and what stands out, naming each
+   node by its name or title.""",
                     ),
                 )
             ]
