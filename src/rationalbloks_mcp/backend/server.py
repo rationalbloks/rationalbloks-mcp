@@ -278,6 +278,8 @@ GRAPH_PROMPTS = [
         arguments=[
             PromptArgument(name="project_id", description="The graph project's ID", required=True),
             PromptArgument(name="text", description="The text to read", required=True),
+            PromptArgument(name="source", description="Where the text comes from: its title, URL or file (optional)",
+                           required=False),
             PromptArgument(name="environment", description="staging (default) or production", required=False),
         ],
     ),
@@ -753,11 +755,13 @@ Generate the graph schema now following ALL rules above:""",
         arguments: dict[str, str] | None,
     ) -> GetPromptResult:
         # populate-graph-from-text: graforest's ingest prompt with its rules rewritten (graforest roadmap 2.5),
-        # so a second pass over the same text adds nothing twice
+        # so a second pass over the same text adds nothing twice; the source, as graforest's source_title and
+        # source_url, is what a source or page field records
         arguments = arguments or {}
         project_id = arguments.get("project_id", "")
         environment = arguments.get("environment") or "staging"
         text = arguments.get("text", "")
+        source = arguments.get("source", "")
 
         return GetPromptResult(
             messages=[
@@ -771,13 +775,14 @@ Generate the graph schema now following ALL rules above:""",
    fields, a nested entity's inherited ones included (each names the entity that declares it), and every
    relationship's ends (from_types / to_types: the entities each end accepts).
 2. List the entities and relationships the text states, each under an entity key or a relationship key
-   exactly as the schema gives it. Record only what the text states.
+   exactly as the schema gives it. Record only what the text states. Take a long text part by part, each
+   part through these steps: what an earlier part created, its search finds (step 3).
 3. Before creating an entity, search for it (fulltext_search_graph with its name) and reuse its entity_id
-   when it exists. Give a new one a meaningful entity_id (e.g. "python", "alan-turing"). Before relating
-   nodes that already existed, read the relationships among them (get_graph_subgraph, those nodes as
-   seeds, depth 0) and skip one already there.
+   when it exists. Give a new one a meaningful kebab-case entity_id (e.g. "python", "alan-turing"). Before
+   relating nodes that already existed, read the relationships among them (get_graph_subgraph, those nodes
+   as seeds, depth 0) and skip one already there.
 4. Fill every required field, the inherited ones included. When the schema has source or page fields,
-   fill them.
+   fill them{f" (the source: {source})" if source else ""}.
 5. Write the new nodes with bulk_create_graph_nodes (one call per entity), then the relationships with
    bulk_create_graph_relationships (one call per relationship). An end whose node is of an entity nested
    under the relationship's own names its entity key in from_type / to_type.
